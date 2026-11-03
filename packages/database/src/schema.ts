@@ -2,8 +2,18 @@ import { sql } from 'drizzle-orm';
 
 const confidenceValues = ['confirmed', 'estimated', 'unknown'] as const;
 const transportValues = [
-  'walking', 'hiking', 'cycling', 'train', 'metro', 'tram', 'car',
-  'bus', 'taxi', 'plane', 'boat', 'ferry',
+  'walking',
+  'hiking',
+  'cycling',
+  'train',
+  'metro',
+  'tram',
+  'car',
+  'bus',
+  'taxi',
+  'plane',
+  'boat',
+  'ferry',
 ] as const;
 import {
   check,
@@ -93,17 +103,27 @@ export const legs = pgTable(
     toVisitId: uuid('to_visit_id').notNull(),
     isCurrent: boolean('is_current').notNull().default(true),
     transportMode: text('transport_mode', { enum: transportValues }),
-    movementConfidence: text('movement_confidence', { enum: confidenceValues }).notNull().default('unknown'),
-    transportConfidence: text('transport_confidence', { enum: confidenceValues }).notNull().default('unknown'),
-    geometryConfidence: text('geometry_confidence', { enum: confidenceValues }).notNull().default('unknown'),
+    movementConfidence: text('movement_confidence', { enum: confidenceValues })
+      .notNull()
+      .default('unknown'),
+    transportConfidence: text('transport_confidence', { enum: confidenceValues })
+      .notNull()
+      .default('unknown'),
+    geometryConfidence: text('geometry_confidence', { enum: confidenceValues })
+      .notNull()
+      .default('unknown'),
     departureLocalDate: date('departure_local_date', { mode: 'string' }),
     departureLocalTime: time('departure_local_time'),
     departureTimeZone: text('departure_time_zone'),
-    departureTimeConfidence: text('departure_time_confidence', { enum: confidenceValues }).notNull().default('unknown'),
+    departureTimeConfidence: text('departure_time_confidence', { enum: confidenceValues })
+      .notNull()
+      .default('unknown'),
     arrivalLocalDate: date('arrival_local_date', { mode: 'string' }),
     arrivalLocalTime: time('arrival_local_time'),
     arrivalTimeZone: text('arrival_time_zone'),
-    arrivalTimeConfidence: text('arrival_time_confidence', { enum: confidenceValues }).notNull().default('unknown'),
+    arrivalTimeConfidence: text('arrival_time_confidence', { enum: confidenceValues })
+      .notNull()
+      .default('unknown'),
   },
   (table) => [
     foreignKey({
@@ -117,16 +137,44 @@ export const legs = pgTable(
       foreignColumns: [visits.tripId, visits.id],
     }),
     check('legs_distinct_endpoints', sql`${table.fromVisitId} <> ${table.toVisitId}`),
-    check('legs_transport_valid', sql`${table.transportMode} IS NULL OR ${table.transportMode} IN ('walking','hiking','cycling','train','metro','tram','car','bus','taxi','plane','boat','ferry')`),
-    check('legs_movement_confidence_valid', sql`${table.movementConfidence} IN ('confirmed','estimated','unknown')`),
-    check('legs_transport_confidence_valid', sql`${table.transportConfidence} IN ('confirmed','estimated','unknown')`),
-    check('legs_geometry_confidence_valid', sql`${table.geometryConfidence} IN ('confirmed','estimated','unknown')`),
-    check('legs_departure_time_confidence_valid', sql`${table.departureTimeConfidence} IN ('confirmed','estimated','unknown')`),
-    check('legs_arrival_time_confidence_valid', sql`${table.arrivalTimeConfidence} IN ('confirmed','estimated','unknown')`),
-    check('legs_departure_time_needs_date', sql`${table.departureLocalTime} IS NULL OR ${table.departureLocalDate} IS NOT NULL`),
-    check('legs_arrival_time_needs_date', sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`),
+    check(
+      'legs_transport_valid',
+      sql`${table.transportMode} IS NULL OR ${table.transportMode} IN ('walking','hiking','cycling','train','metro','tram','car','bus','taxi','plane','boat','ferry')`,
+    ),
+    check(
+      'legs_movement_confidence_valid',
+      sql`${table.movementConfidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'legs_transport_confidence_valid',
+      sql`${table.transportConfidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'legs_geometry_confidence_valid',
+      sql`${table.geometryConfidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'legs_departure_time_confidence_valid',
+      sql`${table.departureTimeConfidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'legs_arrival_time_confidence_valid',
+      sql`${table.arrivalTimeConfidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'legs_departure_time_needs_date',
+      sql`${table.departureLocalTime} IS NULL OR ${table.departureLocalDate} IS NOT NULL`,
+    ),
+    check(
+      'legs_arrival_time_needs_date',
+      sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
+    ),
     index('legs_trip_idx').on(table.tripId),
-    unique('legs_current_from_unique').on(table.fromVisitId).where(sql`${table.isCurrent} = true`),
-    unique('legs_current_to_unique').on(table.toVisitId).where(sql`${table.isCurrent} = true`),
+    unique('legs_current_from_unique')
+      .on(table.fromVisitId)
+      .where(sql`${table.isCurrent} = true`),
+    unique('legs_current_to_unique')
+      .on(table.toVisitId)
+      .where(sql`${table.isCurrent} = true`),
   ],
 );

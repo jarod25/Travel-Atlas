@@ -35,11 +35,16 @@ async function fixture(title: string, count = 3) {
   const [trip] = await db.insert(trips).values({ title }).returning();
   tripIds.push(trip.id);
   const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
-  const points = await db.insert(visits).values(
-    Array.from({ length: count }, (_, position) => ({
-      tripId: trip.id, tripDayId: day.id, position,
-    })),
-  ).returning();
+  const points = await db
+    .insert(visits)
+    .values(
+      Array.from({ length: count }, (_, position) => ({
+        tripId: trip.id,
+        tripDayId: day.id,
+        position,
+      })),
+    )
+    .returning();
   return { trip, day, points };
 }
 
@@ -55,15 +60,20 @@ async function rejectCode(action: () => Promise<unknown>, expected: string) {
 describe('Persisted Legs', () => {
   it('creates a draft with unknown dimensions and no invented timestamps', async () => {
     const { trip, points } = await fixture('Leg defaults');
-    const [leg] = await db.insert(legs).values({
-      tripId: trip.id,
-      fromVisitId: points[0].id,
-      toVisitId: points[1].id,
-    }).returning();
+    const [leg] = await db
+      .insert(legs)
+      .values({
+        tripId: trip.id,
+        fromVisitId: points[0].id,
+        toVisitId: points[1].id,
+      })
+      .returning();
     expect(leg.isCurrent).toBe(true);
     expect(leg.transportMode).toBeNull();
     expect([leg.movementConfidence, leg.transportConfidence, leg.geometryConfidence]).toEqual([
-      'unknown', 'unknown', 'unknown',
+      'unknown',
+      'unknown',
+      'unknown',
     ]);
     expect(leg.departureLocalDate).toBeNull();
     expect(leg.departureLocalTime).toBeNull();
@@ -74,44 +84,92 @@ describe('Persisted Legs', () => {
   it('disallows cross-trip endpoints, including a mismatched trip id', async () => {
     const one = await fixture('Leg source');
     const two = await fixture('Leg destination');
-    await rejectCode(() => db.insert(legs).values({
-      tripId: one.trip.id, fromVisitId: one.points[0].id, toVisitId: two.points[0].id,
-    }), '23503');
-    await rejectCode(() => db.insert(legs).values({
-      tripId: two.trip.id, fromVisitId: one.points[0].id, toVisitId: one.points[1].id,
-    }), '23503');
+    await rejectCode(
+      () =>
+        db.insert(legs).values({
+          tripId: one.trip.id,
+          fromVisitId: one.points[0].id,
+          toVisitId: two.points[0].id,
+        }),
+      '23503',
+    );
+    await rejectCode(
+      () =>
+        db.insert(legs).values({
+          tripId: two.trip.id,
+          fromVisitId: one.points[0].id,
+          toVisitId: one.points[1].id,
+        }),
+      '23503',
+    );
   });
 
   it('rejects self-referencing legs and duplicate current incoming/outgoing links', async () => {
     const { trip, points } = await fixture('Leg cardinality');
-    await rejectCode(() => db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[0].id,
-    }), '23514');
-    const [existing] = await db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-    }).returning();
-    await rejectCode(() => db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[2].id,
-    }), '23505');
-    await rejectCode(() => db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[2].id, toVisitId: points[1].id,
-    }), '23505');
+    await rejectCode(
+      () =>
+        db.insert(legs).values({
+          tripId: trip.id,
+          fromVisitId: points[0].id,
+          toVisitId: points[0].id,
+        }),
+      '23514',
+    );
+    const [existing] = await db
+      .insert(legs)
+      .values({
+        tripId: trip.id,
+        fromVisitId: points[0].id,
+        toVisitId: points[1].id,
+      })
+      .returning();
+    await rejectCode(
+      () =>
+        db.insert(legs).values({
+          tripId: trip.id,
+          fromVisitId: points[0].id,
+          toVisitId: points[2].id,
+        }),
+      '23505',
+    );
+    await rejectCode(
+      () =>
+        db.insert(legs).values({
+          tripId: trip.id,
+          fromVisitId: points[2].id,
+          toVisitId: points[1].id,
+        }),
+      '23505',
+    );
     await db.update(legs).set({ isCurrent: false }).where(eq(legs.id, existing.id));
-    const [next] = await db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-    }).returning();
+    const [next] = await db
+      .insert(legs)
+      .values({
+        tripId: trip.id,
+        fromVisitId: points[0].id,
+        toVisitId: points[1].id,
+      })
+      .returning();
     expect(next.isCurrent).toBe(true);
   });
 
   it('stores local time with unknown time zone without inventing a UTC instant', async () => {
     const { trip, points } = await fixture('Leg local time');
-    const [leg] = await db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-      transportMode: 'train', movementConfidence: 'confirmed',
-      transportConfidence: 'confirmed', geometryConfidence: 'unknown',
-      departureLocalDate: '2026-09-12', departureLocalTime: '14:30:00',
-      departureTimeConfidence: 'estimated',
-    }).returning();
+    const [leg] = await db
+      .insert(legs)
+      .values({
+        tripId: trip.id,
+        fromVisitId: points[0].id,
+        toVisitId: points[1].id,
+        transportMode: 'train',
+        movementConfidence: 'confirmed',
+        transportConfidence: 'confirmed',
+        geometryConfidence: 'unknown',
+        departureLocalDate: '2026-09-12',
+        departureLocalTime: '14:30:00',
+        departureTimeConfidence: 'estimated',
+      })
+      .returning();
     expect(leg.departureLocalDate).toBe('2026-09-12');
     expect(leg.departureLocalTime).toBe('14:30:00');
     expect(leg.departureTimeZone).toBeNull();
@@ -121,21 +179,37 @@ describe('Persisted Legs', () => {
 
   it('rejects an isolated clock time without a calendar date', async () => {
     const { trip, points } = await fixture('Leg invalid time');
-    await rejectCode(() => db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-      arrivalLocalTime: '17:00:00',
-    }), '23514');
+    await rejectCode(
+      () =>
+        db.insert(legs).values({
+          tripId: trip.id,
+          fromVisitId: points[0].id,
+          toVisitId: points[1].id,
+          arrivalLocalTime: '17:00:00',
+        }),
+      '23514',
+    );
   });
 
   it('permits a cross-day link only as an explicit record (no automatic trigger)', async () => {
     const { trip, points } = await fixture('Explicit cross-day');
     const [other] = await db.insert(tripDays).values({ tripId: trip.id, position: 1 }).returning();
-    const [later] = await db.insert(visits).values({
-      tripId: trip.id, tripDayId: other.id, position: 0,
-    }).returning();
-    const [leg] = await db.insert(legs).values({
-      tripId: trip.id, fromVisitId: points[0].id, toVisitId: later.id,
-    }).returning();
+    const [later] = await db
+      .insert(visits)
+      .values({
+        tripId: trip.id,
+        tripDayId: other.id,
+        position: 0,
+      })
+      .returning();
+    const [leg] = await db
+      .insert(legs)
+      .values({
+        tripId: trip.id,
+        fromVisitId: points[0].id,
+        toVisitId: later.id,
+      })
+      .returning();
     expect(leg.toVisitId).toBe(later.id);
   });
 });
