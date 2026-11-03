@@ -50,7 +50,15 @@ draft leg in one database transaction. An empty day yields no Leg; an existing d
 links only to its last Visit. Failed Leg inserts roll back the Visit, and concurrent
 appends are serialized by the parent-day row lock. No inter-day Leg is inferred.
 
+## Atomic reordering
+
+`reorderVisitsInDay()` locks the day, validates an exact visit permutation,
+archives previous current intra-day Legs and creates new unknown draft Legs
+within one transaction. Temporary positions prevent transient uniqueness errors.
+An unchanged order is a no-op. A current cross-day link blocks reordering
+rather than being silently detached.
+
 ## Next increment
 
-Provide atomic timeline reordering while preserving historical Legs, rejecting
-implicit cross-day links and retaining independent provenance.
+Persist route geometry versions and waypoint constraints with PostGIS SRID 4326
+and route-to-Leg integrity checks.

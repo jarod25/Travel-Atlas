@@ -1,2 +1,2 @@
 export { legs, places, tripDays, trips, visits } from './schema';
-export { appendVisitToDay } from './visit-repository';
+export { appendVisitToDay, reorderVisitsInDay } from './visit-repository';
