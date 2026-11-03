@@ -28,3 +28,10 @@ clears selected route geometry, and preserves historical versions.
 ## Place coordinates
 
 PATCH /api/v1/places/:placeId saves an explicit [longitude, latitude] point with independent confidence. API and PostgreSQL validate bounds. Coordinates remain null until supplied. One Place can be reused across Visits.
+
+## Trip changes
+
+PATCH /api/v1/trips/:tripId requires an If-Match revision and accepts a nonempty
+trimmed title and/or soft-archival state. GET /trips?includeArchived=true lists
+archived trips for restoration; Explore omits them from mapping by default.
+A stale revision returns 412 rather than overwriting another edit.
