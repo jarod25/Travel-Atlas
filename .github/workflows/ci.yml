@@ -33,6 +33,7 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier apps/web/src/api.ts apps/web/src/App.tsx apps/web/src/map-data.test.ts apps/web/src/map-data.ts apps/web/src/MapCanvas.tsx apps/web/src/styles.css
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
