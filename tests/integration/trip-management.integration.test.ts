@@ -47,14 +47,24 @@ describe('Revisioned Trip management', () => {
   });
 
   it('hides archived geographic features without erasing their Visits', async () => {
-    const [trip] = await db.insert(trips).values({ title: 'Synthetic archived feature' }).returning();
+    const [trip] = await db
+      .insert(trips)
+      .values({ title: 'Synthetic archived feature' })
+      .returning();
     tripIds.push(trip.id);
     const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
-    const [place] = await db.insert(places).values({
-      name: 'Synthetic point', location: [0, 0], locationConfidence: 'estimated',
-    }).returning();
+    const [place] = await db
+      .insert(places)
+      .values({
+        name: 'Synthetic point',
+        location: [0, 0],
+        locationConfidence: 'estimated',
+      })
+      .returning();
     placeIds.push(place.id);
-    await db.insert(visits).values({ tripId: trip.id, tripDayId: day.id, position: 0, placeId: place.id });
+    await db
+      .insert(visits)
+      .values({ tripId: trip.id, tripDayId: day.id, position: 0, placeId: place.id });
     expect(JSON.stringify(await store.getExplore())).toContain(trip.id);
     await updateTripWithRevision(db, trip.id, 1, { isArchived: true });
     expect(JSON.stringify(await store.getExplore())).not.toContain(trip.id);

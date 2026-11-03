@@ -71,8 +71,11 @@ function post<T>(path: string, payload: unknown) {
 export const atlasApi = {
   trips: (includeArchived = false) => request<Trip[]>(`/trips?includeArchived=${includeArchived}`),
   updateTrip: (id: string, revision: number, changes: { title?: string; isArchived?: boolean }) =>
-    request<Trip>(`/trips/${id}`, { method: 'PATCH',
-      headers: { 'If-Match': `"${revision}"` }, body: JSON.stringify(changes) }),
+    request<Trip>(`/trips/${id}`, {
+      method: 'PATCH',
+      headers: { 'If-Match': `"${revision}"` },
+      body: JSON.stringify(changes),
+    }),
   trip: (id: string) => request<Trip>(`/trips/${encodeURIComponent(id)}`),
   addTrip: (title: string) => post<Trip>('/trips', { title }),
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),

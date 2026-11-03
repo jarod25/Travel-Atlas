@@ -178,7 +178,8 @@ export function App() {
   }
 
   async function toggleTripArchive(trip: Trip) {
-    if (!trip.isArchived && !window.confirm('Archive this trip? Its history will remain saved.')) return;
+    if (!trip.isArchived && !window.confirm('Archive this trip? Its history will remain saved.'))
+      return;
     await changeTrip(trip, { isArchived: !trip.isArchived });
   }
 
@@ -361,8 +362,11 @@ export function App() {
             </button>
           </form>
           <label className="archived-toggle">
-            <input type="checkbox" checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />
             Show archived trips
           </label>
           <div className="trip-grid">
@@ -371,11 +375,19 @@ export function App() {
                 <span>{trip.isArchived ? 'ARCHIVED TRIP' : 'TRIP'}</span>
                 <strong>{trip.title}</strong>
                 <div className="trip-actions">
-                  {!trip.isArchived && <button onClick={() => {
-                    setTripId(trip.id);
-                    setView('editor');
-                  }}>Open timeline</button>}
-                  <button onClick={() => void renameTrip(trip)} disabled={pending}>Rename</button>
+                  {!trip.isArchived && (
+                    <button
+                      onClick={() => {
+                        setTripId(trip.id);
+                        setView('editor');
+                      }}
+                    >
+                      Open timeline
+                    </button>
+                  )}
+                  <button onClick={() => void renameTrip(trip)} disabled={pending}>
+                    Rename
+                  </button>
                   <button onClick={() => void toggleTripArchive(trip)} disabled={pending}>
                     {trip.isArchived ? 'Restore' : 'Archive'}
                   </button>

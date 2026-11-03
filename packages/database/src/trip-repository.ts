@@ -20,10 +20,14 @@ export async function updateTripWithRevision(
     if (current.revision !== expectedRevision) {
       return { status: 'conflict', currentRevision: current.revision };
     }
-    const [trip] = await tx.update(trips).set({
-      ...changes,
-      revision: current.revision + 1,
-    }).where(eq(trips.id, id)).returning();
+    const [trip] = await tx
+      .update(trips)
+      .set({
+        ...changes,
+        revision: current.revision + 1,
+      })
+      .where(eq(trips.id, id))
+      .returning();
     return { status: 'updated', trip };
   });
 }

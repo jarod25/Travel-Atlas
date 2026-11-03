@@ -12,7 +12,11 @@ export interface AtlasStore {
   listTrips(includeArchived?: boolean): Promise<unknown>;
   createTrip(title: string): Promise<unknown>;
   getTrip(tripId: string): Promise<unknown | null>;
-  editTrip(id: string, revision: number, changes: { title?: string; isArchived?: boolean }): Promise<TripUpdateResult>;
+  editTrip(
+    id: string,
+    revision: number,
+    changes: { title?: string; isArchived?: boolean },
+  ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
   getTimeline(tripId: string, dayId: string): Promise<unknown | null>;
@@ -37,9 +41,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
   const db = drizzle(client);
 
   return {
-    listTrips: (includeArchived = false) => db.select().from(trips)
-      .where(includeArchived ? undefined : eq(trips.isArchived, false))
-      .orderBy(asc(trips.title)),
+    listTrips: (includeArchived = false) =>
+      db
+        .select()
+        .from(trips)
+        .where(includeArchived ? undefined : eq(trips.isArchived, false))
+        .orderBy(asc(trips.title)),
     createTrip: async (title) => {
       const [trip] = await db.insert(trips).values({ title }).returning();
       return trip;
@@ -169,7 +176,13 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .from(visits)
         .innerJoin(places, eq(visits.placeId, places.id))
         .innerJoin(trips, eq(visits.tripId, trips.id))
-        .where(and(eq(visits.isArchived, false), eq(trips.isArchived, false), sql`${places.location} IS NOT NULL`));
+        .where(
+          and(
+            eq(visits.isArchived, false),
+            eq(trips.isArchived, false),
+            sql`${places.location} IS NOT NULL`,
+          ),
+        );
       const routes = await db.execute(sql`
         SELECT l.trip_id, l.id AS leg_id, rv.id AS route_version_id,
           ST_AsGeoJSON(rv.geometry) AS geojson, rv.confidence

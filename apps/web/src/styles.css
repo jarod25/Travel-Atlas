@@ -546,7 +546,23 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   width: 100%;
 }
 
-.archived-toggle { display: inline-flex; align-items: center; gap: 10px; font-size: .85rem; margin-top: 16px; color: #526879; }
-.archived-toggle input { width: 16px; height: 16px; }
-.trip-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.trip-actions button { font-size: .78rem; }
+.archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  margin-top: 16px;
+  color: #526879;
+}
+.archived-toggle input {
+  width: 16px;
+  height: 16px;
+}
+.trip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.trip-actions button {
+  font-size: 0.78rem;
+}
