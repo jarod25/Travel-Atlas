@@ -1,4 +1,6 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
+import { updateTripWithRevision } from './trip-repository';
+import type { TripUpdateResult } from './trip-repository';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository';
@@ -7,9 +9,10 @@ import { updateLegWithRevision } from './leg-repository';
 import type { LegChanges, LegUpdateResult } from './leg-repository';
 
 export interface AtlasStore {
-  listTrips(): Promise<unknown>;
+  listTrips(includeArchived?: boolean): Promise<unknown>;
   createTrip(title: string): Promise<unknown>;
   getTrip(tripId: string): Promise<unknown | null>;
+  editTrip(id: string, revision: number, changes: { title?: string; isArchived?: boolean }): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
   getTimeline(tripId: string, dayId: string): Promise<unknown | null>;
@@ -34,7 +37,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
   const db = drizzle(client);
 
   return {
-    listTrips: () => db.select().from(trips).orderBy(asc(trips.title)),
+    listTrips: (includeArchived = false) => db.select().from(trips)
+      .where(includeArchived ? undefined : eq(trips.isArchived, false))
+      .orderBy(asc(trips.title)),
     createTrip: async (title) => {
       const [trip] = await db.insert(trips).values({ title }).returning();
       return trip;
@@ -43,6 +48,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const [trip] = await db.select().from(trips).where(eq(trips.id, id));
       return trip ?? null;
     },
+    editTrip: (id, revision, changes) => updateTripWithRevision(db, id, revision, changes),
     listDays: async (id) => {
       const [trip] = await db.select({ id: trips.id }).from(trips).where(eq(trips.id, id));
       if (!trip) return null;
@@ -162,12 +168,14 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         })
         .from(visits)
         .innerJoin(places, eq(visits.placeId, places.id))
-        .where(and(eq(visits.isArchived, false), sql`${places.location} IS NOT NULL`));
+        .innerJoin(trips, eq(visits.tripId, trips.id))
+        .where(and(eq(visits.isArchived, false), eq(trips.isArchived, false), sql`${places.location} IS NOT NULL`));
       const routes = await db.execute(sql`
         SELECT l.trip_id, l.id AS leg_id, rv.id AS route_version_id,
           ST_AsGeoJSON(rv.geometry) AS geojson, rv.confidence
         FROM legs l JOIN route_versions rv ON rv.id = l.selected_route_version_id
-        WHERE l.is_current = true AND rv.geometry IS NOT NULL
+          JOIN trips t ON t.id = l.trip_id
+        WHERE l.is_current = true AND t.is_archived = false AND rv.geometry IS NOT NULL
       `);
       return {
         type: 'FeatureCollection',
