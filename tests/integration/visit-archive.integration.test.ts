@@ -3,7 +3,11 @@ import { asc, eq } from 'drizzle-orm';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from '../../packages/database/src/visit-repository';
+import {
+  appendVisitToDay,
+  archiveVisitFromDay,
+  reorderVisitsInDay,
+} from '../../packages/database/src/visit-repository';
 import { legs, tripDays, trips, visits } from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
@@ -40,10 +44,14 @@ describe('Atomic visit archival', () => {
   it('archives a Visit and its current legs while preserving history', async () => {
     const { trip, day, ids } = await fixture();
     const result = await archiveVisitFromDay(db, {
-      tripId: trip.id, tripDayId: day.id, visitId: ids[1],
+      tripId: trip.id,
+      tripDayId: day.id,
+      visitId: ids[1],
     });
     expect(result).toEqual({
-      archivedVisitId: ids[1], archivedLegCount: 2, newLegCount: 1,
+      archivedVisitId: ids[1],
+      archivedLegCount: 2,
+      newLegCount: 1,
     });
     const all = await db.select().from(legs).where(eq(legs.tripId, trip.id));
     expect(all.filter((leg) => !leg.isCurrent)).toHaveLength(2);
@@ -54,9 +62,12 @@ describe('Atomic visit archival', () => {
     expect(activeLegs[0].transportMode).toBeNull();
     const rows = await db.select().from(visits).where(eq(visits.tripDayId, day.id));
     expect(rows.find((visit) => visit.id === ids[1])?.isArchived).toBe(true);
-    const active = rows.filter((visit) => !visit.isArchived).sort((a,b) => a.position - b.position);
+    const active = rows
+      .filter((visit) => !visit.isArchived)
+      .sort((a, b) => a.position - b.position);
     expect(active.map((visit) => [visit.id, visit.position])).toEqual([
-      [ids[0], 0], [ids[2], 1],
+      [ids[0], 0],
+      [ids[2], 1],
     ]);
   });
 
@@ -66,12 +77,14 @@ describe('Atomic visit archival', () => {
     const added = await appendVisitToDay(db, { tripId: trip.id, tripDayId: day.id });
     expect(added.visit.position).toBe(2);
     const result = await reorderVisitsInDay(db, {
-      tripId: trip.id, tripDayId: day.id,
+      tripId: trip.id,
+      tripDayId: day.id,
       orderedVisitIds: [added.visit.id, ids[0], ids[2]],
     });
     expect(result.changed).toBe(true);
     const active = (await db.select().from(visits).where(eq(visits.tripDayId, day.id)))
-      .filter((visit) => !visit.isArchived).sort((a,b) => a.position - b.position);
+      .filter((visit) => !visit.isArchived)
+      .sort((a, b) => a.position - b.position);
     expect(active.map((visit) => visit.id)).toEqual([added.visit.id, ids[0], ids[2]]);
     const [archived] = await db.select().from(visits).where(eq(visits.id, ids[1]));
     expect(archived.isArchived).toBe(true);
@@ -79,26 +92,48 @@ describe('Atomic visit archival', () => {
 
   it('rejects archiving another-day visit and leaves the timeline unchanged', async () => {
     const { trip, day, ids } = await fixture();
-    const [otherDay] = await db.insert(tripDays).values({ tripId: trip.id, position: 1 }).returning();
+    const [otherDay] = await db
+      .insert(tripDays)
+      .values({ tripId: trip.id, position: 1 })
+      .returning();
     const other = await appendVisitToDay(db, { tripId: trip.id, tripDayId: otherDay.id });
-    await expect(archiveVisitFromDay(db, {
-      tripId: trip.id, tripDayId: day.id, visitId: other.visit.id,
-    })).rejects.toThrow('Visit not found');
-    const active = await db.select().from(visits)
-      .where(eq(visits.tripDayId, day.id)).orderBy(asc(visits.position));
+    await expect(
+      archiveVisitFromDay(db, {
+        tripId: trip.id,
+        tripDayId: day.id,
+        visitId: other.visit.id,
+      }),
+    ).rejects.toThrow('Visit not found');
+    const active = await db
+      .select()
+      .from(visits)
+      .where(eq(visits.tripDayId, day.id))
+      .orderBy(asc(visits.position));
     expect(active.map((visit) => visit.id)).toEqual(ids);
   });
 
   it('rejects removing a Visit involved in current explicit cross-day link', async () => {
     const { trip, day, ids } = await fixture();
-    const [otherDay] = await db.insert(tripDays).values({ tripId: trip.id, position: 1 }).returning();
-    const [outside] = await db.insert(visits).values({
-      tripId: trip.id, tripDayId: otherDay.id, position: 0,
-    }).returning();
+    const [otherDay] = await db
+      .insert(tripDays)
+      .values({ tripId: trip.id, position: 1 })
+      .returning();
+    const [outside] = await db
+      .insert(visits)
+      .values({
+        tripId: trip.id,
+        tripDayId: otherDay.id,
+        position: 0,
+      })
+      .returning();
     await db.insert(legs).values({ tripId: trip.id, fromVisitId: ids[2], toVisitId: outside.id });
-    await expect(archiveVisitFromDay(db, {
-      tripId: trip.id, tripDayId: day.id, visitId: ids[1],
-    })).rejects.toThrow('current cross-day connection');
+    await expect(
+      archiveVisitFromDay(db, {
+        tripId: trip.id,
+        tripDayId: day.id,
+        visitId: ids[1],
+      }),
+    ).rejects.toThrow('current cross-day connection');
     const [unchanged] = await db.select().from(visits).where(eq(visits.id, ids[1]));
     expect(unchanged.isArchived).toBe(false);
   });
