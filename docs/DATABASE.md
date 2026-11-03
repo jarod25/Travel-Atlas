@@ -92,7 +92,19 @@ a version. Missing geometry causes transaction rollback. The accepted version
 is recorded on the proposal with a same-Leg foreign key; no confidence is
 silently upgraded to Confirmed.
 
-## Next increment
+## Additional provenance and metadata tables
 
-Add evidence links, independent visit time observations, settings, media
-metadata and external Place references with focused constraints/tests.
+`evidence` holds source references without embedding private file bytes.
+`evidence_links` uses typed nullable FKs and a database check requiring exactly
+one target, plus a field path and independent confidence. `visit_time_observations`
+stores independent local dates/times and source references without upgrading
+Leg precision. `media_assets` stores file metadata and nullable Point locations,
+not file contents. `place_external_refs` tracks provider IDs while retaining
+Place reuse. `app_settings` stores JSON preferences. No unknown value is
+silently converted into confirmed geometry, time or presence.
+
+## Remaining Lot 2 validation
+
+Run migration, constraint and transaction tests against PostgreSQL/PostGIS,
+then review repository-wide consistency and record any limitations before
+advancing to Lot 3.
