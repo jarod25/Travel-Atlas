@@ -2,7 +2,7 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository';
-import { legs, places, routeVersions, tripDays, trips, visits } from './schema';
+import { legs, places, tripDays, trips, visits } from './schema';
 
 export interface AtlasStore {
   listTrips(): Promise<unknown>;
