@@ -9,3 +9,4 @@ export {
   visits,
 } from './schema';
 export { appendVisitToDay, reorderVisitsInDay } from './visit-repository';
+export { acceptRouteProposal } from './route-review';
