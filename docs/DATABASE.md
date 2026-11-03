@@ -58,7 +58,18 @@ within one transaction. Temporary positions prevent transient uniqueness errors.
 An unchanged order is a no-op. A current cross-day link blocks reordering
 rather than being silently detached.
 
+## Versioned route geometry
+
+`route_versions` stores independently versioned optional LineString/MultiLineString
+PostGIS geometries (SRID 4326), nullable geodesic distances in meters, provenance,
+confidence and provider. A composite FK guarantees same-trip Leg ownership;
+version numbers are unique per Leg. A GiST index supports spatial queries.
+The geometry is supplied through parameterized SQL using `ST_GeomFromGeoJSON`
+and retrieved through `ST_AsGeoJSON`, not by assuming PostGIS binary data is
+GeoJSON. Geometry may be NULL rather than fabricating a straight line.
+
+`route_waypoints` contains ordered version-specific Point geometries.
+
 ## Next increment
 
-Persist route geometry versions and waypoint constraints with PostGIS SRID 4326
-and route-to-Leg integrity checks.
+Add persistent route proposals and guarded version selection.
