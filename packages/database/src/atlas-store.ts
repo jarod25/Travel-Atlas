@@ -223,9 +223,11 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           name: places.name,
           location: places.location,
           locationConfidence: places.locationConfidence,
+          localDate: tripDays.localDate,
         })
         .from(visits)
         .innerJoin(places, eq(visits.placeId, places.id))
+        .innerJoin(tripDays, eq(visits.tripDayId, tripDays.id))
         .innerJoin(trips, eq(visits.tripId, trips.id))
         .where(
           and(
@@ -236,8 +238,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         );
       const routes = await db.execute(sql`
         SELECT l.trip_id, l.id AS leg_id, rv.id AS route_version_id,
+          l.transport_mode, l.movement_confidence,
+          td.local_date::text AS local_date,
           ST_AsGeoJSON(rv.geometry) AS geojson, rv.confidence
         FROM legs l JOIN route_versions rv ON rv.id = l.selected_route_version_id
+          JOIN visits v ON v.id = l.from_visit_id
+          JOIN trip_days td ON td.id = v.trip_day_id
           JOIN trips t ON t.id = l.trip_id
         WHERE l.is_current = true AND t.is_archived = false AND rv.geometry IS NOT NULL
       `);
@@ -253,6 +259,8 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
               placeId: point.placeId,
               name: point.name,
               kind: 'visit',
+              localDate: point.localDate,
+              locationConfidence: point.locationConfidence,
             },
           })),
           ...routes.map((route) => ({
@@ -263,6 +271,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
               legId: route.leg_id,
               routeVersionId: route.route_version_id,
               confidence: route.confidence,
+              transportMode: route.transport_mode,
+              movementConfidence: route.movement_confidence,
+              localDate: route.local_date,
               kind: 'route',
             },
           })),
