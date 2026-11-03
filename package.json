@@ -1,0 +1,33 @@
+{
+  "name": "travel-atlas",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @travel-atlas/api --filter @travel-atlas/web dev",
+    "dev:api": "pnpm --filter @travel-atlas/api dev",
+    "dev:web": "pnpm --filter @travel-atlas/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^24.10.0",
+    "drizzle-orm": "^0.44.5",
+    "eslint": "^9.39.0",
+    "globals": "^16.5.0",
+    "postgres": "^3.4.7",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.0.8"
+  }
+}

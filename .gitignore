@@ -1,0 +1,37 @@
+# Package managers and build artifacts
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+coverage/
+**/coverage/
+.vite/
+*.tsbuildinfo
+*.log
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Personal geographic data / local exports
+data/
+backups/
+exports/
+*.gpx
+*.kml
+*.kmz
+*.geojson
+*.gpkg
+*.sqlite
+*.db
+*.dump
+*.backup
+
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
