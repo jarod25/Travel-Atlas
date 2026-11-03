@@ -8,26 +8,61 @@ interface MapSource {
   setData: (data: FeatureCollection) => void;
 }
 interface MapInstance {
-  on: (event: string, callback: () => void) => void;
+  on: (event: string, layerOrCallback: string | (() => void),
+    callback?: (event: { features?: Array<{ properties?: Record<string, unknown> }> }) => void) => void;
   addSource: (name: string, options: unknown) => void;
   addLayer: (options: unknown) => void;
   getSource: (name: string) => MapSource | undefined;
   remove: () => void;
   resize: () => void;
+  setPaintProperty: (layer: string, property: string, value: unknown) => void;
 }
 type MapLibrary = { Map: new (options: unknown) => MapInstance };
 
-export function MapCanvas({ data, label }: { data: FeatureCollection; label: string }) {
+export type ColorMode = 'trip' | 'transport';
+const palette = ['#23617c', '#c16a3b', '#3c8765', '#71549b', '#bc5d75', '#b38b36'];
+
+function colorExpression(data: FeatureCollection, colorBy: ColorMode): unknown {
+  if (colorBy === 'transport') {
+    return ['match', ['get', 'transportMode'],
+      'walking', '#31937b', 'hiking', '#498c3d', 'cycling', '#5a9f5f',
+      'train', '#b56536', 'metro', '#9a5b9f', 'tram', '#b58a39',
+      'car', '#52739a', 'bus', '#6a8a9c', 'taxi', '#aa7a61',
+      'plane', '#507fc2', 'boat', '#498fa2', 'ferry', '#5399a8', '#657889'];
+  }
+  const trips = [...new Set(data.features.map((feature) => feature.properties.tripId)
+    .filter((id): id is string => typeof id === 'string'))].sort();
+  if (trips.length === 0) return '#23617c';
+  return ['match', ['get', 'tripId'],
+    ...trips.flatMap((id, index) => [id, palette[index % palette.length]]),
+    '#657889'];
+}
+
+export function MapCanvas({
+  data, label, colorBy = 'trip', onSelect,
+}: {
+  data: FeatureCollection;
+  label: string;
+  colorBy?: ColorMode;
+  onSelect?: (properties: Record<string, string | null>) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const map = useRef<MapInstance | null>(null);
   const latest = useRef<FeatureCollection>(data);
+  const latestColor = useRef<ColorMode>(colorBy);
+  const latestSelect = useRef(onSelect);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     latest.current = data;
+    latestColor.current = colorBy;
+    latestSelect.current = onSelect;
     map.current?.getSource('atlas')?.setData(data);
-  }, [data]);
+    if (map.current && loaded) {
+      map.current.setPaintProperty('atlas-routes', 'line-color', colorExpression(data, colorBy));
+    }
+  }, [data, colorBy, onSelect, loaded]);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -55,7 +90,8 @@ export function MapCanvas({ data, label }: { data: FeatureCollection; label: str
             type: 'line',
             source: 'atlas',
             filter: ['==', ['get', 'kind'], 'route'],
-            paint: { 'line-color': '#cf6e35', 'line-width': 4, 'line-opacity': 0.85 },
+            paint: { 'line-color': colorExpression(latest.current, latestColor.current),
+              'line-width': 4, 'line-opacity': 0.85 },
           });
           created.addLayer({
             id: 'atlas-visits',
@@ -69,6 +105,17 @@ export function MapCanvas({ data, label }: { data: FeatureCollection; label: str
               'circle-stroke-color': '#ffffff',
             },
           });
+          function registerSelection(layer: string) {
+            created?.on('click', layer, (event) => {
+              const raw = event.features?.[0]?.properties;
+              if (!raw || !latestSelect.current) return;
+              const properties = Object.fromEntries(Object.entries(raw).map(([key, value]) =>
+                [key, value === null || value === undefined ? null : String(value)]));
+              latestSelect.current(properties);
+            });
+          }
+          registerSelection('atlas-visits');
+          registerSelection('atlas-routes');
           setLoaded(true);
         });
       } catch {
@@ -95,7 +142,7 @@ export function MapCanvas({ data, label }: { data: FeatureCollection; label: str
       )}
       {data.features.length === 0 && (
         <p className="map-empty">
-          No confirmed geographic coordinates or saved routes to display yet.
+          No recorded geographic coordinates or saved routes to display yet.
         </p>
       )}
     </section>
