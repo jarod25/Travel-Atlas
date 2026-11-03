@@ -82,7 +82,17 @@ review timestamps, and keeps proposals across sessions.
 version of the very same Leg. Selecting an estimated route never automatically
 confirms the Leg's historical geometry.
 
+## Transactional route acceptance
+
+`acceptRouteProposal()` locks the parent Leg, verifies the stored endpoint and
+transport snapshot, and atomically creates an Estimated RouteVersion, selects
+it and marks the proposal Accepted. Concurrent accepts are idempotent. When
+inputs have changed, it persistently Invalidates the proposal without creating
+a version. Missing geometry causes transaction rollback. The accepted version
+is recorded on the proposal with a same-Leg foreign key; no confidence is
+silently upgraded to Confirmed.
+
 ## Next increment
 
-Implement transactional proposal acceptance, stale-input invalidation and
-idempotence, then evidence and remaining supporting tables.
+Add evidence links, independent visit time observations, settings, media
+metadata and external Place references with focused constraints/tests.

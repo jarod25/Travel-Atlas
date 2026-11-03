@@ -266,6 +266,7 @@ export const routeProposals = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     tripId: uuid('trip_id').notNull(),
     legId: uuid('leg_id').notNull(),
+    acceptedRouteVersionId: uuid('accepted_route_version_id'),
     fromVisitId: uuid('from_visit_id').notNull(),
     toVisitId: uuid('to_visit_id').notNull(),
     transportMode: text('transport_mode', { enum: transportValues }),
