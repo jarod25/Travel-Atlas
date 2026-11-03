@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --no-frozen-lockfile
-      - run: pnpm format:check
+      - run: pnpm format && git diff --exit-code
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
