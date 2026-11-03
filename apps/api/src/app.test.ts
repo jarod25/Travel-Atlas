@@ -21,6 +21,10 @@ function stub(): AtlasStore {
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
     reorderVisits: async () => ({ changed: true }),
     archiveVisit: async () => ({ archivedVisitId: visitId }),
+    updateLeg: async (id: string, revision: number) => ({
+      status: 'conflict',
+      currentRevision: revision + 1,
+    }),
     getExplore: async () => ({ type: 'FeatureCollection', features: [] }),
     close: async () => undefined,
   };
@@ -97,6 +101,29 @@ describe('Trip API', () => {
         payload: { visitIds: [visitId, visitId] },
       });
       expect(invalid.statusCode).toBe(400);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('Leg optimistic locking API', () => {
+  it('requires If-Match and rejects conflicting revisions', async () => {
+    const app = buildApp(stub());
+    try {
+      const url = `/api/v1/legs/${visitId}`;
+      expect(
+        (await app.inject({ method: 'PATCH', url, payload: { transportMode: 'train' } }))
+          .statusCode,
+      ).toBe(428);
+      const conflict = await app.inject({
+        method: 'PATCH',
+        url,
+        payload: { transportMode: 'train' },
+        headers: { 'if-match': '"1"' },
+      });
+      expect(conflict.statusCode).toBe(412);
+      expect(conflict.headers.etag).toBe('"2"');
     } finally {
       await app.close();
     }

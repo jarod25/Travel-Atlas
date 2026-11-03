@@ -3,6 +3,8 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository';
 import { legs, places, tripDays, trips, visits } from './schema';
+import { updateLegWithRevision } from './leg-repository';
+import type { LegChanges, LegUpdateResult } from './leg-repository';
 
 export interface AtlasStore {
   listTrips(): Promise<unknown>;
@@ -17,6 +19,7 @@ export interface AtlasStore {
   reorderVisits(tripId: string, dayId: string, visitIds: string[]): Promise<unknown>;
   archiveVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
   getExplore(): Promise<unknown>;
+  updateLeg(id: string, revision: number, changes: LegChanges): Promise<LegUpdateResult>;
   close(): Promise<void>;
 }
 
@@ -86,6 +89,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           fromVisitId: legs.fromVisitId,
           toVisitId: legs.toVisitId,
           transportMode: legs.transportMode,
+          revision: legs.revision,
           movementConfidence: legs.movementConfidence,
           transportConfidence: legs.transportConfidence,
           geometryConfidence: legs.geometryConfidence,
@@ -127,6 +131,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         tripDayId: dayId,
         visitId,
       }),
+    updateLeg: (id, revision, changes) => updateLegWithRevision(db, id, revision, changes),
     getExplore: async () => {
       const points = await db
         .select({
