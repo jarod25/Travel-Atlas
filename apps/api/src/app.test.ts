@@ -10,11 +10,12 @@ function stub(): AtlasStore {
   return {
     listTrips: async () => [{ id: tripId, title: 'Synthetic' }],
     createTrip: async (title) => ({ id: tripId, title }),
-    getTrip: async (id) => id === tripId ? { id, title: 'Synthetic' } : null,
-    listDays: async (id) => id === tripId ? [] : null,
-    createDay: async (id, localDate) => id === tripId ? { id: dayId, tripId: id, localDate } : null,
-    getTimeline: async (id, day) => id === tripId && day === dayId
-      ? { visits: [], legs: [] } : null,
+    getTrip: async (id) => (id === tripId ? { id, title: 'Synthetic' } : null),
+    listDays: async (id) => (id === tripId ? [] : null),
+    createDay: async (id, localDate) =>
+      id === tripId ? { id: dayId, tripId: id, localDate } : null,
+    getTimeline: async (id, day) =>
+      id === tripId && day === dayId ? { visits: [], legs: [] } : null,
     listPlaces: async () => [],
     createPlace: async (name) => ({ id: 'new-place', name }),
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
@@ -38,40 +39,66 @@ describe('Trip API', () => {
   it('creates a trip with a validated title', async () => {
     const app = buildApp(stub());
     try {
-      const valid = await app.inject({ method: 'POST', url: '/api/v1/trips',
-        payload: { title: ' Synthetic ' } });
+      const valid = await app.inject({
+        method: 'POST',
+        url: '/api/v1/trips',
+        payload: { title: ' Synthetic ' },
+      });
       expect(valid.statusCode).toBe(201);
       expect(valid.json().title).toBe('Synthetic');
-      const bad = await app.inject({ method: 'POST', url: '/api/v1/trips',
-        payload: { title: '' } });
+      const bad = await app.inject({
+        method: 'POST',
+        url: '/api/v1/trips',
+        payload: { title: '' },
+      });
       expect(bad.statusCode).toBe(400);
-    } finally { await app.close(); }
+    } finally {
+      await app.close();
+    }
   });
   it('validates UUIDs, lists days and preserves absent dates', async () => {
     const app = buildApp(stub());
     try {
-      expect((await app.inject({ method: 'GET', url: '/api/v1/trips/not-a-uuid' }))
-        .statusCode).toBe(400);
-      const response = await app.inject({ method: 'POST',
-        url: `/api/v1/trips/${tripId}/days`, payload: {} });
+      expect(
+        (await app.inject({ method: 'GET', url: '/api/v1/trips/not-a-uuid' })).statusCode,
+      ).toBe(400);
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/trips/${tripId}/days`,
+        payload: {},
+      });
       expect(response.statusCode).toBe(201);
       expect(response.json().localDate).toBeNull();
-      expect((await app.inject({ method: 'GET',
-        url: '/api/v1/trips/44444444-4444-4444-8444-444444444444/days' }))
-        .statusCode).toBe(404);
-    } finally { await app.close(); }
+      expect(
+        (
+          await app.inject({
+            method: 'GET',
+            url: '/api/v1/trips/44444444-4444-4444-8444-444444444444/days',
+          })
+        ).statusCode,
+      ).toBe(404);
+    } finally {
+      await app.close();
+    }
   });
   it('creates visits through one store operation, never in the UI', async () => {
     const app = buildApp(stub());
     try {
-      const response = await app.inject({ method: 'POST',
-        url: `/api/v1/trips/${tripId}/days/${dayId}/visits`, payload: {} });
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/trips/${tripId}/days/${dayId}/visits`,
+        payload: {},
+      });
       expect(response.statusCode).toBe(201);
       expect(response.json().draftLeg).toBeNull();
-      const invalid = await app.inject({ method: 'POST',
+      const invalid = await app.inject({
+        method: 'POST',
         url: `/api/v1/trips/${tripId}/days/${dayId}/reorder`,
-        payload: { visitIds: [visitId, visitId] } });
+        payload: { visitIds: [visitId, visitId] },
+      });
       expect(invalid.statusCode).toBe(400);
-    } finally { await app.close(); }
+    } finally {
+      await app.close();
+    }
   });
 });
