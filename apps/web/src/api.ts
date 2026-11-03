@@ -91,7 +91,7 @@ export const atlasApi = {
   ) =>
     request<LegRow>(`/legs/${id}`, {
       method: 'PATCH',
-      headers: { 'If-Match': `\"${revision}\"` },
+      headers: { 'If-Match': `"${revision}"` },
       body: JSON.stringify(changes),
     }),
   explore: () => request<FeatureCollection>('/explore/geojson'),
