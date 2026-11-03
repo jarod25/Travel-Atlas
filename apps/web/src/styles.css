@@ -567,10 +567,36 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   font-size: 0.78rem;
 }
 
-.edit-day-date { display: flex; gap: 10px; align-items: center; background: #f7fafb; padding: 9px 14px; font-size: .83rem; }
-.edit-day-date input { min-width: 140px; }
-.time-details { grid-column: 1 / -1; border-top: 1px solid #dae7ed; padding-top: 8px; }
-.time-details summary { font-weight: 700; cursor: pointer; }
-.time-details[open] { display: grid; gap: 8px; }
-.time-details input, .time-details select { width: 100%; }
-@media (max-width: 900px) { .edit-day-date { flex-wrap: wrap; } }
+.edit-day-date {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #f7fafb;
+  padding: 9px 14px;
+  font-size: 0.83rem;
+}
+.edit-day-date input {
+  min-width: 140px;
+}
+.time-details {
+  grid-column: 1 / -1;
+  border-top: 1px solid #dae7ed;
+  padding-top: 8px;
+}
+.time-details summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+.time-details[open] {
+  display: grid;
+  gap: 8px;
+}
+.time-details input,
+.time-details select {
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .edit-day-date {
+    flex-wrap: wrap;
+  }
+}

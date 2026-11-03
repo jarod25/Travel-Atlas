@@ -34,8 +34,10 @@ describe('Day calendar revision', () => {
     if (updated.status !== 'updated') throw new Error('Unexpected day update');
     expect(updated.day.localDate).toBe('2026-09-12');
     expect(updated.day.revision).toBe(2);
-    expect(await store.editDay(trip.id, day.id, 1, null))
-      .toEqual({ status: 'conflict', currentRevision: 2 });
+    expect(await store.editDay(trip.id, day.id, 1, null)).toEqual({
+      status: 'conflict',
+      currentRevision: 2,
+    });
     const cleared = await store.editDay(trip.id, day.id, 2, null);
     expect(cleared.status).toBe('updated');
     if (cleared.status === 'updated') expect(cleared.day.localDate).toBeNull();

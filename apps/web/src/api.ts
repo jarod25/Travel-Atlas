@@ -92,7 +92,8 @@ export const atlasApi = {
     post<TripDay>(`/trips/${id}/days`, { localDate }),
   editDay: (id: string, day: string, revision: number, localDate: string | null) =>
     request<TripDay>(`/trips/${id}/days/${day}`, {
-      method: 'PATCH', headers: { 'If-Match': `"${revision}"` },
+      method: 'PATCH',
+      headers: { 'If-Match': `"${revision}"` },
       body: JSON.stringify({ localDate }),
     }),
   timeline: (id: string, day: string) => request<Timeline>(`/trips/${id}/days/${day}/timeline`),

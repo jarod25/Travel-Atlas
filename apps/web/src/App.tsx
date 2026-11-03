@@ -40,8 +40,12 @@ export function App() {
   const [departureTime, setDepartureTime] = useState('');
   const [arrivalDate, setArrivalDate] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
-  const [departureCertainty, setDepartureCertainty] = useState<'confirmed' | 'estimated' | 'unknown'>('unknown');
-  const [arrivalCertainty, setArrivalCertainty] = useState<'confirmed' | 'estimated' | 'unknown'>('unknown');
+  const [departureCertainty, setDepartureCertainty] = useState<
+    'confirmed' | 'estimated' | 'unknown'
+  >('unknown');
+  const [arrivalCertainty, setArrivalCertainty] = useState<'confirmed' | 'estimated' | 'unknown'>(
+    'unknown',
+  );
   const [legConfidence, setLegConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>(
     'unknown',
   );
@@ -494,9 +498,15 @@ export function App() {
               {selectedDay && (
                 <div className="edit-day-date">
                   <label htmlFor="edit-day-date">Selected day's date (optional)</label>
-                  <input id="edit-day-date" type="date" value={editedDayDate}
-                    onChange={(e) => setEditedDayDate(e.target.value)} />
-                  <button disabled={pending} onClick={() => void updateDayDate()}>Save date</button>
+                  <input
+                    id="edit-day-date"
+                    type="date"
+                    value={editedDayDate}
+                    onChange={(e) => setEditedDayDate(e.target.value)}
+                  />
+                  <button disabled={pending} onClick={() => void updateDayDate()}>
+                    Save date
+                  </button>
                 </div>
               )}
               <div className="mobile-tabs" aria-label="Editor panels">
@@ -725,27 +735,57 @@ export function App() {
                         <summary>Departure and arrival times (optional)</summary>
                         <p className="muted">Local calendar values; no timezone is inferred.</p>
                         <label htmlFor="departure-date">Departure date</label>
-                        <input id="departure-date" type="date" value={departureDate}
-                          onChange={(e) => setDepartureDate(e.target.value)} />
+                        <input
+                          id="departure-date"
+                          type="date"
+                          value={departureDate}
+                          onChange={(e) => setDepartureDate(e.target.value)}
+                        />
                         <label htmlFor="departure-time">Departure clock time</label>
-                        <input id="departure-time" type="time" value={departureTime}
-                          onChange={(e) => setDepartureTime(e.target.value)} />
+                        <input
+                          id="departure-time"
+                          type="time"
+                          value={departureTime}
+                          onChange={(e) => setDepartureTime(e.target.value)}
+                        />
                         <label htmlFor="departure-confidence">Departure certainty</label>
-                        <select id="departure-confidence" value={departureCertainty}
-                          onChange={(e) => setDepartureCertainty(e.target.value as 'confirmed' | 'estimated' | 'unknown')}>
+                        <select
+                          id="departure-confidence"
+                          value={departureCertainty}
+                          onChange={(e) =>
+                            setDepartureCertainty(
+                              e.target.value as 'confirmed' | 'estimated' | 'unknown',
+                            )
+                          }
+                        >
                           <option value="unknown">Unknown</option>
                           <option value="estimated">Estimated</option>
                           <option value="confirmed">Confirmed</option>
                         </select>
                         <label htmlFor="arrival-date">Arrival date</label>
-                        <input id="arrival-date" type="date" value={arrivalDate}
-                          onChange={(e) => setArrivalDate(e.target.value)} />
+                        <input
+                          id="arrival-date"
+                          type="date"
+                          value={arrivalDate}
+                          onChange={(e) => setArrivalDate(e.target.value)}
+                        />
                         <label htmlFor="arrival-time">Arrival clock time</label>
-                        <input id="arrival-time" type="time" value={arrivalTime}
-                          onChange={(e) => setArrivalTime(e.target.value)} />
+                        <input
+                          id="arrival-time"
+                          type="time"
+                          value={arrivalTime}
+                          onChange={(e) => setArrivalTime(e.target.value)}
+                        />
                         <label htmlFor="arrival-confidence">Arrival certainty</label>
-                        <select id="arrival-confidence" value={arrivalCertainty}
-                          onChange={(e) => setArrivalCertainty(e.target.value as 'confirmed' | 'estimated' | 'unknown')}>
+                        <select
+                          id="arrival-confidence"
+                          value={arrivalCertainty}
+                          onChange={(e) =>
+                            setArrivalCertainty(
+                              e.target.value as 'confirmed' | 'estimated' | 'unknown',
+                            )
+                          }
+                        >
                           <option value="unknown">Unknown</option>
                           <option value="estimated">Estimated</option>
                           <option value="confirmed">Confirmed</option>

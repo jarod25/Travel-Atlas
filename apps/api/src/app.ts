@@ -141,30 +141,44 @@ export function buildApp(store?: AtlasStore) {
     Params: { tripId: string; dayId: string };
     Headers: { 'if-match'?: string };
     Body: { localDate: string | null };
-  }>('/api/v1/trips/:tripId/days/:dayId', {
-    schema: {
-      params: dayParams,
-      body: { type: 'object', required: ['localDate'], additionalProperties: false,
-        properties: { localDate: { anyOf: [
-          { type: 'string', format: 'date' }, { type: 'null' },
-        ] } } },
+  }>(
+    '/api/v1/trips/:tripId/days/:dayId',
+    {
+      schema: {
+        params: dayParams,
+        body: {
+          type: 'object',
+          required: ['localDate'],
+          additionalProperties: false,
+          properties: {
+            localDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+          },
+        },
+      },
     },
-  }, async (request, reply) => {
-    const header = request.headers['if-match'];
-    if (!header) return reply.code(428).send({ error: 'If-Match is required' });
-    const match = /^"([1-9][0-9]*)"$/.exec(header);
-    if (!match) return reply.code(400).send({ error: 'Invalid revision' });
-    const result = await store.editDay(request.params.tripId, request.params.dayId,
-      Number(match[1]), request.body.localDate);
-    if (result.status === 'not_found') {
-      return reply.code(404).send({ error: 'Day not found' });
-    }
-    if (result.status === 'conflict') {
-      return reply.code(412).header('ETag', `"${result.currentRevision}"`)
-        .send({ error: 'Day was modified; reload before editing' });
-    }
-    return reply.header('ETag', `"${result.day.revision}"`).send(result.day);
-  });
+    async (request, reply) => {
+      const header = request.headers['if-match'];
+      if (!header) return reply.code(428).send({ error: 'If-Match is required' });
+      const match = /^"([1-9][0-9]*)"$/.exec(header);
+      if (!match) return reply.code(400).send({ error: 'Invalid revision' });
+      const result = await store.editDay(
+        request.params.tripId,
+        request.params.dayId,
+        Number(match[1]),
+        request.body.localDate,
+      );
+      if (result.status === 'not_found') {
+        return reply.code(404).send({ error: 'Day not found' });
+      }
+      if (result.status === 'conflict') {
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Day was modified; reload before editing' });
+      }
+      return reply.header('ETag', `"${result.day.revision}"`).send(result.day);
+    },
+  );
   app.get<{ Params: { tripId: string; dayId: string } }>(
     '/api/v1/trips/:tripId/days/:dayId/timeline',
     { schema: { params: dayParams } },

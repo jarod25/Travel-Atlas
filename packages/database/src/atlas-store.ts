@@ -19,9 +19,16 @@ export interface AtlasStore {
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
-  editDay(tripId: string, dayId: string, revision: number, localDate: string | null):
-    Promise<{ status: 'not_found' } | { status: 'conflict'; currentRevision: number } |
-      { status: 'updated'; day: typeof tripDays.$inferSelect }>;
+  editDay(
+    tripId: string,
+    dayId: string,
+    revision: number,
+    localDate: string | null,
+  ): Promise<
+    | { status: 'not_found' }
+    | { status: 'conflict'; currentRevision: number }
+    | { status: 'updated'; day: typeof tripDays.$inferSelect }
+  >;
   getTimeline(tripId: string, dayId: string): Promise<unknown | null>;
   listPlaces(search: string): Promise<unknown[]>;
   createPlace(name: string): Promise<unknown>;
@@ -86,18 +93,27 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           .returning();
         return day;
       }),
-    editDay: (tripId, dayId, revision, localDate) => db.transaction(async (tx) => {
-      const [day] = await tx.select().from(tripDays)
-        .where(and(eq(tripDays.tripId, tripId), eq(tripDays.id, dayId))).for('update');
-      if (!day) return { status: 'not_found' as const };
-      if (day.revision !== revision) {
-        return { status: 'conflict' as const, currentRevision: day.revision };
-      }
-      const [saved] = await tx.update(tripDays).set({
-        localDate, revision: revision + 1,
-      }).where(eq(tripDays.id, dayId)).returning();
-      return { status: 'updated' as const, day: saved };
-    }),
+    editDay: (tripId, dayId, revision, localDate) =>
+      db.transaction(async (tx) => {
+        const [day] = await tx
+          .select()
+          .from(tripDays)
+          .where(and(eq(tripDays.tripId, tripId), eq(tripDays.id, dayId)))
+          .for('update');
+        if (!day) return { status: 'not_found' as const };
+        if (day.revision !== revision) {
+          return { status: 'conflict' as const, currentRevision: day.revision };
+        }
+        const [saved] = await tx
+          .update(tripDays)
+          .set({
+            localDate,
+            revision: revision + 1,
+          })
+          .where(eq(tripDays.id, dayId))
+          .returning();
+        return { status: 'updated' as const, day: saved };
+      }),
     getTimeline: async (tripId, dayId) => {
       const [day] = await db
         .select()
