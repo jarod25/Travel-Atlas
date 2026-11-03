@@ -2,13 +2,22 @@ import { and, eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { legs, routeProposals } from './schema';
 
-export type LegChanges = Partial<Pick<
-  typeof legs.$inferInsert,
-  'transportMode' | 'movementConfidence' | 'transportConfidence' |
-  'departureLocalDate' | 'departureLocalTime' | 'departureTimeZone' |
-  'departureTimeConfidence' | 'arrivalLocalDate' | 'arrivalLocalTime' |
-  'arrivalTimeZone' | 'arrivalTimeConfidence'
->>;
+export type LegChanges = Partial<
+  Pick<
+    typeof legs.$inferInsert,
+    | 'transportMode'
+    | 'movementConfidence'
+    | 'transportConfidence'
+    | 'departureLocalDate'
+    | 'departureLocalTime'
+    | 'departureTimeZone'
+    | 'departureTimeConfidence'
+    | 'arrivalLocalDate'
+    | 'arrivalLocalTime'
+    | 'arrivalTimeZone'
+    | 'arrivalTimeConfidence'
+  >
+>;
 
 export type LegUpdateResult =
   | { status: 'not_found' }
@@ -28,25 +37,35 @@ export async function updateLegWithRevision(
     if (current.revision !== expectedRevision) {
       return { status: 'conflict', currentRevision: current.revision };
     }
-    const modeChanged = changes.transportMode !== undefined &&
-      changes.transportMode !== current.transportMode;
-    const [updated] = await tx.update(legs).set({
-      ...changes,
-      revision: current.revision + 1,
-      ...(modeChanged ? {
-        selectedRouteVersionId: null,
-        geometryConfidence: 'unknown' as const,
-      } : {}),
-    }).where(eq(legs.id, id)).returning();
+    const modeChanged =
+      changes.transportMode !== undefined && changes.transportMode !== current.transportMode;
+    const [updated] = await tx
+      .update(legs)
+      .set({
+        ...changes,
+        revision: current.revision + 1,
+        ...(modeChanged
+          ? {
+              selectedRouteVersionId: null,
+              geometryConfidence: 'unknown' as const,
+            }
+          : {}),
+      })
+      .where(eq(legs.id, id))
+      .returning();
 
     if (modeChanged) {
-      await tx.update(routeProposals).set({
-        status: 'invalidated', reviewedAt: new Date(),
-      }).where(
-        // Database SQL checks pending; update only pending candidates.
-        // Accepted routes remain in history, but selection is cleared.
-        and(eq(routeProposals.legId, id), eq(routeProposals.status, 'pending')),
-      );
+      await tx
+        .update(routeProposals)
+        .set({
+          status: 'invalidated',
+          reviewedAt: new Date(),
+        })
+        .where(
+          // Database SQL checks pending; update only pending candidates.
+          // Accepted routes remain in history, but selection is cleared.
+          and(eq(routeProposals.legId, id), eq(routeProposals.status, 'pending')),
+        );
     }
     return { status: 'updated', leg: updated };
   });

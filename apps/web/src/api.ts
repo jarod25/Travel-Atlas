@@ -81,9 +81,18 @@ export const atlasApi = {
     post<unknown>(`/trips/${id}/days/${day}/reorder`, { visitIds }),
   archiveVisit: (id: string, day: string, visit: string) =>
     request<unknown>(`/trips/${id}/days/${day}/visits/${visit}`, { method: 'DELETE' }),
-  updateLeg: (id: string, revision: number, changes: { transportMode?: string | null,
-    transportConfidence?: 'confirmed' | 'estimated' | 'unknown' }) =>
-    request<LegRow>(`/legs/${id}`, { method: 'PATCH', headers: { 'If-Match': `\"${revision}\"` },
-      body: JSON.stringify(changes) }),
+  updateLeg: (
+    id: string,
+    revision: number,
+    changes: {
+      transportMode?: string | null;
+      transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
+    },
+  ) =>
+    request<LegRow>(`/legs/${id}`, {
+      method: 'PATCH',
+      headers: { 'If-Match': `\"${revision}\"` },
+      body: JSON.stringify(changes),
+    }),
   explore: () => request<FeatureCollection>('/explore/geojson'),
 };

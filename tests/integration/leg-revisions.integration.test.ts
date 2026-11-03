@@ -4,14 +4,23 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { eq } from 'drizzle-orm';
 import { updateLegWithRevision } from '../../packages/database/src/leg-repository';
-import { legs, routeProposals, routeVersions, tripDays, trips, visits } from '../../packages/database/src/schema';
+import {
+  legs,
+  routeProposals,
+  routeVersions,
+  tripDays,
+  trips,
+  visits,
+} from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL must point to a disposable integration-test database.');
 const client = postgres(url, { max: 4 });
 const db = drizzle(client);
 const tripIds: string[] = [];
-beforeAll(async () => { await migrate(db, { migrationsFolder: 'packages/database/drizzle' }); });
+beforeAll(async () => {
+  await migrate(db, { migrationsFolder: 'packages/database/drizzle' });
+});
 afterAll(async () => {
   for (const id of tripIds) {
     await db.delete(routeProposals).where(eq(routeProposals.tripId, id));
@@ -26,14 +35,22 @@ async function fixture() {
   const [trip] = await db.insert(trips).values({ title: 'Synthetic revision test' }).returning();
   tripIds.push(trip.id);
   const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
-  const points = await db.insert(visits).values([
-    { tripId: trip.id, tripDayId: day.id, position: 0 },
-    { tripId: trip.id, tripDayId: day.id, position: 1 },
-  ]).returning();
-  const [leg] = await db.insert(legs).values({
-    tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-    transportMode: 'train',
-  }).returning();
+  const points = await db
+    .insert(visits)
+    .values([
+      { tripId: trip.id, tripDayId: day.id, position: 0 },
+      { tripId: trip.id, tripDayId: day.id, position: 1 },
+    ])
+    .returning();
+  const [leg] = await db
+    .insert(legs)
+    .values({
+      tripId: trip.id,
+      fromVisitId: points[0].id,
+      toVisitId: points[1].id,
+      transportMode: 'train',
+    })
+    .returning();
   return { trip, leg, points };
 }
 describe('Leg revision transactions', () => {
@@ -53,24 +70,43 @@ describe('Leg revision transactions', () => {
 
   it('invalidates pending proposals on transport change but retains accepted history', async () => {
     const { trip, leg, points } = await fixture();
-    const [version] = await db.insert(routeVersions).values({
-      tripId: trip.id, legId: leg.id, versionNumber: 1, confidence: 'estimated',
-    }).returning();
-    await db.update(legs).set({ selectedRouteVersionId: version.id,
-      geometryConfidence: 'estimated' }).where(eq(legs.id, leg.id));
-    const [candidate] = await db.insert(routeProposals).values({
-      tripId: trip.id, legId: leg.id,
-      fromVisitId: points[0].id, toVisitId: points[1].id, transportMode: 'train',
-    }).returning();
+    const [version] = await db
+      .insert(routeVersions)
+      .values({
+        tripId: trip.id,
+        legId: leg.id,
+        versionNumber: 1,
+        confidence: 'estimated',
+      })
+      .returning();
+    await db
+      .update(legs)
+      .set({ selectedRouteVersionId: version.id, geometryConfidence: 'estimated' })
+      .where(eq(legs.id, leg.id));
+    const [candidate] = await db
+      .insert(routeProposals)
+      .values({
+        tripId: trip.id,
+        legId: leg.id,
+        fromVisitId: points[0].id,
+        toVisitId: points[1].id,
+        transportMode: 'train',
+      })
+      .returning();
     const result = await updateLegWithRevision(db, leg.id, 1, { transportMode: 'bus' });
     expect(result.status).toBe('updated');
     const [saved] = await db.select().from(legs).where(eq(legs.id, leg.id));
     expect(saved.transportMode).toBe('bus');
     expect(saved.geometryConfidence).toBe('unknown');
     expect(saved.selectedRouteVersionId).toBeNull();
-    const [invalid] = await db.select().from(routeProposals).where(eq(routeProposals.id, candidate.id));
+    const [invalid] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, candidate.id));
     expect(invalid.status).toBe('invalidated');
     expect(invalid.reviewedAt).not.toBeNull();
-    expect(await db.select().from(routeVersions).where(eq(routeVersions.legId, leg.id))).toHaveLength(1);
+    expect(
+      await db.select().from(routeVersions).where(eq(routeVersions.legId, leg.id)),
+    ).toHaveLength(1);
   });
 });

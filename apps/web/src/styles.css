@@ -487,10 +487,36 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   }
 }
 
-.leg-pill { background: transparent !important; color: #647c89 !important; border: 0 !important; border-left: 2px dotted #b3c7d0 !important; border-radius: 0 !important; display: block; text-align: left; width: calc(100% - 24px); }
-.leg-pill:hover { background: #f3f9fc !important; }
-.leg-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; align-items: center; }
-.leg-details > div { grid-column: 1 / -1; }
-.leg-details label { font-size: .8rem; }
-.leg-details select { padding: 10px; border: 1px solid #d5e1e5; border-radius: 8px; }
-.leg-details > button { grid-column: 1 / -1; }
+.leg-pill {
+  background: transparent !important;
+  color: #647c89 !important;
+  border: 0 !important;
+  border-left: 2px dotted #b3c7d0 !important;
+  border-radius: 0 !important;
+  display: block;
+  text-align: left;
+  width: calc(100% - 24px);
+}
+.leg-pill:hover {
+  background: #f3f9fc !important;
+}
+.leg-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  align-items: center;
+}
+.leg-details > div {
+  grid-column: 1 / -1;
+}
+.leg-details label {
+  font-size: 0.8rem;
+}
+.leg-details select {
+  padding: 10px;
+  border: 1px solid #d5e1e5;
+  border-radius: 8px;
+}
+.leg-details > button {
+  grid-column: 1 / -1;
+}

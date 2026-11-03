@@ -29,7 +29,9 @@ export function App() {
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
   const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
   const [legMode, setLegMode] = useState('');
-  const [legConfidence, setLegConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>('unknown');
+  const [legConfidence, setLegConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>(
+    'unknown',
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -409,16 +411,27 @@ export function App() {
                           const incoming = timeline.legs.find((leg) => leg.toVisitId === visit.id);
                           return (
                             <div key={visit.id}>
-                              {index > 0 && <button className="leg-pill" disabled={!incoming} onClick={() => {
-                      setSelectedLegId(incoming?.id ?? null);
-                      setSelectedVisitId(null);
-                    }}>{describeLeg(incoming)} · Edit</button>}
+                              {index > 0 && (
+                                <button
+                                  className="leg-pill"
+                                  disabled={!incoming}
+                                  onClick={() => {
+                                    setSelectedLegId(incoming?.id ?? null);
+                                    setSelectedVisitId(null);
+                                  }}
+                                >
+                                  {describeLeg(incoming)} · Edit
+                                </button>
+                              )}
                               <div
                                 className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
                               >
                                 <button
                                   className="visit-title"
-                                  onClick={() => { setSelectedVisitId(visit.id); setSelectedLegId(null); }}
+                                  onClick={() => {
+                                    setSelectedVisitId(visit.id);
+                                    setSelectedLegId(null);
+                                  }}
                                 >
                                   <span className="visit-number">{index + 1}</span>
                                   <strong>{visit.placeName ?? 'Unknown place'}</strong>
@@ -502,28 +515,56 @@ export function App() {
                 <section className={`editor-map mobile-${mobilePanel}`}>
                   <MapCanvas data={displayed} label="Map of selected trip and its saved geometry" />
                   {selectedLeg && (
-                <div className="details-panel leg-details">
-                  <div><span className="eyebrow">Leg details</span>
-                    <h2>Travel between visits</h2>
-                    <p>Transport and geometry have independent certainty.</p>
-                  </div>
-                  <label htmlFor="leg-transport">Transport mode</label>
-                  <select id="leg-transport" value={legMode} onChange={(e) => setLegMode(e.target.value)}>
-                    <option value="">Unknown</option>
-                    {['walking','hiking','cycling','train','metro','tram','car','bus','taxi','plane','boat','ferry'].map((mode) =>
-                      <option key={mode} value={mode}>{mode}</option>)}
-                  </select>
-                  <label htmlFor="leg-confidence">Transport certainty</label>
-                  <select id="leg-confidence" value={legConfidence}
-                    onChange={(e) => setLegConfidence(e.target.value as 'confirmed' | 'estimated' | 'unknown')}>
-                    <option value="unknown">Unknown</option>
-                    <option value="estimated">Estimated</option>
-                    <option value="confirmed">Confirmed</option>
-                  </select>
-                  <button disabled={pending} onClick={() => void saveLeg()}>Save Leg</button>
-                </div>
-              )}
-              {selectedVisit && (
+                    <div className="details-panel leg-details">
+                      <div>
+                        <span className="eyebrow">Leg details</span>
+                        <h2>Travel between visits</h2>
+                        <p>Transport and geometry have independent certainty.</p>
+                      </div>
+                      <label htmlFor="leg-transport">Transport mode</label>
+                      <select
+                        id="leg-transport"
+                        value={legMode}
+                        onChange={(e) => setLegMode(e.target.value)}
+                      >
+                        <option value="">Unknown</option>
+                        {[
+                          'walking',
+                          'hiking',
+                          'cycling',
+                          'train',
+                          'metro',
+                          'tram',
+                          'car',
+                          'bus',
+                          'taxi',
+                          'plane',
+                          'boat',
+                          'ferry',
+                        ].map((mode) => (
+                          <option key={mode} value={mode}>
+                            {mode}
+                          </option>
+                        ))}
+                      </select>
+                      <label htmlFor="leg-confidence">Transport certainty</label>
+                      <select
+                        id="leg-confidence"
+                        value={legConfidence}
+                        onChange={(e) =>
+                          setLegConfidence(e.target.value as 'confirmed' | 'estimated' | 'unknown')
+                        }
+                      >
+                        <option value="unknown">Unknown</option>
+                        <option value="estimated">Estimated</option>
+                        <option value="confirmed">Confirmed</option>
+                      </select>
+                      <button disabled={pending} onClick={() => void saveLeg()}>
+                        Save Leg
+                      </button>
+                    </div>
+                  )}
+                  {selectedVisit && (
                     <div className="details-panel">
                       <div>
                         <span className="eyebrow">Details</span>
