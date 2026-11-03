@@ -3,6 +3,8 @@ const prefix = '/api/v1';
 export interface Trip {
   id: string;
   title: string;
+  revision: number;
+  isArchived: boolean;
 }
 export interface TripDay {
   id: string;
@@ -67,7 +69,13 @@ function post<T>(path: string, payload: unknown) {
   return request<T>(path, { method: 'POST', body: JSON.stringify(payload) });
 }
 export const atlasApi = {
-  trips: () => request<Trip[]>('/trips'),
+  trips: (includeArchived = false) => request<Trip[]>(`/trips?includeArchived=${includeArchived}`),
+  updateTrip: (id: string, revision: number, changes: { title?: string; isArchived?: boolean }) =>
+    request<Trip>(`/trips/${id}`, {
+      method: 'PATCH',
+      headers: { 'If-Match': `"${revision}"` },
+      body: JSON.stringify(changes),
+    }),
   trip: (id: string) => request<Trip>(`/trips/${encodeURIComponent(id)}`),
   addTrip: (title: string) => post<Trip>('/trips', { title }),
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),

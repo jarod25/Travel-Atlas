@@ -10,6 +10,10 @@ function stub(): AtlasStore {
   return {
     listTrips: async () => [{ id: tripId, title: 'Synthetic' }],
     createTrip: async (title: string) => ({ id: tripId, title }),
+    editTrip: async (id: string, revision: number) => ({
+      status: 'conflict',
+      currentRevision: revision + 1,
+    }),
     getTrip: async (id: string) => (id === tripId ? { id, title: 'Synthetic' } : null),
     listDays: async (id: string) => (id === tripId ? [] : null),
     createDay: async (id: string, localDate: string | null) =>
@@ -162,6 +166,38 @@ describe('Place coordinate API', () => {
             method: 'PATCH',
             url,
             payload: { coordinates: null, confidence: 'confirmed' },
+          })
+        ).statusCode,
+      ).toBe(400);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('Trip metadata API', () => {
+  it('enforces optimistic revision and rejects blank titles', async () => {
+    const app = buildApp(stub());
+    const url = `/api/v1/trips/${tripId}`;
+    try {
+      expect(
+        (await app.inject({ method: 'PATCH', url, payload: { title: 'Changed' } })).statusCode,
+      ).toBe(428);
+      const conflict = await app.inject({
+        method: 'PATCH',
+        url,
+        headers: { 'if-match': '"1"' },
+        payload: { isArchived: true },
+      });
+      expect(conflict.statusCode).toBe(412);
+      expect(conflict.headers.etag).toBe('"2"');
+      expect(
+        (
+          await app.inject({
+            method: 'PATCH',
+            url,
+            headers: { 'if-match': '"1"' },
+            payload: { title: ' ' },
           })
         ).statusCode,
       ).toBe(400);

@@ -71,6 +71,13 @@
       "when": 1793754000000,
       "tag": "0009_place_coordinate_certainty",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793760000000,
+      "tag": "0010_trip_management",
+      "breakpoints": true
     }
   ]
 }

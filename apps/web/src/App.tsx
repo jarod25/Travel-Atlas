@@ -21,6 +21,7 @@ export function App() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [features, setFeatures] = useState<FeatureCollection>(emptyFeatures);
   const [tripName, setTripName] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
   const [newPlace, setNewPlace] = useState('');
@@ -53,7 +54,7 @@ export function App() {
   }, []);
 
   const loadTrips = useCallback(async () => {
-    const data = await atlasApi.trips();
+    const data = await atlasApi.trips(true);
     setTrips(data);
   }, []);
   const loadDays = useCallback(async (id: string) => {
@@ -134,6 +135,8 @@ export function App() {
   }, [placeQuery]);
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
+  const activeTrips = trips.filter((trip) => !trip.isArchived);
+  const displayedTrips = showArchived ? trips : activeTrips;
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = timeline?.legs.find((leg) => leg.id === selectedLegId);
   useEffect(() => {
@@ -158,6 +161,28 @@ export function App() {
       setView('editor');
     });
   }
+  async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean }) {
+    await execute(async () => {
+      await atlasApi.updateTrip(trip.id, trip.revision, changes);
+      await Promise.all([loadTrips(), loadExplore()]);
+      if (changes.isArchived && tripId === trip.id) {
+        setTripId(null);
+        setView('trips');
+      }
+    });
+  }
+
+  async function renameTrip(trip: Trip) {
+    const title = window.prompt('Rename trip', trip.title)?.trim();
+    if (title && title !== trip.title) await changeTrip(trip, { title });
+  }
+
+  async function toggleTripArchive(trip: Trip) {
+    if (!trip.isArchived && !window.confirm('Archive this trip? Its history will remain saved.'))
+      return;
+    await changeTrip(trip, { isArchived: !trip.isArchived });
+  }
+
   async function addDay() {
     if (!tripId) return;
     await execute(async () => {
@@ -285,7 +310,7 @@ export function App() {
               onChange={(e) => setTripId(e.target.value || null)}
             >
               <option value="">All trips</option>
-              {trips.map((trip) => (
+              {activeTrips.map((trip) => (
                 <option value={trip.id} key={trip.id}>
                   {trip.title}
                 </option>
@@ -336,23 +361,41 @@ export function App() {
               Create trip
             </button>
           </form>
+          <label className="archived-toggle">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />
+            Show archived trips
+          </label>
           <div className="trip-grid">
-            {trips.map((trip) => (
-              <button
-                key={trip.id}
-                className="trip-card"
-                onClick={() => {
-                  setTripId(trip.id);
-                  setView('editor');
-                }}
-              >
-                <span>TRIP</span>
+            {displayedTrips.map((trip) => (
+              <div className="trip-card" key={trip.id}>
+                <span>{trip.isArchived ? 'ARCHIVED TRIP' : 'TRIP'}</span>
                 <strong>{trip.title}</strong>
-                <small>Open timeline →</small>
-              </button>
+                <div className="trip-actions">
+                  {!trip.isArchived && (
+                    <button
+                      onClick={() => {
+                        setTripId(trip.id);
+                        setView('editor');
+                      }}
+                    >
+                      Open timeline
+                    </button>
+                  )}
+                  <button onClick={() => void renameTrip(trip)} disabled={pending}>
+                    Rename
+                  </button>
+                  <button onClick={() => void toggleTripArchive(trip)} disabled={pending}>
+                    {trip.isArchived ? 'Restore' : 'Archive'}
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
-          {trips.length === 0 && (
+          {activeTrips.length === 0 && !showArchived && (
             <p className="empty-state">No trips yet. Create your first one above.</p>
           )}
         </main>

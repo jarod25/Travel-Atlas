@@ -24,3 +24,7 @@ revision/If-Match conflict handling, MapLibre editing controls, geographic
 search providers and guided routing. These belong to subsequent increments.
 
 The optional coordinate editor attaches a WGS84 point to the selected reusable Place with explicit location confidence. No coordinates are inferred; edits affect all Visits of that Place.
+
+The Trips page supports rename, soft archive and restore with revision checks.
+Archival preserves all related visits, legs and evidence. Archived trips remain
+available for restoration but are hidden from Explore by default.

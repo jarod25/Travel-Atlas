@@ -41,8 +41,13 @@ export const trips = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     title: text('title').notNull(),
+    isArchived: boolean('is_archived').notNull().default(false),
+    revision: integer('revision').notNull().default(1),
   },
-  (table) => [check('trips_title_nonempty', sql`length(btrim(${table.title})) > 0`)],
+  (table) => [
+    check('trips_title_nonempty', sql`length(btrim(${table.title})) > 0`),
+    check('trips_revision_positive', sql`${table.revision} > 0`),
+  ],
 );
 
 /** A date is a calendar value, not a UTC timestamp. */

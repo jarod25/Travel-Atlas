@@ -22,7 +22,62 @@ export function buildApp(store?: AtlasStore) {
 
   if (!store) return app;
 
-  app.get('/api/v1/trips', async () => store.listTrips());
+  app.get<{ Querystring: { includeArchived?: boolean } }>(
+    '/api/v1/trips',
+    {
+      schema: {
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          properties: { includeArchived: { type: 'boolean' } },
+        },
+      },
+    },
+    async (request) => store.listTrips(request.query.includeArchived ?? false),
+  );
+  app.patch<{
+    Params: { tripId: string };
+    Headers: { 'if-match'?: string };
+    Body: { title?: string; isArchived?: boolean };
+  }>(
+    '/api/v1/trips/:tripId',
+    {
+      schema: {
+        params: idParams,
+        body: {
+          type: 'object',
+          minProperties: 1,
+          additionalProperties: false,
+          properties: { title: nonblank, isArchived: { type: 'boolean' } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const header = request.headers['if-match'];
+      if (!header) return reply.code(428).send({ error: 'If-Match is required' });
+      const match = /^"([1-9][0-9]*)"$/.exec(header);
+      if (!match) return reply.code(400).send({ error: 'Invalid revision' });
+      const title = request.body.title?.trim();
+      if (title !== undefined && !title) {
+        return reply.code(400).send({ error: 'Invalid trip title' });
+      }
+      const result = await store.editTrip(request.params.tripId, Number(match[1]), {
+        ...request.body,
+        ...(title === undefined ? {} : { title }),
+      });
+      if (result.status === 'not_found') {
+        return reply.code(404).send({ error: 'Trip not found' });
+      }
+      if (result.status === 'conflict') {
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Trip was modified; reload before editing' });
+      }
+      return reply.header('ETag', `"${result.trip.revision}"`).send(result.trip);
+    },
+  );
+
   app.post<{ Body: { title: string } }>(
     '/api/v1/trips',
     {
