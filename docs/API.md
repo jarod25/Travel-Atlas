@@ -24,3 +24,7 @@ PATCH /api/v1/legs/:legId accepts validated evidence-sensitive fields and requir
 412 and the latest ETag. The Drizzle repository takes a Leg row lock and updates
 one revision atomically. Changing transport invalidates pending proposals,
 clears selected route geometry, and preserves historical versions.
+
+## Place coordinates
+
+PATCH /api/v1/places/:placeId saves an explicit [longitude, latitude] point with independent confidence. API and PostgreSQL validate bounds. Coordinates remain null until supplied. One Place can be reused across Visits.
