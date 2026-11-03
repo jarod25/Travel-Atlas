@@ -23,6 +23,7 @@ export function App() {
   const [tripName, setTripName] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
+  const [editedDayDate, setEditedDayDate] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
   const [newPlace, setNewPlace] = useState('');
   const [placeLon, setPlaceLon] = useState('');
@@ -35,6 +36,16 @@ export function App() {
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
   const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
   const [legMode, setLegMode] = useState('');
+  const [departureDate, setDepartureDate] = useState('');
+  const [departureTime, setDepartureTime] = useState('');
+  const [arrivalDate, setArrivalDate] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('');
+  const [departureCertainty, setDepartureCertainty] = useState<
+    'confirmed' | 'estimated' | 'unknown'
+  >('unknown');
+  const [arrivalCertainty, setArrivalCertainty] = useState<'confirmed' | 'estimated' | 'unknown'>(
+    'unknown',
+  );
   const [legConfidence, setLegConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>(
     'unknown',
   );
@@ -135,13 +146,23 @@ export function App() {
   }, [placeQuery]);
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
+  const selectedDay = days.find((day) => day.id === dayId);
   const activeTrips = trips.filter((trip) => !trip.isArchived);
   const displayedTrips = showArchived ? trips : activeTrips;
+  useEffect(() => {
+    setEditedDayDate(selectedDay?.localDate ?? '');
+  }, [selectedDay?.id, selectedDay?.revision]);
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = timeline?.legs.find((leg) => leg.id === selectedLegId);
   useEffect(() => {
     if (!selectedLeg) return;
     setLegMode(selectedLeg.transportMode ?? '');
+    setDepartureDate(selectedLeg.departureLocalDate ?? '');
+    setDepartureTime(selectedLeg.departureLocalTime?.slice(0, 5) ?? '');
+    setArrivalDate(selectedLeg.arrivalLocalDate ?? '');
+    setArrivalTime(selectedLeg.arrivalLocalTime?.slice(0, 5) ?? '');
+    setDepartureCertainty(selectedLeg.departureTimeConfidence);
+    setArrivalCertainty(selectedLeg.arrivalTimeConfidence);
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
   }, [selectedLeg?.id, selectedLeg?.revision]);
 
@@ -192,6 +213,14 @@ export function App() {
       setDayDate('');
     });
   }
+  async function updateDayDate() {
+    if (!tripId || !dayId || !selectedDay) return;
+    await execute(async () => {
+      await atlasApi.editDay(tripId, dayId, selectedDay.revision, editedDayDate || null);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId)]);
+    });
+  }
+
   async function addPlace() {
     const name = newPlace.trim();
     if (!name) return;
@@ -247,10 +276,20 @@ export function App() {
   }
   async function saveLeg() {
     if (!selectedLeg || !tripId || !dayId) return;
+    if ((!departureDate && departureTime) || (!arrivalDate && arrivalTime)) {
+      setError('A clock time needs a date; leave both empty if unknown.');
+      return;
+    }
     await execute(async () => {
       await atlasApi.updateLeg(selectedLeg.id, selectedLeg.revision, {
         transportMode: legMode || null,
         transportConfidence: legConfidence,
+        departureLocalDate: departureDate || null,
+        departureLocalTime: departureDate && departureTime ? departureTime + ':00' : null,
+        departureTimeConfidence: departureCertainty,
+        arrivalLocalDate: arrivalDate || null,
+        arrivalLocalTime: arrivalDate && arrivalTime ? arrivalTime + ':00' : null,
+        arrivalTimeConfidence: arrivalCertainty,
       });
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
     });
@@ -456,6 +495,20 @@ export function App() {
                   </button>
                 </form>
               </div>
+              {selectedDay && (
+                <div className="edit-day-date">
+                  <label htmlFor="edit-day-date">Selected day's date (optional)</label>
+                  <input
+                    id="edit-day-date"
+                    type="date"
+                    value={editedDayDate}
+                    onChange={(e) => setEditedDayDate(e.target.value)}
+                  />
+                  <button disabled={pending} onClick={() => void updateDayDate()}>
+                    Save date
+                  </button>
+                </div>
+              )}
               <div className="mobile-tabs" aria-label="Editor panels">
                 <button
                   className={mobilePanel === 'timeline' ? 'selected' : ''}
@@ -678,6 +731,66 @@ export function App() {
                         <option value="estimated">Estimated</option>
                         <option value="confirmed">Confirmed</option>
                       </select>
+                      <details className="time-details">
+                        <summary>Departure and arrival times (optional)</summary>
+                        <p className="muted">Local calendar values; no timezone is inferred.</p>
+                        <label htmlFor="departure-date">Departure date</label>
+                        <input
+                          id="departure-date"
+                          type="date"
+                          value={departureDate}
+                          onChange={(e) => setDepartureDate(e.target.value)}
+                        />
+                        <label htmlFor="departure-time">Departure clock time</label>
+                        <input
+                          id="departure-time"
+                          type="time"
+                          value={departureTime}
+                          onChange={(e) => setDepartureTime(e.target.value)}
+                        />
+                        <label htmlFor="departure-confidence">Departure certainty</label>
+                        <select
+                          id="departure-confidence"
+                          value={departureCertainty}
+                          onChange={(e) =>
+                            setDepartureCertainty(
+                              e.target.value as 'confirmed' | 'estimated' | 'unknown',
+                            )
+                          }
+                        >
+                          <option value="unknown">Unknown</option>
+                          <option value="estimated">Estimated</option>
+                          <option value="confirmed">Confirmed</option>
+                        </select>
+                        <label htmlFor="arrival-date">Arrival date</label>
+                        <input
+                          id="arrival-date"
+                          type="date"
+                          value={arrivalDate}
+                          onChange={(e) => setArrivalDate(e.target.value)}
+                        />
+                        <label htmlFor="arrival-time">Arrival clock time</label>
+                        <input
+                          id="arrival-time"
+                          type="time"
+                          value={arrivalTime}
+                          onChange={(e) => setArrivalTime(e.target.value)}
+                        />
+                        <label htmlFor="arrival-confidence">Arrival certainty</label>
+                        <select
+                          id="arrival-confidence"
+                          value={arrivalCertainty}
+                          onChange={(e) =>
+                            setArrivalCertainty(
+                              e.target.value as 'confirmed' | 'estimated' | 'unknown',
+                            )
+                          }
+                        >
+                          <option value="unknown">Unknown</option>
+                          <option value="estimated">Estimated</option>
+                          <option value="confirmed">Confirmed</option>
+                        </select>
+                      </details>
                       <button disabled={pending} onClick={() => void saveLeg()}>
                         Save Leg
                       </button>

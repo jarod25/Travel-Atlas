@@ -11,6 +11,7 @@ export interface TripDay {
   tripId: string;
   localDate: string | null;
   position: number;
+  revision: number;
 }
 export interface Place {
   id: string;
@@ -31,6 +32,14 @@ export interface LegRow {
   toVisitId: string;
   transportMode: string | null;
   revision: number;
+  departureLocalDate: string | null;
+  departureLocalTime: string | null;
+  departureTimeZone: string | null;
+  departureTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
+  arrivalLocalDate: string | null;
+  arrivalLocalTime: string | null;
+  arrivalTimeZone: string | null;
+  arrivalTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   movementConfidence: string;
   transportConfidence: string;
   geometryConfidence: string;
@@ -81,6 +90,12 @@ export const atlasApi = {
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),
   addDay: (id: string, localDate: string | null) =>
     post<TripDay>(`/trips/${id}/days`, { localDate }),
+  editDay: (id: string, day: string, revision: number, localDate: string | null) =>
+    request<TripDay>(`/trips/${id}/days/${day}`, {
+      method: 'PATCH',
+      headers: { 'If-Match': `"${revision}"` },
+      body: JSON.stringify({ localDate }),
+    }),
   timeline: (id: string, day: string) => request<Timeline>(`/trips/${id}/days/${day}/timeline`),
   places: (search: string) => request<Place[]>(`/places?q=${encodeURIComponent(search)}`),
   addPlace: (name: string) => post<Place>('/places', { name }),
@@ -105,6 +120,12 @@ export const atlasApi = {
     changes: {
       transportMode?: string | null;
       transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      departureLocalDate?: string | null;
+      departureLocalTime?: string | null;
+      departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      arrivalLocalDate?: string | null;
+      arrivalLocalTime?: string | null;
+      arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
     },
   ) =>
     request<LegRow>(`/legs/${id}`, {

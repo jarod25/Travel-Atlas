@@ -28,3 +28,7 @@ The optional coordinate editor attaches a WGS84 point to the selected reusable P
 The Trips page supports rename, soft archive and restore with revision checks.
 Archival preserves all related visits, legs and evidence. Archived trips remain
 available for restoration but are hidden from Explore by default.
+
+Trip Editor can correct a day date with a revision check and edit departure/arrival
+local dates, clock times and independent certainty on each Leg. The advanced
+clock-time controls are collapsed by default and never infer a timezone.
