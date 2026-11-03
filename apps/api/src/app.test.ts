@@ -9,15 +9,15 @@ const visitId = '33333333-3333-4333-8333-333333333333';
 function stub(): AtlasStore {
   return {
     listTrips: async () => [{ id: tripId, title: 'Synthetic' }],
-    createTrip: async (title) => ({ id: tripId, title }),
-    getTrip: async (id) => (id === tripId ? { id, title: 'Synthetic' } : null),
-    listDays: async (id) => (id === tripId ? [] : null),
-    createDay: async (id, localDate) =>
+    createTrip: async (title: string) => ({ id: tripId, title }),
+    getTrip: async (id: string) => (id === tripId ? { id, title: 'Synthetic' } : null),
+    listDays: async (id: string) => (id === tripId ? [] : null),
+    createDay: async (id: string, localDate: string | null) =>
       id === tripId ? { id: dayId, tripId: id, localDate } : null,
-    getTimeline: async (id, day) =>
+    getTimeline: async (id: string, day: string) =>
       id === tripId && day === dayId ? { visits: [], legs: [] } : null,
     listPlaces: async () => [],
-    createPlace: async (name) => ({ id: 'new-place', name }),
+    createPlace: async (name: string) => ({ id: 'new-place', name }),
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
     reorderVisits: async () => ({ changed: true }),
     archiveVisit: async () => ({ archivedVisitId: visitId }),
