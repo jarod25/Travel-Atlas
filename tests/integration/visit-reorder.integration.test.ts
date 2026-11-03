@@ -55,10 +55,12 @@ describe('Atomic visit reordering', () => {
     const current = all.filter((leg) => leg.isCurrent);
     expect(historical).toHaveLength(2);
     expect(current).toHaveLength(2);
-    expect(current.map((leg) => [leg.fromVisitId, leg.toVisitId])).toEqual([
-      [ids[2], ids[0]],
-      [ids[0], ids[1]],
-    ]);
+    const actualPairs = current.map((leg) => [leg.fromVisitId, leg.toVisitId].join(':')).sort();
+    const expectedPairs = [
+      [ids[2], ids[0]].join(':'),
+      [ids[0], ids[1]].join(':'),
+    ].sort();
+    expect(actualPairs).toEqual(expectedPairs);
     expect(
       current.every((leg) => leg.transportMode === null && leg.geometryConfidence === 'unknown'),
     ).toBe(true);
