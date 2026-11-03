@@ -15,6 +15,16 @@ export type TransportMode =
   | 'boat'
   | 'ferry';
 
+export {
+  planDraftLegsForDay,
+  type DraftLegPlan,
+  type LegProvenance,
+  type Place,
+  type Trip,
+  type TripDay,
+  type Visit,
+} from './travel';
+
 /**
  * A computed path is a proposal, even if it visually follows the network.
  * Confirming a historical journey requires separate supporting evidence.
