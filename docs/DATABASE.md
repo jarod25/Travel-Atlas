@@ -108,3 +108,12 @@ silently converted into confirmed geometry, time or presence.
 Run migration, constraint and transaction tests against PostgreSQL/PostGIS,
 then review repository-wide consistency and record any limitations before
 advancing to Lot 3.
+
+## Visit archival and timeline integrity
+
+`archiveVisitFromDay()` marks a Visit archived rather than deleting evidence
+or breaking historical Leg foreign keys. It archives the day's existing current
+links and replaces surviving adjacency with fresh unknown drafts atomically.
+An active cross-day connection blocks the operation. The per-day unique
+position index applies only to active Visits; archived rows retain their
+historical positions. Append and reorder operations ignore archived Visits.

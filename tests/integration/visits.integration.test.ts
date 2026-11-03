@@ -116,8 +116,8 @@ describe('Persisted ordered visits', () => {
 
   it('supports independent ordering within different days', async () => {
     const indexes = await db.execute(sql`
-      SELECT constraint_name FROM information_schema.table_constraints
-      WHERE table_name = 'visits' AND constraint_name = 'visits_day_position_unique'
+      SELECT indexname FROM pg_indexes
+      WHERE tablename = 'visits' AND indexname = 'visits_active_day_position_unique'
     `);
     expect(indexes).toHaveLength(1);
   });
