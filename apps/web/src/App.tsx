@@ -27,6 +27,9 @@ export function App() {
   const [placeId, setPlaceId] = useState('');
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('timeline');
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+  const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
+  const [legMode, setLegMode] = useState('');
+  const [legConfidence, setLegConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>('unknown');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,6 +128,13 @@ export function App() {
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
+  const selectedLeg = timeline?.legs.find((leg) => leg.id === selectedLegId);
+  useEffect(() => {
+    if (!selectedLeg) return;
+    setLegMode(selectedLeg.transportMode ?? '');
+    setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
+  }, [selectedLeg?.id, selectedLeg?.revision]);
+
   const displayed = useMemo(
     () => visibleFeatures(features, view === 'explore' ? tripId : tripId),
     [features, tripId, view],
@@ -178,6 +188,17 @@ export function App() {
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
     });
   }
+  async function saveLeg() {
+    if (!selectedLeg || !tripId || !dayId) return;
+    await execute(async () => {
+      await atlasApi.updateLeg(selectedLeg.id, selectedLeg.revision, {
+        transportMode: legMode || null,
+        transportConfidence: legConfidence,
+      });
+      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+    });
+  }
+
   async function archiveVisit(visit: VisitRow) {
     if (!tripId || !dayId) return;
     if (!window.confirm('Archive this visit? Historical legs will be preserved.')) return;
@@ -388,13 +409,16 @@ export function App() {
                           const incoming = timeline.legs.find((leg) => leg.toVisitId === visit.id);
                           return (
                             <div key={visit.id}>
-                              {index > 0 && <div className="leg-pill">{describeLeg(incoming)}</div>}
+                              {index > 0 && <button className="leg-pill" disabled={!incoming} onClick={() => {
+                      setSelectedLegId(incoming?.id ?? null);
+                      setSelectedVisitId(null);
+                    }}>{describeLeg(incoming)} · Edit</button>}
                               <div
                                 className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
                               >
                                 <button
                                   className="visit-title"
-                                  onClick={() => setSelectedVisitId(visit.id)}
+                                  onClick={() => { setSelectedVisitId(visit.id); setSelectedLegId(null); }}
                                 >
                                   <span className="visit-number">{index + 1}</span>
                                   <strong>{visit.placeName ?? 'Unknown place'}</strong>
@@ -477,7 +501,29 @@ export function App() {
                 </aside>
                 <section className={`editor-map mobile-${mobilePanel}`}>
                   <MapCanvas data={displayed} label="Map of selected trip and its saved geometry" />
-                  {selectedVisit && (
+                  {selectedLeg && (
+                <div className="details-panel leg-details">
+                  <div><span className="eyebrow">Leg details</span>
+                    <h2>Travel between visits</h2>
+                    <p>Transport and geometry have independent certainty.</p>
+                  </div>
+                  <label htmlFor="leg-transport">Transport mode</label>
+                  <select id="leg-transport" value={legMode} onChange={(e) => setLegMode(e.target.value)}>
+                    <option value="">Unknown</option>
+                    {['walking','hiking','cycling','train','metro','tram','car','bus','taxi','plane','boat','ferry'].map((mode) =>
+                      <option key={mode} value={mode}>{mode}</option>)}
+                  </select>
+                  <label htmlFor="leg-confidence">Transport certainty</label>
+                  <select id="leg-confidence" value={legConfidence}
+                    onChange={(e) => setLegConfidence(e.target.value as 'confirmed' | 'estimated' | 'unknown')}>
+                    <option value="unknown">Unknown</option>
+                    <option value="estimated">Estimated</option>
+                    <option value="confirmed">Confirmed</option>
+                  </select>
+                  <button disabled={pending} onClick={() => void saveLeg()}>Save Leg</button>
+                </div>
+              )}
+              {selectedVisit && (
                     <div className="details-panel">
                       <div>
                         <span className="eyebrow">Details</span>
