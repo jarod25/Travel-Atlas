@@ -43,7 +43,14 @@ coordinate bounds and application-level validation remain future work.
 - Local calendar dates, wall-clock times and optional timezone strings are preserved without inferred UTC instants. A clock time requires a date.
 - Cross-day Legs can be represented, but only future application-level explicit Connect Days may create them.
 
+## Atomic append repository
+
+`appendVisitToDay()` locks the parent day, creates the new visit and its intra-day
+draft leg in one database transaction. An empty day yields no Leg; an existing day
+links only to its last Visit. Failed Leg inserts roll back the Visit, and concurrent
+appends are serialized by the parent-day row lock. No inter-day Leg is inferred.
+
 ## Next increment
 
-Persist draft-leg planning atomically when visits are inserted or reordered. Add
-transaction tests that reject implicit cross-day Legs and roll back on failure.
+Provide atomic timeline reordering while preserving historical Legs, rejecting
+implicit cross-day links and retaining independent provenance.
