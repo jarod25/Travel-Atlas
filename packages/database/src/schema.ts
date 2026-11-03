@@ -312,7 +312,9 @@ export const placeExternalRefs = pgTable(
   'place_external_refs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    placeId: uuid('place_id').notNull().references(() => places.id, { onDelete: 'cascade' }),
+    placeId: uuid('place_id')
+      .notNull()
+      .references(() => places.id, { onDelete: 'cascade' }),
     provider: text('provider').notNull(),
     externalId: text('external_id').notNull(),
   },
@@ -328,14 +330,19 @@ export const evidence = pgTable(
   'evidence',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    kind: text('kind', { enum: ['user_statement', 'ticket', 'photo', 'gps_trace', 'document', 'other'] }).notNull(),
+    kind: text('kind', {
+      enum: ['user_statement', 'ticket', 'photo', 'gps_trace', 'document', 'other'],
+    }).notNull(),
     description: text('description'),
     reference: text('reference'),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
     recordedAt: timestamp('recorded_at', { withTimezone: true }),
   },
   (table) => [
-    check('evidence_kind_valid', sql`${table.kind} IN ('user_statement','ticket','photo','gps_trace','document','other')`),
+    check(
+      'evidence_kind_valid',
+      sql`${table.kind} IN ('user_statement','ticket','photo','gps_trace','document','other')`,
+    ),
   ],
 );
 
@@ -354,7 +361,10 @@ export const mediaAssets = pgTable(
   },
   (table) => [
     check('media_assets_filename_nonempty', sql`length(btrim(${table.filename})) > 0`),
-    check('media_assets_time_needs_date', sql`${table.capturedLocalTime} IS NULL OR ${table.capturedLocalDate} IS NOT NULL`),
+    check(
+      'media_assets_time_needs_date',
+      sql`${table.capturedLocalTime} IS NULL OR ${table.capturedLocalDate} IS NOT NULL`,
+    ),
   ],
 );
 
@@ -366,22 +376,34 @@ export const evidenceLinks = pgTable(
   'evidence_links',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    evidenceId: uuid('evidence_id').notNull().references(() => evidence.id, { onDelete: 'cascade' }),
+    evidenceId: uuid('evidence_id')
+      .notNull()
+      .references(() => evidence.id, { onDelete: 'cascade' }),
     tripId: uuid('trip_id').references(() => trips.id, { onDelete: 'cascade' }),
     tripDayId: uuid('trip_day_id').references(() => tripDays.id, { onDelete: 'cascade' }),
     placeId: uuid('place_id').references(() => places.id, { onDelete: 'cascade' }),
     visitId: uuid('visit_id').references(() => visits.id, { onDelete: 'cascade' }),
     legId: uuid('leg_id').references(() => legs.id, { onDelete: 'cascade' }),
-    routeVersionId: uuid('route_version_id').references(() => routeVersions.id, { onDelete: 'cascade' }),
-    routeProposalId: uuid('route_proposal_id').references(() => routeProposals.id, { onDelete: 'cascade' }),
+    routeVersionId: uuid('route_version_id').references(() => routeVersions.id, {
+      onDelete: 'cascade',
+    }),
+    routeProposalId: uuid('route_proposal_id').references(() => routeProposals.id, {
+      onDelete: 'cascade',
+    }),
     mediaAssetId: uuid('media_asset_id').references(() => mediaAssets.id, { onDelete: 'cascade' }),
     fieldName: text('field_name').notNull(),
     confidence: text('confidence', { enum: confidenceValues }).notNull().default('unknown'),
   },
   (table) => [
-    check('evidence_links_exactly_one_target', sql`num_nonnulls(${table.tripId},${table.tripDayId},${table.placeId},${table.visitId},${table.legId},${table.routeVersionId},${table.routeProposalId},${table.mediaAssetId}) = 1`),
+    check(
+      'evidence_links_exactly_one_target',
+      sql`num_nonnulls(${table.tripId},${table.tripDayId},${table.placeId},${table.visitId},${table.legId},${table.routeVersionId},${table.routeProposalId},${table.mediaAssetId}) = 1`,
+    ),
     check('evidence_links_field_nonempty', sql`length(btrim(${table.fieldName})) > 0`),
-    check('evidence_links_confidence_valid', sql`${table.confidence} IN ('confirmed','estimated','unknown')`),
+    check(
+      'evidence_links_confidence_valid',
+      sql`${table.confidence} IN ('confirmed','estimated','unknown')`,
+    ),
     index('evidence_links_evidence_idx').on(table.evidenceId),
   ],
 );
@@ -391,7 +413,9 @@ export const visitTimeObservations = pgTable(
   'visit_time_observations',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    visitId: uuid('visit_id').notNull().references(() => visits.id, { onDelete: 'cascade' }),
+    visitId: uuid('visit_id')
+      .notNull()
+      .references(() => visits.id, { onDelete: 'cascade' }),
     kind: text('kind', { enum: ['arrival', 'departure', 'presence'] }).notNull(),
     localDate: date('local_date', { mode: 'string' }),
     localTime: time('local_time'),
@@ -400,9 +424,18 @@ export const visitTimeObservations = pgTable(
     evidenceId: uuid('evidence_id').references(() => evidence.id, { onDelete: 'set null' }),
   },
   (table) => [
-    check('visit_time_observations_kind_valid', sql`${table.kind} IN ('arrival','departure','presence')`),
-    check('visit_time_observations_confidence_valid', sql`${table.confidence} IN ('confirmed','estimated','unknown')`),
-    check('visit_time_observations_time_needs_date', sql`${table.localTime} IS NULL OR ${table.localDate} IS NOT NULL`),
+    check(
+      'visit_time_observations_kind_valid',
+      sql`${table.kind} IN ('arrival','departure','presence')`,
+    ),
+    check(
+      'visit_time_observations_confidence_valid',
+      sql`${table.confidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'visit_time_observations_time_needs_date',
+      sql`${table.localTime} IS NULL OR ${table.localDate} IS NOT NULL`,
+    ),
   ],
 );
 
@@ -414,7 +447,5 @@ export const appSettings = pgTable(
     value: jsonb('value').$type<unknown>().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    check('app_settings_key_nonempty', sql`length(btrim(${table.key})) > 0`),
-  ],
+  (table) => [check('app_settings_key_nonempty', sql`length(btrim(${table.key})) > 0`)],
 );
