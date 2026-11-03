@@ -8,8 +8,11 @@ interface MapSource {
   setData: (data: FeatureCollection) => void;
 }
 interface MapInstance {
-  on: (event: string, layerOrCallback: string | (() => void),
-    callback?: (event: { features?: Array<{ properties?: Record<string, unknown> }> }) => void) => void;
+  on: (
+    event: string,
+    layerOrCallback: string | (() => void),
+    callback?: (event: { features?: Array<{ properties?: Record<string, unknown> }> }) => void,
+  ) => void;
   addSource: (name: string, options: unknown) => void;
   addLayer: (options: unknown) => void;
   getSource: (name: string) => MapSource | undefined;
@@ -24,22 +27,57 @@ const palette = ['#23617c', '#c16a3b', '#3c8765', '#71549b', '#bc5d75', '#b38b36
 
 function colorExpression(data: FeatureCollection, colorBy: ColorMode): unknown {
   if (colorBy === 'transport') {
-    return ['match', ['get', 'transportMode'],
-      'walking', '#31937b', 'hiking', '#498c3d', 'cycling', '#5a9f5f',
-      'train', '#b56536', 'metro', '#9a5b9f', 'tram', '#b58a39',
-      'car', '#52739a', 'bus', '#6a8a9c', 'taxi', '#aa7a61',
-      'plane', '#507fc2', 'boat', '#498fa2', 'ferry', '#5399a8', '#657889'];
+    return [
+      'match',
+      ['get', 'transportMode'],
+      'walking',
+      '#31937b',
+      'hiking',
+      '#498c3d',
+      'cycling',
+      '#5a9f5f',
+      'train',
+      '#b56536',
+      'metro',
+      '#9a5b9f',
+      'tram',
+      '#b58a39',
+      'car',
+      '#52739a',
+      'bus',
+      '#6a8a9c',
+      'taxi',
+      '#aa7a61',
+      'plane',
+      '#507fc2',
+      'boat',
+      '#498fa2',
+      'ferry',
+      '#5399a8',
+      '#657889',
+    ];
   }
-  const trips = [...new Set(data.features.map((feature) => feature.properties.tripId)
-    .filter((id): id is string => typeof id === 'string'))].sort();
+  const trips = [
+    ...new Set(
+      data.features
+        .map((feature) => feature.properties.tripId)
+        .filter((id): id is string => typeof id === 'string'),
+    ),
+  ].sort();
   if (trips.length === 0) return '#23617c';
-  return ['match', ['get', 'tripId'],
+  return [
+    'match',
+    ['get', 'tripId'],
     ...trips.flatMap((id, index) => [id, palette[index % palette.length]]),
-    '#657889'];
+    '#657889',
+  ];
 }
 
 export function MapCanvas({
-  data, label, colorBy = 'trip', onSelect,
+  data,
+  label,
+  colorBy = 'trip',
+  onSelect,
 }: {
   data: FeatureCollection;
   label: string;
@@ -90,8 +128,11 @@ export function MapCanvas({
             type: 'line',
             source: 'atlas',
             filter: ['==', ['get', 'kind'], 'route'],
-            paint: { 'line-color': colorExpression(latest.current, latestColor.current),
-              'line-width': 4, 'line-opacity': 0.85 },
+            paint: {
+              'line-color': colorExpression(latest.current, latestColor.current),
+              'line-width': 4,
+              'line-opacity': 0.85,
+            },
           });
           created.addLayer({
             id: 'atlas-visits',
@@ -109,8 +150,12 @@ export function MapCanvas({
             created?.on('click', layer, (event) => {
               const raw = event.features?.[0]?.properties;
               if (!raw || !latestSelect.current) return;
-              const properties = Object.fromEntries(Object.entries(raw).map(([key, value]) =>
-                [key, value === null || value === undefined ? null : String(value)]));
+              const properties = Object.fromEntries(
+                Object.entries(raw).map(([key, value]) => [
+                  key,
+                  value === null || value === undefined ? null : String(value),
+                ]),
+              );
               latestSelect.current(properties);
             });
           }

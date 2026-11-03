@@ -613,11 +613,47 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   color: #5a7281;
 }
 
-.explore-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 14px 0; }
-.explore-filters label { display: grid; gap: 6px; color: #526c7d; font-size: .8rem; }
-.explore-filters input, .explore-filters select { min-width: 140px; max-width: 220px; }
-.explore-filters button { margin-bottom: 2px; }
-.map-filter-note { font-size: .8rem; margin: 0 0 10px; }
-.map-selection { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; background: #fff; padding: 16px; margin-top: 12px; border: 1px solid #d7e4e9; border-radius: 12px; }
-.map-selection h2 { margin: 6px 0; }
-.map-selection p { margin: 0; font-size: .82rem; }
+.explore-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 14px 0;
+}
+.explore-filters label {
+  display: grid;
+  gap: 6px;
+  color: #526c7d;
+  font-size: 0.8rem;
+}
+.explore-filters input,
+.explore-filters select {
+  min-width: 140px;
+  max-width: 220px;
+}
+.explore-filters button {
+  margin-bottom: 2px;
+}
+.map-filter-note {
+  font-size: 0.8rem;
+  margin: 0 0 10px;
+}
+.map-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: #fff;
+  padding: 16px;
+  margin-top: 12px;
+  border: 1px solid #d7e4e9;
+  border-radius: 12px;
+}
+.map-selection h2 {
+  margin: 6px 0;
+}
+.map-selection p {
+  margin: 0;
+  font-size: 0.82rem;
+}
