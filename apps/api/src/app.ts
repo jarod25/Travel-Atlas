@@ -150,11 +150,7 @@ export function buildApp(store?: AtlasStore) {
                   type: 'array',
                   minItems: 2,
                   maxItems: 2,
-                  prefixItems: [
-                    { type: 'number', minimum: -180, maximum: 180 },
-                    { type: 'number', minimum: -90, maximum: 90 },
-                  ],
-                  items: false,
+                  items: { type: 'number', minimum: -180, maximum: 180 },
                 },
                 { type: 'null' },
               ],
@@ -165,6 +161,10 @@ export function buildApp(store?: AtlasStore) {
       },
     },
     async (request, reply) => {
+      if (request.body.coordinates !== null &&
+        (request.body.coordinates[1] < -90 || request.body.coordinates[1] > 90)) {
+        return reply.code(400).send({ error: 'Latitude must be between -90 and 90' });
+      }
       if (request.body.coordinates === null && request.body.confidence !== 'unknown') {
         return reply.code(400).send({ error: 'Missing coordinates must be Unknown' });
       }
