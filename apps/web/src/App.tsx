@@ -521,11 +521,15 @@ export function App() {
               )}
               {selectedDay && followingDay && (
                 <div className="connect-day">
-                  <span>{(timeline?.crossDayLegs.length ?? 0) > 0
-                    ? 'A cross-day connection exists for the selected day.'
-                    : 'Days are not linked automatically.'}</span>
-                  <button disabled={pending || (timeline?.crossDayLegs.length ?? 0) > 0}
-                    onClick={() => void connectToFollowingDay()}>
+                  <span>
+                    {(timeline?.crossDayLegs.length ?? 0) > 0
+                      ? 'A cross-day connection exists for the selected day.'
+                      : 'Days are not linked automatically.'}
+                  </span>
+                  <button
+                    disabled={pending || (timeline?.crossDayLegs.length ?? 0) > 0}
+                    onClick={() => void connectToFollowingDay()}
+                  >
                     Connect to next day
                   </button>
                 </div>

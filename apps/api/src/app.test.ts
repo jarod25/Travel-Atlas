@@ -249,11 +249,23 @@ describe('Explicit day connections API', () => {
     const app = buildApp(stub());
     try {
       const path = `/api/v1/trips/${tripId}/connect-days`;
-      expect((await app.inject({ method: 'POST', url: path,
-        payload: { fromDayId: 'invalid', toDayId: dayId } })).statusCode).toBe(400);
-      const blocked = await app.inject({ method: 'POST', url: path,
-        payload: { fromDayId: dayId, toDayId: visitId } });
+      expect(
+        (
+          await app.inject({
+            method: 'POST',
+            url: path,
+            payload: { fromDayId: 'invalid', toDayId: dayId },
+          })
+        ).statusCode,
+      ).toBe(400);
+      const blocked = await app.inject({
+        method: 'POST',
+        url: path,
+        payload: { fromDayId: dayId, toDayId: visitId },
+      });
       expect(blocked.statusCode).toBe(409);
-    } finally { await app.close(); }
+    } finally {
+      await app.close();
+    }
   });
 });

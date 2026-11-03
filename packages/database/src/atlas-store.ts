@@ -208,9 +208,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         visitId,
       }),
     updateLeg: (id, revision, changes) => updateLegWithRevision(db, id, revision, changes),
-    connectDays: (tripId, fromDayId, toDayId) => connectAdjacentDays(db, {
-      tripId, fromDayId, toDayId,
-    }),
+    connectDays: (tripId, fromDayId, toDayId) =>
+      connectAdjacentDays(db, {
+        tripId,
+        fromDayId,
+        toDayId,
+      }),
     getExplore: async () => {
       const points = await db
         .select({
