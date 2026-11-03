@@ -161,8 +161,10 @@ export function buildApp(store?: AtlasStore) {
       },
     },
     async (request, reply) => {
-      if (request.body.coordinates !== null &&
-        (request.body.coordinates[1] < -90 || request.body.coordinates[1] > 90)) {
+      if (
+        request.body.coordinates !== null &&
+        (request.body.coordinates[1] < -90 || request.body.coordinates[1] > 90)
+      ) {
         return reply.code(400).send({ error: 'Latitude must be between -90 and 90' });
       }
       if (request.body.coordinates === null && request.body.confidence !== 'unknown') {
