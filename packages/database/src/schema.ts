@@ -175,11 +175,7 @@ export const legs = pgTable(
       'legs_arrival_time_needs_date',
       sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
     ),
-    foreignKey({
-      name: 'legs_selected_version_same_leg_fk',
-      columns: [table.id, table.selectedRouteVersionId],
-      foreignColumns: [routeVersions.legId, routeVersions.id],
-    }),
+    // The circular selected-version FK is enforced by migration 0004.
     unique('legs_trip_id_id_unique').on(table.tripId, table.id),
     index('legs_trip_idx').on(table.tripId),
     uniqueIndex('legs_current_from_unique')
