@@ -600,3 +600,5 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
     flex-wrap: wrap;
   }
 }
+
+.connect-day { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 14px; background: #f4f7f9; font-size: .8rem; color: #5a7281; }

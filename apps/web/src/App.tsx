@@ -147,6 +147,7 @@ export function App() {
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
   const selectedDay = days.find((day) => day.id === dayId);
+  const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
   const activeTrips = trips.filter((trip) => !trip.isArchived);
   const displayedTrips = showArchived ? trips : activeTrips;
   useEffect(() => {
@@ -218,6 +219,15 @@ export function App() {
     await execute(async () => {
       await atlasApi.editDay(tripId, dayId, selectedDay.revision, editedDayDate || null);
       await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId)]);
+    });
+  }
+
+  async function connectToFollowingDay() {
+    if (!tripId || !selectedDay || !followingDay) return;
+    if (!window.confirm('Connect the last Visit of this day to the first of the next day?')) return;
+    await execute(async () => {
+      await atlasApi.connectDays(tripId, selectedDay.id, followingDay.id);
+      await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
     });
   }
 
@@ -506,6 +516,17 @@ export function App() {
                   />
                   <button disabled={pending} onClick={() => void updateDayDate()}>
                     Save date
+                  </button>
+                </div>
+              )}
+              {selectedDay && followingDay && (
+                <div className="connect-day">
+                  <span>{(timeline?.crossDayLegs.length ?? 0) > 0
+                    ? 'A cross-day connection exists for the selected day.'
+                    : 'Days are not linked automatically.'}</span>
+                  <button disabled={pending || (timeline?.crossDayLegs.length ?? 0) > 0}
+                    onClick={() => void connectToFollowingDay()}>
+                    Connect to next day
                   </button>
                 </div>
               )}

@@ -42,3 +42,11 @@ PATCH /api/v1/trips/:tripId/days/:dayId changes a day's optional local calendar
 date with the same If-Match/412 precondition semantics. Leg PATCH supports
 independent optional local departure/arrival dates, wall-clock times and
 confidence, without inventing a timezone or UTC timestamp.
+
+## Explicit inter-day connections
+
+POST /api/v1/trips/:tripId/connect-days accepts fromDayId/toDayId (adjacent
+ordered days) and atomically creates one unknown draft Leg from the final
+active Visit of one day to the first of the next. Repeating the same connection
+is idempotent. Timeline responses include crossDayLegs separately from intra-day
+Legs. No connection is inferred automatically.

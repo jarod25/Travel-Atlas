@@ -1,5 +1,7 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { updateTripWithRevision } from './trip-repository';
+import { connectAdjacentDays } from './day-connection';
+import type { DayConnectionResult } from './day-connection';
 import type { TripUpdateResult } from './trip-repository';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
@@ -41,6 +43,7 @@ export interface AtlasStore {
   reorderVisits(tripId: string, dayId: string, visitIds: string[]): Promise<unknown>;
   archiveVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
   getExplore(): Promise<unknown>;
+  connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
   updateLeg(id: string, revision: number, changes: LegChanges): Promise<LegUpdateResult>;
   close(): Promise<void>;
 }
@@ -160,6 +163,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         legs: edges.filter(
           (edge) => memberIds.has(edge.fromVisitId) && memberIds.has(edge.toVisitId),
         ),
+        crossDayLegs: edges.filter(
+          (edge) => memberIds.has(edge.fromVisitId) !== memberIds.has(edge.toVisitId),
+        ),
       };
     },
     listPlaces: async (search) =>
@@ -202,6 +208,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         visitId,
       }),
     updateLeg: (id, revision, changes) => updateLegWithRevision(db, id, revision, changes),
+    connectDays: (tripId, fromDayId, toDayId) => connectAdjacentDays(db, {
+      tripId, fromDayId, toDayId,
+    }),
     getExplore: async () => {
       const points = await db
         .select({

@@ -38,6 +38,7 @@ function stub(): AtlasStore {
       status: 'conflict',
       currentRevision: revision + 1,
     }),
+    connectDays: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
     getExplore: async () => ({ type: 'FeatureCollection', features: [] }),
     close: async () => undefined,
   };
@@ -240,5 +241,19 @@ describe('Trip day revision API', () => {
     } finally {
       await app.close();
     }
+  });
+});
+
+describe('Explicit day connections API', () => {
+  it('validates day UUIDs and reports a domain conflict', async () => {
+    const app = buildApp(stub());
+    try {
+      const path = `/api/v1/trips/${tripId}/connect-days`;
+      expect((await app.inject({ method: 'POST', url: path,
+        payload: { fromDayId: 'invalid', toDayId: dayId } })).statusCode).toBe(400);
+      const blocked = await app.inject({ method: 'POST', url: path,
+        payload: { fromDayId: dayId, toDayId: visitId } });
+      expect(blocked.statusCode).toBe(409);
+    } finally { await app.close(); }
   });
 });

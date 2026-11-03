@@ -22,3 +22,5 @@ export { updateLegWithRevision } from './leg-repository';
 export type { LegChanges, LegUpdateResult } from './leg-repository';
 export { updateTripWithRevision } from './trip-repository';
 export type { TripUpdateResult } from './trip-repository';
+export { connectAdjacentDays } from './day-connection';
+export type { DayConnectionResult } from './day-connection';
