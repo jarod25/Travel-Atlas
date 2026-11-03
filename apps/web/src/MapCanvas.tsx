@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FeatureCollection } from './api';
-import { emptyFeatures } from './map-data';
 
 const moduleUrl = 'https://unpkg.com/maplibre-gl@6.16.0/dist/maplibre-gl.mjs';
 const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
