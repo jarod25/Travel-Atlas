@@ -15,7 +15,9 @@ The intended hierarchy is **Trip → TripDay → Visit → Leg**. A place can be
 
 Confidence is not a single trip-level boolean: route geometry, transport mode, timestamps, and visits may independently be **confirmed**, **estimated**, or **unknown**. Routing results are proposals with provenance and a review state.
 
-Planned persistence uses PostgreSQL/PostGIS, Drizzle ORM, GeoJSON, explicit geometry SRID 4326, and versioned route proposals. It must be possible to store a Leg without known geometry.
+The shared package now defines initial **Trip**, **TripDay**, **Place**, and **Visit** contracts and a pure `planDraftLegsForDay()` function. Its input is an ordered list of visits for one day. It creates only _draft leg plans_ with unknown geometry and unknown transport, never cross-day links. It deliberately does not assign IDs, persist records, or invent route geometry. The API/database layer must apply timeline changes atomically in a later feature.
+
+Planned persistence uses PostgreSQL/PostGIS, Drizzle ORM, GeoJSON, explicit geometry SRID 4326, and versioned route proposals. It must be possible to store a Leg without known geometry. These TypeScript interfaces are **not** a completed database model or migration.
 
 ## Mapping and routing
 
@@ -27,4 +29,4 @@ The source repository is public. Real itineraries, tracks, evidence documents, G
 
 ## Roadmap boundary
 
-The initial commit is only a working skeleton. The map, timeline, visit/leg CRUD, routing integration, evidence handling, backup/export, and statistics belong to later feature branches. The detailed product specifications live in the project's private planning documents.
+The initial feature branch validates pure domain invariants only. Database tables, Drizzle mappings, persistence/transactions, the map, timeline, visit/leg CRUD, routing integration, evidence handling, backup/export, and statistics belong to later feature branches. The detailed product specifications live in the project's private planning documents.
