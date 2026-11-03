@@ -18,6 +18,11 @@ function stub(): AtlasStore {
       id === tripId && day === dayId ? { visits: [], legs: [] } : null,
     listPlaces: async () => [],
     createPlace: async (name: string) => ({ id: 'new-place', name }),
+    updatePlace: async (id: string, coordinates: [number, number] | null, confidence: string) => ({
+      id,
+      location: coordinates,
+      locationConfidence: confidence,
+    }),
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
     reorderVisits: async () => ({ changed: true }),
     archiveVisit: async () => ({ archivedVisitId: visitId }),
@@ -124,6 +129,42 @@ describe('Leg optimistic locking API', () => {
       });
       expect(conflict.statusCode).toBe(412);
       expect(conflict.headers.etag).toBe('"2"');
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('Place coordinate API', () => {
+  it('validates bounds and requires Unknown when coordinates are null', async () => {
+    const app = buildApp(stub());
+    const url = `/api/v1/places/${visitId}`;
+    try {
+      const ok = await app.inject({
+        method: 'PATCH',
+        url,
+        payload: { coordinates: [0, 0], confidence: 'confirmed' },
+      });
+      expect(ok.statusCode).toBe(200);
+      expect(ok.json().location).toEqual([0, 0]);
+      expect(
+        (
+          await app.inject({
+            method: 'PATCH',
+            url,
+            payload: { coordinates: [200, 0], confidence: 'estimated' },
+          })
+        ).statusCode,
+      ).toBe(400);
+      expect(
+        (
+          await app.inject({
+            method: 'PATCH',
+            url,
+            payload: { coordinates: null, confidence: 'confirmed' },
+          })
+        ).statusCode,
+      ).toBe(400);
     } finally {
       await app.close();
     }

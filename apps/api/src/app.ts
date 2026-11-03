@@ -123,6 +123,61 @@ export function buildApp(store?: AtlasStore) {
       return reply.code(201).send(await store.createPlace(name));
     },
   );
+  app.patch<{
+    Params: { placeId: string };
+    Body: {
+      coordinates: [number, number] | null;
+      confidence: 'confirmed' | 'estimated' | 'unknown';
+    };
+  }>(
+    '/api/v1/places/:placeId',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['placeId'],
+          properties: { placeId: uuid },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          required: ['coordinates', 'confidence'],
+          additionalProperties: false,
+          properties: {
+            coordinates: {
+              anyOf: [
+                {
+                  type: 'array',
+                  minItems: 2,
+                  maxItems: 2,
+                  items: { type: 'number', minimum: -180, maximum: 180 },
+                },
+                { type: 'null' },
+              ],
+            },
+            confidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (
+        request.body.coordinates !== null &&
+        (request.body.coordinates[1] < -90 || request.body.coordinates[1] > 90)
+      ) {
+        return reply.code(400).send({ error: 'Latitude must be between -90 and 90' });
+      }
+      if (request.body.coordinates === null && request.body.confidence !== 'unknown') {
+        return reply.code(400).send({ error: 'Missing coordinates must be Unknown' });
+      }
+      const place = await store.updatePlace(
+        request.params.placeId,
+        request.body.coordinates,
+        request.body.confidence,
+      );
+      return place ?? reply.code(404).send({ error: 'Place not found' });
+    },
+  );
   app.post<{ Params: { tripId: string; dayId: string }; Body: { placeId?: string | null } }>(
     '/api/v1/trips/:tripId/days/:dayId/visits',
     {

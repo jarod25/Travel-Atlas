@@ -520,3 +520,28 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
 .leg-details > button {
   grid-column: 1 / -1;
 }
+
+.coordinate-editor {
+  border-top: 1px solid #dae7ed;
+  padding: 12px 0;
+}
+.coordinate-editor summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2c5d76;
+}
+.coordinate-editor[open] {
+  display: grid;
+  gap: 8px;
+}
+.coordinate-editor label {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.79rem;
+}
+.coordinate-editor input,
+.coordinate-editor select {
+  display: block;
+  width: 100%;
+}

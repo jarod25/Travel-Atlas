@@ -64,6 +64,13 @@
       "when": 1793748000000,
       "tag": "0008_leg_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793754000000,
+      "tag": "0009_place_coordinate_certainty",
+      "breakpoints": true
     }
   ]
 }

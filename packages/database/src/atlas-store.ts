@@ -15,6 +15,11 @@ export interface AtlasStore {
   getTimeline(tripId: string, dayId: string): Promise<unknown | null>;
   listPlaces(search: string): Promise<unknown[]>;
   createPlace(name: string): Promise<unknown>;
+  updatePlace(
+    id: string,
+    coordinates: [number, number] | null,
+    confidence: 'confirmed' | 'estimated' | 'unknown',
+  ): Promise<unknown | null>;
   addVisit(tripId: string, dayId: string, placeId: string | null): Promise<unknown>;
   reorderVisits(tripId: string, dayId: string, visitIds: string[]): Promise<unknown>;
   archiveVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
@@ -107,7 +112,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
     },
     listPlaces: async (search) =>
       db
-        .select({ id: places.id, name: places.name, location: places.location })
+        .select({
+          id: places.id,
+          name: places.name,
+          location: places.location,
+          locationConfidence: places.locationConfidence,
+        })
         .from(places)
         .where(sql`${places.name} ILIKE ${'%' + search + '%'}`)
         .orderBy(asc(places.name))
@@ -115,6 +125,14 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
     createPlace: async (name) => {
       const [place] = await db.insert(places).values({ name }).returning();
       return place;
+    },
+    updatePlace: async (id, coordinates, confidence) => {
+      const [updated] = await db
+        .update(places)
+        .set({ location: coordinates, locationConfidence: coordinates ? confidence : 'unknown' })
+        .where(eq(places.id, id))
+        .returning();
+      return updated ?? null;
     },
     addVisit: async (tripId, dayId, placeId) => {
       return appendVisitToDay(db, { tripId, tripDayId: dayId, placeId });
@@ -140,6 +158,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           placeId: places.id,
           name: places.name,
           location: places.location,
+          locationConfidence: places.locationConfidence,
         })
         .from(visits)
         .innerJoin(places, eq(visits.placeId, places.id))

@@ -22,3 +22,5 @@ privacy disclosure before sharing the app externally.
 Still missing for full product scope: detailed Leg edits, trip archival,
 revision/If-Match conflict handling, MapLibre editing controls, geographic
 search providers and guided routing. These belong to subsequent increments.
+
+The optional coordinate editor attaches a WGS84 point to the selected reusable Place with explicit location confidence. No coordinates are inferred; edits affect all Visits of that Place.
