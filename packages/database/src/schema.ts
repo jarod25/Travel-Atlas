@@ -30,11 +30,8 @@ export const tripDays = pgTable(
 );
 
 /** Null means an unknown position; [0, 0] remains a valid, distinct point. */
-export const places = pgTable(
-  'places',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    name: text('name'),
-    location: geometry('location', { type: 'point', mode: 'tuple', srid: 4326 }),
-  },
-);
+export const places = pgTable('places', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name'),
+  location: geometry('location', { type: 'point', mode: 'tuple', srid: 4326 }),
+});
