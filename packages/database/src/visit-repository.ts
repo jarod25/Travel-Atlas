@@ -84,7 +84,11 @@ export async function reorderVisitsInDay(
       .select({ id: visits.id, position: visits.position })
       .from(visits)
       .where(
-        and(eq(visits.tripId, input.tripId), eq(visits.tripDayId, day.id), eq(visits.isArchived, false)),
+        and(
+          eq(visits.tripId, input.tripId),
+          eq(visits.tripDayId, day.id),
+          eq(visits.isArchived, false),
+        ),
       )
       .orderBy(asc(visits.position));
     const ids = existing.map((visit) => visit.id);
