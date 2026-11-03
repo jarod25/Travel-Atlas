@@ -123,34 +123,59 @@ export function buildApp(store?: AtlasStore) {
       return reply.code(201).send(await store.createPlace(name));
     },
   );
-  app.patch<{ Params: { placeId: string }; Body: {
-    coordinates: [number, number] | null;
-    confidence: 'confirmed' | 'estimated' | 'unknown';
-  } }>('/api/v1/places/:placeId', {
-    schema: {
-      params: { type: 'object', required: ['placeId'], properties: { placeId: uuid }, additionalProperties: false },
-      body: { type: 'object', required: ['coordinates', 'confidence'], additionalProperties: false,
-        properties: {
-          coordinates: { anyOf: [
-            { type: 'array', minItems: 2, maxItems: 2,
-              prefixItems: [
-                { type: 'number', minimum: -180, maximum: 180 },
-                { type: 'number', minimum: -90, maximum: 90 },
-              ], items: false },
-            { type: 'null' },
-          ] },
-          confidence: { type: 'string', enum: ['confirmed','estimated','unknown'] },
+  app.patch<{
+    Params: { placeId: string };
+    Body: {
+      coordinates: [number, number] | null;
+      confidence: 'confirmed' | 'estimated' | 'unknown';
+    };
+  }>(
+    '/api/v1/places/:placeId',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['placeId'],
+          properties: { placeId: uuid },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          required: ['coordinates', 'confidence'],
+          additionalProperties: false,
+          properties: {
+            coordinates: {
+              anyOf: [
+                {
+                  type: 'array',
+                  minItems: 2,
+                  maxItems: 2,
+                  prefixItems: [
+                    { type: 'number', minimum: -180, maximum: 180 },
+                    { type: 'number', minimum: -90, maximum: 90 },
+                  ],
+                  items: false,
+                },
+                { type: 'null' },
+              ],
+            },
+            confidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
+          },
         },
       },
     },
-  }, async (request, reply) => {
-    if (request.body.coordinates === null && request.body.confidence !== 'unknown') {
-      return reply.code(400).send({ error: 'Missing coordinates must be Unknown' });
-    }
-    const place = await store.updatePlace(request.params.placeId,
-      request.body.coordinates, request.body.confidence);
-    return place ?? reply.code(404).send({ error: 'Place not found' });
-  });
+    async (request, reply) => {
+      if (request.body.coordinates === null && request.body.confidence !== 'unknown') {
+        return reply.code(400).send({ error: 'Missing coordinates must be Unknown' });
+      }
+      const place = await store.updatePlace(
+        request.params.placeId,
+        request.body.coordinates,
+        request.body.confidence,
+      );
+      return place ?? reply.code(404).send({ error: 'Place not found' });
+    },
+  );
   app.post<{ Params: { tripId: string; dayId: string }; Body: { placeId?: string | null } }>(
     '/api/v1/trips/:tripId/days/:dayId/visits',
     {

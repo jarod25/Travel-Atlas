@@ -76,9 +76,15 @@ export const atlasApi = {
   timeline: (id: string, day: string) => request<Timeline>(`/trips/${id}/days/${day}/timeline`),
   places: (search: string) => request<Place[]>(`/places?q=${encodeURIComponent(search)}`),
   addPlace: (name: string) => post<Place>('/places', { name }),
-  updatePlace: (id: string, coordinates: [number, number] | null,
-    confidence: 'confirmed' | 'estimated' | 'unknown') => request<Place>(`/places/${id}`,
-      { method: 'PATCH', body: JSON.stringify({ coordinates, confidence }) }),
+  updatePlace: (
+    id: string,
+    coordinates: [number, number] | null,
+    confidence: 'confirmed' | 'estimated' | 'unknown',
+  ) =>
+    request<Place>(`/places/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ coordinates, confidence }),
+    }),
   addVisit: (id: string, day: string, placeId: string | null) =>
     post<unknown>(`/trips/${id}/days/${day}/visits`, { placeId }),
   reorder: (id: string, day: string, visitIds: string[]) =>

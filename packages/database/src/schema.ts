@@ -70,13 +70,24 @@ export const places = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name'),
     location: geometry('location', { type: 'point', mode: 'tuple', srid: 4326 }),
-    locationConfidence: text('location_confidence', { enum: confidenceValues }).notNull().default('unknown'),
+    locationConfidence: text('location_confidence', { enum: confidenceValues })
+      .notNull()
+      .default('unknown'),
   },
   (table) => [
-    check('places_location_confidence_valid', sql`${table.locationConfidence} IN ('confirmed','estimated','unknown')`),
-    check('places_location_bounds', sql`${table.location} IS NULL OR
-      (ST_X(${table.location}) BETWEEN -180 AND 180 AND ST_Y(${table.location}) BETWEEN -90 AND 90)`),
-    check('places_null_location_unknown', sql`${table.location} IS NOT NULL OR ${table.locationConfidence} = 'unknown'`),
+    check(
+      'places_location_confidence_valid',
+      sql`${table.locationConfidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'places_location_bounds',
+      sql`${table.location} IS NULL OR
+      (ST_X(${table.location}) BETWEEN -180 AND 180 AND ST_Y(${table.location}) BETWEEN -90 AND 90)`,
+    ),
+    check(
+      'places_null_location_unknown',
+      sql`${table.location} IS NOT NULL OR ${table.locationConfidence} = 'unknown'`,
+    ),
   ],
 );
 

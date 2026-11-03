@@ -26,7 +26,9 @@ export function App() {
   const [newPlace, setNewPlace] = useState('');
   const [placeLon, setPlaceLon] = useState('');
   const [placeLat, setPlaceLat] = useState('');
-  const [placeConfidence, setPlaceConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>('estimated');
+  const [placeConfidence, setPlaceConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>(
+    'estimated',
+  );
   const [placeId, setPlaceId] = useState('');
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('timeline');
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
@@ -181,9 +183,16 @@ export function App() {
       setError('Enter both longitude and latitude.');
       return;
     }
-    const lon = Number(placeLon), lat = Number(placeLat);
-    if (!Number.isFinite(lon) || !Number.isFinite(lat) ||
-        lon < -180 || lon > 180 || lat < -90 || lat > 90) {
+    const lon = Number(placeLon),
+      lat = Number(placeLat);
+    if (
+      !Number.isFinite(lon) ||
+      !Number.isFinite(lat) ||
+      lon < -180 ||
+      lon > 180 ||
+      lat < -90 ||
+      lat > 90
+    ) {
       setError('Coordinates are outside valid longitude/latitude bounds.');
       return;
     }
@@ -512,21 +521,47 @@ export function App() {
                         </button>
                         <details className="coordinate-editor">
                           <summary>Coordinates (optional)</summary>
-                          <p className="muted">Changes this reusable Place for every Visit linked to it.</p>
+                          <p className="muted">
+                            Changes this reusable Place for every Visit linked to it.
+                          </p>
                           <label htmlFor="place-lon">Longitude</label>
-                          <input id="place-lon" type="number" min="-180" max="180" step="any"
-                            value={placeLon} onChange={(e) => setPlaceLon(e.target.value)} />
+                          <input
+                            id="place-lon"
+                            type="number"
+                            min="-180"
+                            max="180"
+                            step="any"
+                            value={placeLon}
+                            onChange={(e) => setPlaceLon(e.target.value)}
+                          />
                           <label htmlFor="place-lat">Latitude</label>
-                          <input id="place-lat" type="number" min="-90" max="90" step="any"
-                            value={placeLat} onChange={(e) => setPlaceLat(e.target.value)} />
+                          <input
+                            id="place-lat"
+                            type="number"
+                            min="-90"
+                            max="90"
+                            step="any"
+                            value={placeLat}
+                            onChange={(e) => setPlaceLat(e.target.value)}
+                          />
                           <label htmlFor="place-coord-confidence">Location confidence</label>
-                          <select id="place-coord-confidence" value={placeConfidence}
-                            onChange={(e) => setPlaceConfidence(e.target.value as 'confirmed' | 'estimated' | 'unknown')}>
+                          <select
+                            id="place-coord-confidence"
+                            value={placeConfidence}
+                            onChange={(e) =>
+                              setPlaceConfidence(
+                                e.target.value as 'confirmed' | 'estimated' | 'unknown',
+                              )
+                            }
+                          >
                             <option value="estimated">Estimated</option>
                             <option value="confirmed">Confirmed</option>
                             <option value="unknown">Unknown</option>
                           </select>
-                          <button disabled={pending || !placeId} onClick={() => void saveCoordinates()}>
+                          <button
+                            disabled={pending || !placeId}
+                            onClick={() => void saveCoordinates()}
+                          >
                             Save coordinates
                           </button>
                         </details>

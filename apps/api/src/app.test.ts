@@ -18,7 +18,11 @@ function stub(): AtlasStore {
       id === tripId && day === dayId ? { visits: [], legs: [] } : null,
     listPlaces: async () => [],
     createPlace: async (name: string) => ({ id: 'new-place', name }),
-    updatePlace: async (id: string, coordinates: [number, number] | null, confidence: string) => ({ id, location: coordinates, locationConfidence: confidence }),
+    updatePlace: async (id: string, coordinates: [number, number] | null, confidence: string) => ({
+      id,
+      location: coordinates,
+      locationConfidence: confidence,
+    }),
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
     reorderVisits: async () => ({ changed: true }),
     archiveVisit: async () => ({ archivedVisitId: visitId }),
@@ -136,14 +140,33 @@ describe('Place coordinate API', () => {
     const app = buildApp(stub());
     const url = `/api/v1/places/${visitId}`;
     try {
-      const ok = await app.inject({ method: 'PATCH', url,
-        payload: { coordinates: [0, 0], confidence: 'confirmed' } });
+      const ok = await app.inject({
+        method: 'PATCH',
+        url,
+        payload: { coordinates: [0, 0], confidence: 'confirmed' },
+      });
       expect(ok.statusCode).toBe(200);
       expect(ok.json().location).toEqual([0, 0]);
-      expect((await app.inject({ method: 'PATCH', url,
-        payload: { coordinates: [200, 0], confidence: 'estimated' } })).statusCode).toBe(400);
-      expect((await app.inject({ method: 'PATCH', url,
-        payload: { coordinates: null, confidence: 'confirmed' } })).statusCode).toBe(400);
-    } finally { await app.close(); }
+      expect(
+        (
+          await app.inject({
+            method: 'PATCH',
+            url,
+            payload: { coordinates: [200, 0], confidence: 'estimated' },
+          })
+        ).statusCode,
+      ).toBe(400);
+      expect(
+        (
+          await app.inject({
+            method: 'PATCH',
+            url,
+            payload: { coordinates: null, confidence: 'confirmed' },
+          })
+        ).statusCode,
+      ).toBe(400);
+    } finally {
+      await app.close();
+    }
   });
 });
