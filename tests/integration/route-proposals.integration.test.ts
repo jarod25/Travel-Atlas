@@ -3,7 +3,14 @@ import { eq, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { legs, routeProposals, routeVersions, tripDays, trips, visits } from '../../packages/database/src/schema';
+import {
+  legs,
+  routeProposals,
+  routeVersions,
+  tripDays,
+  trips,
+  visits,
+} from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -43,31 +50,56 @@ async function fixture() {
   const [trip] = await db.insert(trips).values({ title: 'Synthetic proposal' }).returning();
   tripIds.push(trip.id);
   const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
-  const points = await db.insert(visits).values([
-    { tripId: trip.id, tripDayId: day.id, position: 0 },
-    { tripId: trip.id, tripDayId: day.id, position: 1 },
-    { tripId: trip.id, tripDayId: day.id, position: 2 },
-  ]).returning();
-  const [first] = await db.insert(legs).values({
-    tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-  }).returning();
-  const [second] = await db.insert(legs).values({
-    tripId: trip.id, fromVisitId: points[1].id, toVisitId: points[2].id,
-  }).returning();
+  const points = await db
+    .insert(visits)
+    .values([
+      { tripId: trip.id, tripDayId: day.id, position: 0 },
+      { tripId: trip.id, tripDayId: day.id, position: 1 },
+      { tripId: trip.id, tripDayId: day.id, position: 2 },
+    ])
+    .returning();
+  const [first] = await db
+    .insert(legs)
+    .values({
+      tripId: trip.id,
+      fromVisitId: points[0].id,
+      toVisitId: points[1].id,
+    })
+    .returning();
+  const [second] = await db
+    .insert(legs)
+    .values({
+      tripId: trip.id,
+      fromVisitId: points[1].id,
+      toVisitId: points[2].id,
+    })
+    .returning();
   return { trip, points, first, second };
 }
 
 describe('Persistent route proposals and guarded route selection', () => {
   it('stores pending parameters and geometry without selecting or confirming travel', async () => {
     const { trip, points, first } = await fixture();
-    const line = { type: 'LineString', coordinates: [[0, 0], [0, 1]] };
-    const [proposal] = await db.insert(routeProposals).values({
-      tripId: trip.id, legId: first.id,
-      fromVisitId: points[0].id, toVisitId: points[1].id,
-      transportMode: 'train', provider: 'synthetic',
-      parameters: { profile: 'train', attempts: 1 },
-      geometry: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(line)}),4326)`,
-    }).returning();
+    const line = {
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [0, 1],
+      ],
+    };
+    const [proposal] = await db
+      .insert(routeProposals)
+      .values({
+        tripId: trip.id,
+        legId: first.id,
+        fromVisitId: points[0].id,
+        toVisitId: points[1].id,
+        transportMode: 'train',
+        provider: 'synthetic',
+        parameters: { profile: 'train', attempts: 1 },
+        geometry: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(line)}),4326)`,
+      })
+      .returning();
     expect(proposal.status).toBe('pending');
     expect(proposal.parameters).toEqual({ profile: 'train', attempts: 1 });
     expect(proposal.reviewedAt).toBeNull();
@@ -81,12 +113,21 @@ describe('Persistent route proposals and guarded route selection', () => {
 
   it('selects only a version belonging to the same Leg', async () => {
     const { trip, first, second } = await fixture();
-    const [version] = await db.insert(routeVersions).values({
-      tripId: trip.id, legId: first.id, versionNumber: 1,
-      confidence: 'estimated', origin: 'calculated',
-    }).returning();
-    await reject(() => db.update(legs)
-      .set({ selectedRouteVersionId: version.id }).where(eq(legs.id, second.id)), '23503');
+    const [version] = await db
+      .insert(routeVersions)
+      .values({
+        tripId: trip.id,
+        legId: first.id,
+        versionNumber: 1,
+        confidence: 'estimated',
+        origin: 'calculated',
+      })
+      .returning();
+    await reject(
+      () =>
+        db.update(legs).set({ selectedRouteVersionId: version.id }).where(eq(legs.id, second.id)),
+      '23503',
+    );
     await db.update(legs).set({ selectedRouteVersionId: version.id }).where(eq(legs.id, first.id));
     const [selected] = await db.select().from(legs).where(eq(legs.id, first.id));
     expect(selected.selectedRouteVersionId).toBe(version.id);
@@ -95,14 +136,28 @@ describe('Persistent route proposals and guarded route selection', () => {
 
   it('requires reviewed timestamp when proposal status changes', async () => {
     const { trip, points, first } = await fixture();
-    const [proposal] = await db.insert(routeProposals).values({
-      tripId: trip.id, legId: first.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-    }).returning();
-    await reject(() => db.update(routeProposals)
-      .set({ status: 'accepted' }).where(eq(routeProposals.id, proposal.id)), '23514');
-    const [reviewed] = await db.update(routeProposals)
+    const [proposal] = await db
+      .insert(routeProposals)
+      .values({
+        tripId: trip.id,
+        legId: first.id,
+        fromVisitId: points[0].id,
+        toVisitId: points[1].id,
+      })
+      .returning();
+    await reject(
+      () =>
+        db
+          .update(routeProposals)
+          .set({ status: 'accepted' })
+          .where(eq(routeProposals.id, proposal.id)),
+      '23514',
+    );
+    const [reviewed] = await db
+      .update(routeProposals)
       .set({ status: 'invalidated', reviewedAt: new Date() })
-      .where(eq(routeProposals.id, proposal.id)).returning();
+      .where(eq(routeProposals.id, proposal.id))
+      .returning();
     expect(reviewed.status).toBe('invalidated');
     expect(reviewed.reviewedAt).not.toBeNull();
   });
@@ -110,9 +165,15 @@ describe('Persistent route proposals and guarded route selection', () => {
   it('rejects same-trip Leg violations', async () => {
     const a = await fixture();
     const b = await fixture();
-    await reject(() => db.insert(routeProposals).values({
-      tripId: a.trip.id, legId: b.first.id,
-      fromVisitId: a.points[0].id, toVisitId: a.points[1].id,
-    }), '23503');
+    await reject(
+      () =>
+        db.insert(routeProposals).values({
+          tripId: a.trip.id,
+          legId: b.first.id,
+          fromVisitId: a.points[0].id,
+          toVisitId: a.points[1].id,
+        }),
+      '23503',
+    );
   });
 });

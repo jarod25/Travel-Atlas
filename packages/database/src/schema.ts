@@ -288,11 +288,23 @@ export const routeProposals = pgTable(
       columns: [table.tripId, table.legId],
       foreignColumns: [legs.tripId, legs.id],
     }),
-    check('route_proposals_status_valid', sql`${table.status} IN ('pending','accepted','rejected','invalidated')`),
-    check('route_proposals_transport_valid', sql`${table.transportMode} IS NULL OR ${table.transportMode} IN ('walking','hiking','cycling','train','metro','tram','car','bus','taxi','plane','boat','ferry')`),
+    check(
+      'route_proposals_status_valid',
+      sql`${table.status} IN ('pending','accepted','rejected','invalidated')`,
+    ),
+    check(
+      'route_proposals_transport_valid',
+      sql`${table.transportMode} IS NULL OR ${table.transportMode} IN ('walking','hiking','cycling','train','metro','tram','car','bus','taxi','plane','boat','ferry')`,
+    ),
     check('route_proposals_distinct_endpoints', sql`${table.fromVisitId} <> ${table.toVisitId}`),
-    check('route_proposals_linear_geometry', sql`${table.geometry} IS NULL OR GeometryType(${table.geometry}) IN ('LINESTRING','MULTILINESTRING')`),
-    check('route_proposals_review_timestamp_valid', sql`(${table.status} = 'pending' AND ${table.reviewedAt} IS NULL) OR (${table.status} <> 'pending' AND ${table.reviewedAt} IS NOT NULL)`),
+    check(
+      'route_proposals_linear_geometry',
+      sql`${table.geometry} IS NULL OR GeometryType(${table.geometry}) IN ('LINESTRING','MULTILINESTRING')`,
+    ),
+    check(
+      'route_proposals_review_timestamp_valid',
+      sql`(${table.status} = 'pending' AND ${table.reviewedAt} IS NULL) OR (${table.status} <> 'pending' AND ${table.reviewedAt} IS NOT NULL)`,
+    ),
     index('route_proposals_leg_idx').on(table.legId),
     index('route_proposals_geometry_gist_idx').using('gist', table.geometry),
   ],

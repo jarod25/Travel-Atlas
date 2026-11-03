@@ -33,7 +33,6 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier packages/database/src/index.ts packages/database/src/schema.ts tests/integration/route-proposals.integration.test.ts
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
