@@ -15,7 +15,7 @@ The intended hierarchy is **Trip → TripDay → Visit → Leg**. A place can be
 
 Confidence is not a single trip-level boolean: route geometry, transport mode, timestamps, and visits may independently be **confirmed**, **estimated**, or **unknown**. Routing results are proposals with provenance and a review state.
 
-The shared package now defines initial **Trip**, **TripDay**, **Place**, and **Visit** contracts and a pure `planDraftLegsForDay()` function. Its input is an ordered list of visits for one day. It creates only *draft leg plans* with unknown geometry and unknown transport, never cross-day links. It deliberately does not assign IDs, persist records, or invent route geometry. The API/database layer must apply timeline changes atomically in a later feature.
+The shared package now defines initial **Trip**, **TripDay**, **Place**, and **Visit** contracts and a pure `planDraftLegsForDay()` function. Its input is an ordered list of visits for one day. It creates only _draft leg plans_ with unknown geometry and unknown transport, never cross-day links. It deliberately does not assign IDs, persist records, or invent route geometry. The API/database layer must apply timeline changes atomically in a later feature.
 
 Planned persistence uses PostgreSQL/PostGIS, Drizzle ORM, GeoJSON, explicit geometry SRID 4326, and versioned route proposals. It must be possible to store a Leg without known geometry. These TypeScript interfaces are **not** a completed database model or migration.
 

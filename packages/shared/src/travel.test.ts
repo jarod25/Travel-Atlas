@@ -35,9 +35,9 @@ describe('draft leg planning', () => {
   });
 
   it('never creates an automatic cross-day leg', () => {
-    expect(() =>
-      planDraftLegsForDay([first, { ...second, tripDayId: 'day-2' }]),
-    ).toThrow(/different days/);
+    expect(() => planDraftLegsForDay([first, { ...second, tripDayId: 'day-2' }])).toThrow(
+      /different days/,
+    );
   });
 
   it('rejects visits belonging to another trip', () => {
