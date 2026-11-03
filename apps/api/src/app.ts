@@ -211,6 +211,60 @@ export function buildApp(store?: AtlasStore) {
       }
     },
   );
+
+  app.patch<{
+    Params: { legId: string };
+    Body: {
+      transportMode?: 'walking' | 'hiking' | 'cycling' | 'train' | 'metro' | 'tram' |
+        'car' | 'bus' | 'taxi' | 'plane' | 'boat' | 'ferry' | null;
+      movementConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      departureLocalDate?: string | null;
+      departureLocalTime?: string | null;
+      departureTimeZone?: string | null;
+      departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      arrivalLocalDate?: string | null;
+      arrivalLocalTime?: string | null;
+      arrivalTimeZone?: string | null;
+      arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+    };
+    Headers: { 'if-match'?: string };
+  }>('/api/v1/legs/:legId', {
+    schema: {
+      params: { type: 'object', required: ['legId'], properties: { legId: uuid },
+        additionalProperties: false },
+      body: { type: 'object', minProperties: 1, additionalProperties: false,
+        properties: {
+          transportMode: { anyOf: [
+            { type: 'string', enum: ['walking','hiking','cycling','train','metro','tram','car',
+              'bus','taxi','plane','boat','ferry'] }, { type: 'null' },
+          ] },
+          movementConfidence: { type: 'string', enum: ['confirmed','estimated','unknown'] },
+          transportConfidence: { type: 'string', enum: ['confirmed','estimated','unknown'] },
+          departureLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+          departureLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          departureTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+          departureTimeConfidence: { type: 'string', enum: ['confirmed','estimated','unknown'] },
+          arrivalLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+          arrivalLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          arrivalTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+          arrivalTimeConfidence: { type: 'string', enum: ['confirmed','estimated','unknown'] },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const header = request.headers['if-match'];
+    if (!header) return reply.code(428).send({ error: 'If-Match is required' });
+    const match = /^"([1-9][0-9]*)"$/.exec(header);
+    if (!match) return reply.code(400).send({ error: 'Invalid If-Match revision' });
+    const result = await store.updateLeg(request.params.legId, Number(match[1]), request.body);
+    if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
+    if (result.status === 'conflict') {
+      return reply.code(412).header('ETag', `"${result.currentRevision}"`)
+        .send({ error: 'Leg was modified; reload before editing' });
+    }
+    return reply.header('ETag', `"${result.leg.revision}"`).send(result.leg);
+  });
   app.get('/api/v1/explore/geojson', async () => store.getExplore());
   return app;
 }

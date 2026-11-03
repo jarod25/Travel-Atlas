@@ -110,6 +110,7 @@ export const legs = pgTable(
     fromVisitId: uuid('from_visit_id').notNull(),
     toVisitId: uuid('to_visit_id').notNull(),
     isCurrent: boolean('is_current').notNull().default(true),
+    revision: integer('revision').notNull().default(1),
     selectedRouteVersionId: uuid('selected_route_version_id'),
     transportMode: text('transport_mode', { enum: transportValues }),
     movementConfidence: text('movement_confidence', { enum: confidenceValues })
@@ -145,6 +146,7 @@ export const legs = pgTable(
       columns: [table.tripId, table.toVisitId],
       foreignColumns: [visits.tripId, visits.id],
     }),
+    check('legs_revision_positive', sql`${table.revision} > 0`),
     check('legs_distinct_endpoints', sql`${table.fromVisitId} <> ${table.toVisitId}`),
     check(
       'legs_transport_valid',

@@ -16,3 +16,11 @@ users or sharing. Do not expose it on a public network without authentication.
 
 The current endpoints are an initial subset; conditional edits/ETags, archival of Trips,
 full Leg editing and pagination remain for later increments.
+
+## Leg editing and concurrency
+
+PATCH /api/v1/legs/:legId accepts validated evidence-sensitive fields and requires
+`If-Match: "<revision>"`. Missing precondition is 428; stale revisions return
+412 and the latest ETag. The Drizzle repository takes a Leg row lock and updates
+one revision atomically. Changing transport invalidates pending proposals,
+clears selected route geometry, and preserves historical versions.

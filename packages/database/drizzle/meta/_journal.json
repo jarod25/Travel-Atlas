@@ -57,6 +57,13 @@
       "when": 1793742000000,
       "tag": "0007_archive_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793748000000,
+      "tag": "0008_leg_revisions",
+      "breakpoints": true
     }
   ]
 }
