@@ -109,11 +109,7 @@ export async function reorderVisitsInDay(
       );
 
     const owned = new Set(ids);
-    if (
-      current.some(
-        (leg) => !owned.has(leg.fromVisitId) || !owned.has(leg.toVisitId),
-      )
-    ) {
+    if (current.some((leg) => !owned.has(leg.fromVisitId) || !owned.has(leg.toVisitId))) {
       throw new Error('Cannot reorder a day with a current cross-day connection');
     }
 
