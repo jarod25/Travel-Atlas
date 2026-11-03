@@ -5,7 +5,9 @@ import { emptyFeatures } from './map-data';
 const moduleUrl = 'https://unpkg.com/maplibre-gl@6.16.0/dist/maplibre-gl.mjs';
 const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
 
-interface MapSource { setData: (data: FeatureCollection) => void }
+interface MapSource {
+  setData: (data: FeatureCollection) => void;
+}
 interface MapInstance {
   on: (event: string, callback: () => void) => void;
   addSource: (name: string, options: unknown) => void;
@@ -39,7 +41,10 @@ export function MapCanvas({ data, label }: { data: FeatureCollection; label: str
         const lib = (await import(/* @vite-ignore */ moduleUrl)) as MapLibrary;
         if (cancelled || !ref.current) return;
         created = new lib.Map({
-          container: ref.current, style: styleUrl, center: [0, 15], zoom: 1.4,
+          container: ref.current,
+          style: styleUrl,
+          center: [0, 15],
+          zoom: 1.4,
           attributionControl: true,
         });
         map.current = created;
@@ -47,22 +52,29 @@ export function MapCanvas({ data, label }: { data: FeatureCollection; label: str
           if (cancelled || !created) return;
           created.addSource('atlas', { type: 'geojson', data: latest.current });
           created.addLayer({
-            id: 'atlas-routes', type: 'line', source: 'atlas',
+            id: 'atlas-routes',
+            type: 'line',
+            source: 'atlas',
             filter: ['==', ['get', 'kind'], 'route'],
             paint: { 'line-color': '#cf6e35', 'line-width': 4, 'line-opacity': 0.85 },
           });
           created.addLayer({
-            id: 'atlas-visits', type: 'circle', source: 'atlas',
+            id: 'atlas-visits',
+            type: 'circle',
+            source: 'atlas',
             filter: ['==', ['get', 'kind'], 'visit'],
             paint: {
-              'circle-radius': 6, 'circle-color': '#2677a3',
-              'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff',
+              'circle-radius': 6,
+              'circle-color': '#2677a3',
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff',
             },
           });
           setLoaded(true);
         });
       } catch {
-        if (!cancelled) setError('Map tiles or MapLibre could not be loaded. Your timeline remains available.');
+        if (!cancelled)
+          setError('Map tiles or MapLibre could not be loaded. Your timeline remains available.');
       }
     }
     void initialize();
@@ -77,10 +89,16 @@ export function MapCanvas({ data, label }: { data: FeatureCollection; label: str
     <section className="map-shell" aria-label={label}>
       <div ref={ref} className="map-surface" role="img" aria-label={label} />
       {!loaded && !error && <p className="map-hint">Loading interactive map…</p>}
-      {error && <p className="map-hint" role="status">{error}</p>}
-      {data.features.length === 0 && <p className="map-empty">
-        No confirmed geographic coordinates or saved routes to display yet.
-      </p>}
+      {error && (
+        <p className="map-hint" role="status">
+          {error}
+        </p>
+      )}
+      {data.features.length === 0 && (
+        <p className="map-empty">
+          No confirmed geographic coordinates or saved routes to display yet.
+        </p>
+      )}
     </section>
   );
 }

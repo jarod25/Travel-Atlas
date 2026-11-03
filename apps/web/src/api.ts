@@ -1,14 +1,31 @@
 const prefix = '/api/v1';
 
-export interface Trip { id: string; title: string }
-export interface TripDay { id: string; tripId: string; localDate: string | null; position: number }
-export interface Place { id: string; name: string | null; location: [number, number] | null }
+export interface Trip {
+  id: string;
+  title: string;
+}
+export interface TripDay {
+  id: string;
+  tripId: string;
+  localDate: string | null;
+  position: number;
+}
+export interface Place {
+  id: string;
+  name: string | null;
+  location: [number, number] | null;
+}
 export interface VisitRow {
-  id: string; position: number; placeId: string | null;
-  placeName: string | null; placeLocation: [number, number] | null;
+  id: string;
+  position: number;
+  placeId: string | null;
+  placeName: string | null;
+  placeLocation: [number, number] | null;
 }
 export interface LegRow {
-  id: string; fromVisitId: string; toVisitId: string;
+  id: string;
+  fromVisitId: string;
+  toVisitId: string;
   transportMode: string | null;
   movementConfidence: string;
   transportConfidence: string;
@@ -24,7 +41,10 @@ export interface Feature {
   geometry: { type: string; coordinates: unknown };
   properties: Record<string, string | null>;
 }
-export interface FeatureCollection { type: 'FeatureCollection'; features: Feature[] }
+export interface FeatureCollection {
+  type: 'FeatureCollection';
+  features: Feature[];
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(prefix + path, {
@@ -33,8 +53,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
-    const message = typeof body === 'object' && body !== null && 'error' in body
-      ? String(body.error) : `Request failed (${response.status})`;
+    const message =
+      typeof body === 'object' && body !== null && 'error' in body
+        ? String(body.error)
+        : `Request failed (${response.status})`;
     throw new Error(message);
   }
   return response.json() as Promise<T>;
@@ -49,8 +71,7 @@ export const atlasApi = {
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),
   addDay: (id: string, localDate: string | null) =>
     post<TripDay>(`/trips/${id}/days`, { localDate }),
-  timeline: (id: string, day: string) =>
-    request<Timeline>(`/trips/${id}/days/${day}/timeline`),
+  timeline: (id: string, day: string) => request<Timeline>(`/trips/${id}/days/${day}/timeline`),
   places: (search: string) => request<Place[]>(`/places?q=${encodeURIComponent(search)}`),
   addPlace: (name: string) => post<Place>('/places', { name }),
   addVisit: (id: string, day: string, placeId: string | null) =>
