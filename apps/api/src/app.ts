@@ -463,6 +463,37 @@ export function buildApp(store?: AtlasStore) {
       return reply.header('ETag', `"${result.leg.revision}"`).send(result.leg);
     },
   );
+  app.post<{
+    Params: { tripId: string };
+    Body: { fromDayId: string; toDayId: string };
+  }>(
+    '/api/v1/trips/:tripId/connect-days',
+    {
+      schema: {
+        params: idParams,
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['fromDayId', 'toDayId'],
+          properties: { fromDayId: uuid, toDayId: uuid },
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await store.connectDays(
+        request.params.tripId,
+        request.body.fromDayId,
+        request.body.toDayId,
+      );
+      if (result.status === 'not_found') {
+        return reply.code(404).send({ error: 'Day not found in this trip' });
+      }
+      if (result.status === 'invalid') {
+        return reply.code(409).send({ error: result.reason });
+      }
+      return reply.code(result.created ? 201 : 200).send(result);
+    },
+  );
   app.get('/api/v1/explore/geojson', async () => store.getExplore());
   return app;
 }

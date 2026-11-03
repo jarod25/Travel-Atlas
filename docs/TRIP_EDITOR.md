@@ -32,3 +32,7 @@ available for restoration but are hidden from Explore by default.
 Trip Editor can correct a day date with a revision check and edit departure/arrival
 local dates, clock times and independent certainty on each Leg. The advanced
 clock-time controls are collapsed by default and never infer a timezone.
+
+The explicit Connect to next day control creates a single unknown draft Leg
+between the last active Visit and the following day's first active Visit.
+It never connects days on creation and rejects existing competing endpoints.

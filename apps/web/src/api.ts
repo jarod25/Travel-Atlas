@@ -48,6 +48,7 @@ export interface Timeline {
   day: TripDay;
   visits: VisitRow[];
   legs: LegRow[];
+  crossDayLegs: LegRow[];
 }
 export interface Feature {
   type: 'Feature';
@@ -133,5 +134,7 @@ export const atlasApi = {
       headers: { 'If-Match': `"${revision}"` },
       body: JSON.stringify(changes),
     }),
+  connectDays: (tripId: string, fromDayId: string, toDayId: string) =>
+    post<unknown>(`/trips/${tripId}/connect-days`, { fromDayId, toDayId }),
   explore: () => request<FeatureCollection>('/explore/geojson'),
 };
