@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { check, date, geometry, integer, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
+import {
+  check,
+  date,
+  geometry,
+  integer,
+  pgTable,
+  text,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 /** Trips contain ordered days; no geographic coordinates or times are inferred. */
 export const trips = pgTable(

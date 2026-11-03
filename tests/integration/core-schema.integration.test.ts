@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { places, tripDays, trips } from '../../packages/database/src/schema';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -21,10 +21,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (createdTripIds.length > 0) {
-    await db.delete(trips).where(sql`${trips.id} IN ${createdTripIds}`);
+    await db.delete(trips).where(inArray(trips.id, createdTripIds));
   }
   if (createdPlaceIds.length > 0) {
-    await db.delete(places).where(sql`${places.id} IN ${createdPlaceIds}`);
+    await db.delete(places).where(inArray(places.id, createdPlaceIds));
   }
   await client.end();
 });
@@ -59,9 +59,12 @@ describe('Initial Drizzle/PostGIS schema', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].position).toBe(0);
 
-    await expect(
-      db.insert(tripDays).values({ tripId: trip.id, position: 0 }),
-    ).rejects.toMatchObject({ code: '23505' });
+    try {
+      await db.insert(tripDays).values({ tripId: trip.id, position: 0 });
+      throw new Error('Expected a duplicate day position to be rejected');
+    } catch (error) {
+      expect(pgCode(error)).toBe('23505');
+    }
 
     try {
       await db.insert(tripDays).values({ tripId: trip.id, position: -1 });
@@ -115,7 +118,7 @@ describe('Initial Drizzle/PostGIS schema', () => {
     expect(indexes).toHaveLength(1);
   });
 
-  it('rejects invalid place coordinates outside WGS84 longitude/latitude', async () => {
+  it('documents that coordinate bounds require application validation', async () => {
     // PostGIS geometry(Point, 4326) validates geometry type/SRID, not the coordinate range.
     // Future application validation must guard geographic bounds before persistence.
     const rows = await db.execute(sql`
