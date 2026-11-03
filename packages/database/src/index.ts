@@ -14,5 +14,5 @@ export {
   visitTimeObservations,
   visits,
 } from './schema';
-export { appendVisitToDay, reorderVisitsInDay } from './visit-repository';
+export { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository';
 export { acceptRouteProposal } from './route-review';

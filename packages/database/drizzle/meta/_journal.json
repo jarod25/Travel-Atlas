@@ -50,6 +50,13 @@
       "when": 1793736000000,
       "tag": "0006_supporting_data",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793742000000,
+      "tag": "0007_archive_visits",
+      "breakpoints": true
     }
   ]
 }

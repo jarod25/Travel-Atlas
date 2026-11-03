@@ -79,6 +79,7 @@ export const visits = pgTable(
     tripDayId: uuid('trip_day_id').notNull(),
     placeId: uuid('place_id').references(() => places.id, { onDelete: 'set null' }),
     position: integer('position').notNull(),
+    isArchived: boolean('is_archived').notNull().default(false),
   },
   (table) => [
     foreignKey({
@@ -86,7 +87,9 @@ export const visits = pgTable(
       columns: [table.tripId, table.tripDayId],
       foreignColumns: [tripDays.tripId, tripDays.id],
     }).onDelete('cascade'),
-    unique('visits_day_position_unique').on(table.tripDayId, table.position),
+    uniqueIndex('visits_active_day_position_unique')
+      .on(table.tripDayId, table.position)
+      .where(sql`${table.isArchived} = false`),
     unique('visits_trip_id_id_unique').on(table.tripId, table.id),
     check('visits_position_nonnegative', sql`${table.position} >= 0`),
   ],

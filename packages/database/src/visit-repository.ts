@@ -25,7 +25,13 @@ export async function appendVisitToDay(
     const [previous] = await tx
       .select({ id: visits.id, position: visits.position })
       .from(visits)
-      .where(and(eq(visits.tripId, input.tripId), eq(visits.tripDayId, day.id)))
+      .where(
+        and(
+          eq(visits.tripId, input.tripId),
+          eq(visits.tripDayId, day.id),
+          eq(visits.isArchived, false),
+        ),
+      )
       .orderBy(desc(visits.position))
       .limit(1);
 
@@ -77,7 +83,13 @@ export async function reorderVisitsInDay(
     const existing = await tx
       .select({ id: visits.id, position: visits.position })
       .from(visits)
-      .where(and(eq(visits.tripId, input.tripId), eq(visits.tripDayId, day.id)))
+      .where(
+        and(
+          eq(visits.tripId, input.tripId),
+          eq(visits.tripDayId, day.id),
+          eq(visits.isArchived, false),
+        ),
+      )
       .orderBy(asc(visits.position));
     const ids = existing.map((visit) => visit.id);
     const requested = input.orderedVisitIds;
@@ -145,6 +157,90 @@ export async function reorderVisitsInDay(
       changed: true,
       archivedLegCount: current.length,
       newLegCount: requested.length - 1,
+    };
+  });
+}
+
+/**
+ * Archive one Visit without deleting its historic evidence or Leg references.
+ * All affected current daily Legs are archived; surviving adjacent Visits gain
+ * fresh draft connections. A current explicit cross-day link blocks the edit.
+ */
+export async function archiveVisitFromDay(
+  db: PostgresJsDatabase,
+  input: { tripId: string; tripDayId: string; visitId: string },
+) {
+  return db.transaction(async (tx) => {
+    const [day] = await tx
+      .select({ id: tripDays.id })
+      .from(tripDays)
+      .where(and(eq(tripDays.id, input.tripDayId), eq(tripDays.tripId, input.tripId)))
+      .for('update');
+    if (!day) {
+      throw new Error('Trip day not found in the specified trip');
+    }
+    const active = await tx
+      .select({ id: visits.id, position: visits.position })
+      .from(visits)
+      .where(
+        and(
+          eq(visits.tripId, input.tripId),
+          eq(visits.tripDayId, day.id),
+          eq(visits.isArchived, false),
+        ),
+      )
+      .orderBy(asc(visits.position));
+    if (!active.some((visit) => visit.id === input.visitId)) {
+      throw new Error('Visit not found in the active day');
+    }
+    const owned = new Set(active.map((visit) => visit.id));
+    const current = await tx
+      .select({
+        id: legs.id,
+        fromVisitId: legs.fromVisitId,
+        toVisitId: legs.toVisitId,
+      })
+      .from(legs)
+      .where(
+        and(
+          eq(legs.tripId, input.tripId),
+          eq(legs.isCurrent, true),
+          or(inArray(legs.fromVisitId, [...owned]), inArray(legs.toVisitId, [...owned])),
+        ),
+      );
+    if (current.some((leg) => !owned.has(leg.fromVisitId) || !owned.has(leg.toVisitId))) {
+      throw new Error('Cannot archive a Visit involved in a current cross-day connection');
+    }
+
+    for (const leg of current) {
+      await tx.update(legs).set({ isCurrent: false }).where(eq(legs.id, leg.id));
+    }
+    await tx.update(visits).set({ isArchived: true }).where(eq(visits.id, input.visitId));
+    const remaining = active.filter((visit) => visit.id !== input.visitId);
+    const base = Math.max(...active.map((visit) => visit.position)) + 1;
+    if (base + remaining.length > 2147483647) {
+      throw new Error('Visit positions exceed the database integer range');
+    }
+    for (let index = 0; index < remaining.length; index += 1) {
+      await tx
+        .update(visits)
+        .set({ position: base + index })
+        .where(eq(visits.id, remaining[index].id));
+    }
+    for (let index = 0; index < remaining.length; index += 1) {
+      await tx.update(visits).set({ position: index }).where(eq(visits.id, remaining[index].id));
+    }
+    for (let index = 1; index < remaining.length; index += 1) {
+      await tx.insert(legs).values({
+        tripId: input.tripId,
+        fromVisitId: remaining[index - 1].id,
+        toVisitId: remaining[index].id,
+      });
+    }
+    return {
+      archivedVisitId: input.visitId,
+      archivedLegCount: current.length,
+      newLegCount: Math.max(remaining.length - 1, 0),
     };
   });
 }
