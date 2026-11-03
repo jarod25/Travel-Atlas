@@ -16,3 +16,5 @@ export {
 } from './schema';
 export { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository';
 export { acceptRouteProposal } from './route-review';
+export { createAtlasStore } from './atlas-store';
+export type { AtlasStore } from './atlas-store';
