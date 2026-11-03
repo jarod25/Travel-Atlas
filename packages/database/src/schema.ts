@@ -27,6 +27,7 @@ import {
   pgTable,
   text,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -170,10 +171,10 @@ export const legs = pgTable(
       sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
     ),
     index('legs_trip_idx').on(table.tripId),
-    unique('legs_current_from_unique')
+    uniqueIndex('legs_current_from_unique')
       .on(table.fromVisitId)
       .where(sql`${table.isCurrent} = true`),
-    unique('legs_current_to_unique')
+    uniqueIndex('legs_current_to_unique')
       .on(table.toVisitId)
       .where(sql`${table.isCurrent} = true`),
   ],
