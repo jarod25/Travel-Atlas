@@ -71,10 +71,7 @@ describe('Persisted ordered visits', () => {
   it('rejects a visit whose trip and day belong to different trips', async () => {
     const first = await newTrip('Synthetic trip A');
     const second = await newTrip('Synthetic trip B');
-    const [day] = await db
-      .insert(tripDays)
-      .values({ tripId: first.id, position: 0 })
-      .returning();
+    const [day] = await db.insert(tripDays).values({ tripId: first.id, position: 0 }).returning();
 
     try {
       await db.insert(visits).values({ tripId: second.id, tripDayId: day.id, position: 0 });
@@ -86,10 +83,7 @@ describe('Persisted ordered visits', () => {
 
   it('rejects duplicate and negative positions within a day', async () => {
     const trip = await newTrip('Synthetic positions');
-    const [day] = await db
-      .insert(tripDays)
-      .values({ tripId: trip.id, position: 0 })
-      .returning();
+    const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
 
     await db.insert(visits).values({ tripId: trip.id, tripDayId: day.id, position: 0 });
 
@@ -107,10 +101,7 @@ describe('Persisted ordered visits', () => {
 
   it('cascades visits on day deletion, without deleting the reusable place', async () => {
     const trip = await newTrip('Synthetic cascade');
-    const [day] = await db
-      .insert(tripDays)
-      .values({ tripId: trip.id, position: 0 })
-      .returning();
+    const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
     const [place] = await db.insert(places).values({ name: 'Reusable place' }).returning();
     placeIds.push(place.id);
     const [visit] = await db
