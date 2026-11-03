@@ -15,6 +15,13 @@
       "when": 1793706000000,
       "tag": "0001_ordered_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793712000000,
+      "tag": "0002_leg_relations",
+      "breakpoints": true
     }
   ]
 }

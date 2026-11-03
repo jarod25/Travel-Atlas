@@ -1,7 +1,7 @@
 # Database — initial schema
 
-The first persistence increments cover `trips`, `trip_days`, `places`, and `visits`.
-It uses Drizzle ORM mappings and a committed SQL migration managed by the Drizzle
+The first persistence increments cover `trips`, `trip_days`, `places`, `visits`, and `legs`.
+They use Drizzle ORM mappings and committed SQL migrations managed by the Drizzle
 migrator. PostgreSQL 18 with PostGIS 3.6 is the current target.
 
 ## Setup
@@ -36,7 +36,14 @@ Only synthetic fixtures are used in integration tests. The migrations create
 persistent tables: run them in a disposable database during CI. Geographic
 coordinate bounds and application-level validation remain future work.
 
+- `legs` references both endpoint visits using composite `(trip_id, visit_id)` foreign keys.
+- A Leg cannot connect a visit to itself or reuse a current incoming/outgoing endpoint.
+- Historical links may remain with `is_current = false`; deletion of referenced visits is restricted until Leg history is handled.
+- Transport and each confidence dimension are independent. Draft values default to `unknown` and transport to `NULL`.
+- Local calendar dates, wall-clock times and optional timezone strings are preserved without inferred UTC instants. A clock time requires a date.
+- Cross-day Legs can be represented, but only future application-level explicit Connect Days may create them.
+
 ## Next increment
 
-Introduce `legs` with same-trip endpoint foreign keys and independently nullable
-transport/timing evidence, then persist draft-leg planning atomically.
+Persist draft-leg planning atomically when visits are inserted or reordered. Add
+transaction tests that reject implicit cross-day Legs and roll back on failure.
