@@ -4,7 +4,14 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { acceptRouteProposal } from '../../packages/database/src/route-review';
-import { legs, routeProposals, routeVersions, tripDays, trips, visits } from '../../packages/database/src/schema';
+import {
+  legs,
+  routeProposals,
+  routeVersions,
+  tripDays,
+  trips,
+  visits,
+} from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -32,27 +39,50 @@ async function fixture() {
   const [trip] = await db.insert(trips).values({ title: 'Synthetic route review' }).returning();
   tripIds.push(trip.id);
   const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
-  const points = await db.insert(visits).values([
-    { tripId: trip.id, tripDayId: day.id, position: 0 },
-    { tripId: trip.id, tripDayId: day.id, position: 1 },
-  ]).returning();
-  const [leg] = await db.insert(legs).values({
-    tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-    transportMode: 'train',
-  }).returning();
+  const points = await db
+    .insert(visits)
+    .values([
+      { tripId: trip.id, tripDayId: day.id, position: 0 },
+      { tripId: trip.id, tripDayId: day.id, position: 1 },
+    ])
+    .returning();
+  const [leg] = await db
+    .insert(legs)
+    .values({
+      tripId: trip.id,
+      fromVisitId: points[0].id,
+      toVisitId: points[1].id,
+      transportMode: 'train',
+    })
+    .returning();
   return { trip, leg, points };
 }
 
-const line = { type: 'LineString', coordinates: [[0, 0], [0, 1]] };
-async function proposalFor(f: Awaited<ReturnType<typeof fixture>>, overrides: Record<string, unknown> = {}) {
-  const [candidate] = await db.insert(routeProposals).values({
-    tripId: f.trip.id, legId: f.leg.id,
-    fromVisitId: f.points[0].id, toVisitId: f.points[1].id,
-    transportMode: 'train', provider: 'synthetic',
-    parameters: { profile: 'tgv' },
-    geometry: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(line)}),4326)`,
-    ...overrides,
-  }).returning();
+const line = {
+  type: 'LineString',
+  coordinates: [
+    [0, 0],
+    [0, 1],
+  ],
+};
+async function proposalFor(
+  f: Awaited<ReturnType<typeof fixture>>,
+  overrides: Record<string, unknown> = {},
+) {
+  const [candidate] = await db
+    .insert(routeProposals)
+    .values({
+      tripId: f.trip.id,
+      legId: f.leg.id,
+      fromVisitId: f.points[0].id,
+      toVisitId: f.points[1].id,
+      transportMode: 'train',
+      provider: 'synthetic',
+      parameters: { profile: 'tgv' },
+      geometry: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(line)}),4326)`,
+      ...overrides,
+    })
+    .returning();
   return candidate;
 }
 
@@ -65,7 +95,11 @@ describe('Transactional route proposal review', () => {
     if (first.status !== 'accepted') throw new Error('Unexpected invalidation');
     expect(first.alreadyAccepted).toBe(false);
     const second = await acceptRouteProposal(db, { legId: f.leg.id, proposalId: candidate.id });
-    expect(second).toEqual({ status: 'accepted', versionId: first.versionId, alreadyAccepted: true });
+    expect(second).toEqual({
+      status: 'accepted',
+      versionId: first.versionId,
+      alreadyAccepted: true,
+    });
     const versions = await db.select().from(routeVersions).where(eq(routeVersions.legId, f.leg.id));
     expect(versions).toHaveLength(1);
     expect(versions[0].confidence).toBe('estimated');
@@ -73,7 +107,10 @@ describe('Transactional route proposal review', () => {
     const [leg] = await db.select().from(legs).where(eq(legs.id, f.leg.id));
     expect(leg.selectedRouteVersionId).toBe(first.versionId);
     expect(leg.geometryConfidence).toBe('unknown');
-    const [proposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, candidate.id));
+    const [proposal] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, candidate.id));
     expect(proposal.status).toBe('accepted');
     expect(proposal.acceptedRouteVersionId).toBe(first.versionId);
   });
@@ -84,21 +121,34 @@ describe('Transactional route proposal review', () => {
     await db.update(legs).set({ transportMode: 'bus' }).where(eq(legs.id, f.leg.id));
     const result = await acceptRouteProposal(db, { legId: f.leg.id, proposalId: candidate.id });
     expect(result).toEqual({ status: 'invalidated' });
-    const [proposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, candidate.id));
+    const [proposal] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, candidate.id));
     expect(proposal.status).toBe('invalidated');
     expect(proposal.reviewedAt).not.toBeNull();
-    expect(await db.select().from(routeVersions).where(eq(routeVersions.legId, f.leg.id))).toHaveLength(0);
+    expect(
+      await db.select().from(routeVersions).where(eq(routeVersions.legId, f.leg.id)),
+    ).toHaveLength(0);
   });
 
   it('rolls back if geometry is missing', async () => {
     const f = await fixture();
     const candidate = await proposalFor(f, { geometry: null });
-    await expect(acceptRouteProposal(db, {
-      legId: f.leg.id, proposalId: candidate.id,
-    })).rejects.toThrow('without route geometry');
-    const [proposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, candidate.id));
+    await expect(
+      acceptRouteProposal(db, {
+        legId: f.leg.id,
+        proposalId: candidate.id,
+      }),
+    ).rejects.toThrow('without route geometry');
+    const [proposal] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, candidate.id));
     expect(proposal.status).toBe('pending');
-    expect(await db.select().from(routeVersions).where(eq(routeVersions.legId, f.leg.id))).toHaveLength(0);
+    expect(
+      await db.select().from(routeVersions).where(eq(routeVersions.legId, f.leg.id)),
+    ).toHaveLength(0);
   });
 
   it('serializes two concurrent accepts of the same proposal', async () => {
@@ -109,17 +159,25 @@ describe('Transactional route proposal review', () => {
       acceptRouteProposal(db, { legId: f.leg.id, proposalId: candidate.id }),
     ]);
     expect(results.every((result) => result.status === 'accepted')).toBe(true);
-    expect(await db.select().from(routeVersions).where(eq(routeVersions.legId, f.leg.id))).toHaveLength(1);
+    expect(
+      await db.select().from(routeVersions).where(eq(routeVersions.legId, f.leg.id)),
+    ).toHaveLength(1);
   });
 
   it('rejects an unrelated leg and leaves proposal unchanged', async () => {
     const a = await fixture();
     const b = await fixture();
     const candidate = await proposalFor(a);
-    await expect(acceptRouteProposal(db, {
-      legId: b.leg.id, proposalId: candidate.id,
-    })).rejects.toThrow('Proposal not found');
-    const [saved] = await db.select().from(routeProposals).where(eq(routeProposals.id, candidate.id));
+    await expect(
+      acceptRouteProposal(db, {
+        legId: b.leg.id,
+        proposalId: candidate.id,
+      }),
+    ).rejects.toThrow('Proposal not found');
+    const [saved] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, candidate.id));
     expect(saved.status).toBe('pending');
   });
 });
