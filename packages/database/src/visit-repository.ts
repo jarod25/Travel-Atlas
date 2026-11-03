@@ -83,7 +83,9 @@ export async function reorderVisitsInDay(
     const existing = await tx
       .select({ id: visits.id, position: visits.position })
       .from(visits)
-      .where(and(eq(visits.tripId, input.tripId), eq(visits.tripDayId, day.id)))
+      .where(
+        and(eq(visits.tripId, input.tripId), eq(visits.tripDayId, day.id), eq(visits.isArchived, false)),
+      )
       .orderBy(asc(visits.position));
     const ids = existing.map((visit) => visit.id);
     const requested = input.orderedVisitIds;
