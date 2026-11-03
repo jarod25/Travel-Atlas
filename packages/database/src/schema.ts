@@ -216,10 +216,22 @@ export const routeVersions = pgTable(
     unique('route_versions_leg_version_unique').on(table.legId, table.versionNumber),
     unique('route_versions_leg_id_id_unique').on(table.legId, table.id),
     check('route_versions_positive_number', sql`${table.versionNumber} > 0`),
-    check('route_versions_distance_nonnegative', sql`${table.distanceMeters} IS NULL OR ${table.distanceMeters} >= 0`),
-    check('route_versions_origin_valid', sql`${table.origin} IS NULL OR ${table.origin} IN ('gps','calculated','manual','schematic')`),
-    check('route_versions_confidence_valid', sql`${table.confidence} IN ('confirmed','estimated','unknown')`),
-    check('route_versions_linear_geometry', sql`${table.geometry} IS NULL OR GeometryType(${table.geometry}) IN ('LINESTRING','MULTILINESTRING')`),
+    check(
+      'route_versions_distance_nonnegative',
+      sql`${table.distanceMeters} IS NULL OR ${table.distanceMeters} >= 0`,
+    ),
+    check(
+      'route_versions_origin_valid',
+      sql`${table.origin} IS NULL OR ${table.origin} IN ('gps','calculated','manual','schematic')`,
+    ),
+    check(
+      'route_versions_confidence_valid',
+      sql`${table.confidence} IN ('confirmed','estimated','unknown')`,
+    ),
+    check(
+      'route_versions_linear_geometry',
+      sql`${table.geometry} IS NULL OR GeometryType(${table.geometry}) IN ('LINESTRING','MULTILINESTRING')`,
+    ),
     index('route_versions_geometry_gist_idx').using('gist', table.geometry),
   ],
 );

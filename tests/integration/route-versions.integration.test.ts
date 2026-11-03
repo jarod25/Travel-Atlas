@@ -3,7 +3,14 @@ import { eq, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { legs, routeVersions, routeWaypoints, tripDays, trips, visits } from '../../packages/database/src/schema';
+import {
+  legs,
+  routeVersions,
+  routeWaypoints,
+  tripDays,
+  trips,
+  visits,
+} from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -44,30 +51,62 @@ async function fixture() {
   const [trip] = await db.insert(trips).values({ title: 'Synthetic routes' }).returning();
   tripIds.push(trip.id);
   const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
-  const points = await db.insert(visits).values([
-    { tripId: trip.id, tripDayId: day.id, position: 0 },
-    { tripId: trip.id, tripDayId: day.id, position: 1 },
-  ]).returning();
-  const [leg] = await db.insert(legs).values({
-    tripId: trip.id, fromVisitId: points[0].id, toVisitId: points[1].id,
-  }).returning();
+  const points = await db
+    .insert(visits)
+    .values([
+      { tripId: trip.id, tripDayId: day.id, position: 0 },
+      { tripId: trip.id, tripDayId: day.id, position: 1 },
+    ])
+    .returning();
+  const [leg] = await db
+    .insert(legs)
+    .values({
+      tripId: trip.id,
+      fromVisitId: points[0].id,
+      toVisitId: points[1].id,
+    })
+    .returning();
   return { trip, leg };
 }
 
 describe('Versioned PostGIS route geometry', () => {
   it('round-trips LineString, MultiLineString and NULL with SRID 4326', async () => {
     const { trip, leg } = await fixture();
-    const line = { type: 'LineString', coordinates: [[0, 0], [0, 1]] };
-    const multi = { type: 'MultiLineString', coordinates: [[[0, 0], [0, 1]], [[1, 1], [2, 2]]] };
+    const line = {
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [0, 1],
+      ],
+    };
+    const multi = {
+      type: 'MultiLineString',
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+        ],
+        [
+          [1, 1],
+          [2, 2],
+        ],
+      ],
+    };
     for (const [index, geojson] of [line, multi].entries()) {
       await db.insert(routeVersions).values({
-        tripId: trip.id, legId: leg.id, versionNumber: index + 1,
+        tripId: trip.id,
+        legId: leg.id,
+        versionNumber: index + 1,
         geometry: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geojson)}),4326)`,
-        origin: 'calculated', confidence: 'estimated',
+        origin: 'calculated',
+        confidence: 'estimated',
       });
     }
     await db.insert(routeVersions).values({
-      tripId: trip.id, legId: leg.id, versionNumber: 3, geometry: null,
+      tripId: trip.id,
+      legId: leg.id,
+      versionNumber: 3,
+      geometry: null,
     });
     const rows = await db.execute(sql`
       SELECT version_number, ST_AsGeoJSON(geometry) AS geojson,
@@ -87,36 +126,77 @@ describe('Versioned PostGIS route geometry', () => {
 
   it('rejects invalid geometry, duplicate numbering and negative distances', async () => {
     const { trip, leg } = await fixture();
-    await rejection(() => db.insert(routeVersions).values({
-      tripId: trip.id, legId: leg.id, versionNumber: 1,
-      geometry: sql`ST_SetSRID(ST_MakePoint(0,0),4326)`,
-    }), '23514');
+    await rejection(
+      () =>
+        db.insert(routeVersions).values({
+          tripId: trip.id,
+          legId: leg.id,
+          versionNumber: 1,
+          geometry: sql`ST_SetSRID(ST_MakePoint(0,0),4326)`,
+        }),
+      '23514',
+    );
     await db.insert(routeVersions).values({ tripId: trip.id, legId: leg.id, versionNumber: 1 });
-    await rejection(() => db.insert(routeVersions).values({
-      tripId: trip.id, legId: leg.id, versionNumber: 1,
-    }), '23505');
-    await rejection(() => db.insert(routeVersions).values({
-      tripId: trip.id, legId: leg.id, versionNumber: 2, distanceMeters: -1,
-    }), '23514');
+    await rejection(
+      () =>
+        db.insert(routeVersions).values({
+          tripId: trip.id,
+          legId: leg.id,
+          versionNumber: 1,
+        }),
+      '23505',
+    );
+    await rejection(
+      () =>
+        db.insert(routeVersions).values({
+          tripId: trip.id,
+          legId: leg.id,
+          versionNumber: 2,
+          distanceMeters: -1,
+        }),
+      '23514',
+    );
   });
 
   it('enforces same-trip Leg ownership and unique waypoint positions', async () => {
     const first = await fixture();
     const second = await fixture();
-    await rejection(() => db.insert(routeVersions).values({
-      tripId: first.trip.id, legId: second.leg.id, versionNumber: 1,
-    }), '23503');
-    const [version] = await db.insert(routeVersions).values({
-      tripId: first.trip.id, legId: first.leg.id, versionNumber: 1,
-      confidence: 'unknown',
-    }).returning();
-    const [waypoint] = await db.insert(routeWaypoints).values({
-      routeVersionId: version.id, position: 0, location: [0, 0],
-    }).returning();
+    await rejection(
+      () =>
+        db.insert(routeVersions).values({
+          tripId: first.trip.id,
+          legId: second.leg.id,
+          versionNumber: 1,
+        }),
+      '23503',
+    );
+    const [version] = await db
+      .insert(routeVersions)
+      .values({
+        tripId: first.trip.id,
+        legId: first.leg.id,
+        versionNumber: 1,
+        confidence: 'unknown',
+      })
+      .returning();
+    const [waypoint] = await db
+      .insert(routeWaypoints)
+      .values({
+        routeVersionId: version.id,
+        position: 0,
+        location: [0, 0],
+      })
+      .returning();
     expect(waypoint.location).toEqual([0, 0]);
-    await rejection(() => db.insert(routeWaypoints).values({
-      routeVersionId: version.id, position: 0, location: [1, 1],
-    }), '23505');
+    await rejection(
+      () =>
+        db.insert(routeWaypoints).values({
+          routeVersionId: version.id,
+          position: 0,
+          location: [1, 1],
+        }),
+      '23505',
+    );
   });
 
   it('creates a GiST index for route geometry', async () => {
