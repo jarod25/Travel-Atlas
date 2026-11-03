@@ -23,6 +23,8 @@ import {
   foreignKey,
   geometry,
   integer,
+  jsonb,
+  timestamp,
   boolean,
   time,
   index,
@@ -105,6 +107,7 @@ export const legs = pgTable(
     fromVisitId: uuid('from_visit_id').notNull(),
     toVisitId: uuid('to_visit_id').notNull(),
     isCurrent: boolean('is_current').notNull().default(true),
+    selectedRouteVersionId: uuid('selected_route_version_id'),
     transportMode: text('transport_mode', { enum: transportValues }),
     movementConfidence: text('movement_confidence', { enum: confidenceValues })
       .notNull()
@@ -172,6 +175,11 @@ export const legs = pgTable(
       'legs_arrival_time_needs_date',
       sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
     ),
+    foreignKey({
+      name: 'legs_selected_version_same_leg_fk',
+      columns: [table.id, table.selectedRouteVersionId],
+      foreignColumns: [routeVersions.legId, routeVersions.id],
+    }),
     unique('legs_trip_id_id_unique').on(table.tripId, table.id),
     index('legs_trip_idx').on(table.tripId),
     uniqueIndex('legs_current_from_unique')
@@ -249,5 +257,43 @@ export const routeWaypoints = pgTable(
   (table) => [
     unique('route_waypoints_version_position_unique').on(table.routeVersionId, table.position),
     check('route_waypoints_position_nonnegative', sql`${table.position} >= 0`),
+  ],
+);
+
+/**
+ * Route proposals are durable review candidates, not proof of historical travel.
+ * Their endpoint/transport snapshots enable later invalidation on changed inputs.
+ */
+export const routeProposals = pgTable(
+  'route_proposals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tripId: uuid('trip_id').notNull(),
+    legId: uuid('leg_id').notNull(),
+    fromVisitId: uuid('from_visit_id').notNull(),
+    toVisitId: uuid('to_visit_id').notNull(),
+    transportMode: text('transport_mode', { enum: transportValues }),
+    status: text('status', { enum: ['pending', 'accepted', 'rejected', 'invalidated'] })
+      .notNull()
+      .default('pending'),
+    geometry: linearGeometry('geometry'),
+    parameters: jsonb('parameters').$type<Record<string, unknown>>().notNull().default({}),
+    provider: text('provider'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  },
+  (table) => [
+    foreignKey({
+      name: 'route_proposals_same_trip_leg_fk',
+      columns: [table.tripId, table.legId],
+      foreignColumns: [legs.tripId, legs.id],
+    }),
+    check('route_proposals_status_valid', sql`${table.status} IN ('pending','accepted','rejected','invalidated')`),
+    check('route_proposals_transport_valid', sql`${table.transportMode} IS NULL OR ${table.transportMode} IN ('walking','hiking','cycling','train','metro','tram','car','bus','taxi','plane','boat','ferry')`),
+    check('route_proposals_distinct_endpoints', sql`${table.fromVisitId} <> ${table.toVisitId}`),
+    check('route_proposals_linear_geometry', sql`${table.geometry} IS NULL OR GeometryType(${table.geometry}) IN ('LINESTRING','MULTILINESTRING')`),
+    check('route_proposals_review_timestamp_valid', sql`(${table.status} = 'pending' AND ${table.reviewedAt} IS NULL) OR (${table.status} <> 'pending' AND ${table.reviewedAt} IS NOT NULL)`),
+    index('route_proposals_leg_idx').on(table.legId),
+    index('route_proposals_geometry_gist_idx').using('gist', table.geometry),
   ],
 );

@@ -70,6 +70,19 @@ GeoJSON. Geometry may be NULL rather than fabricating a straight line.
 
 `route_waypoints` contains ordered version-specific Point geometries.
 
+## Persistent proposals and selection
+
+`route_proposals` stores pending/accepted/rejected/invalidated candidates,
+serialized provider parameters, snapshot endpoints and transport, optional linear
+geometry, provider and review timestamps. A candidate does not affect statistics
+or the selected route. The database checks valid states, linear geometry and
+review timestamps, and keeps proposals across sessions.
+
+`legs.selected_route_version_id` is a nullable composite FK pointing only to a
+version of the very same Leg. Selecting an estimated route never automatically
+confirms the Leg's historical geometry.
+
 ## Next increment
 
-Add persistent route proposals and guarded version selection.
+Implement transactional proposal acceptance, stale-input invalidation and
+idempotence, then evidence and remaining supporting tables.
