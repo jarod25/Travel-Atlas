@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { atlasApi } from './api';
-import type { FeatureCollection, LegRow, Place, Timeline, Trip, TripDay, VisitRow } from './api';
+import type {
+  FeatureCollection,
+  Feature,
+  LegRow,
+  Place,
+  Timeline,
+  Trip,
+  TripDay,
+  VisitRow,
+} from './api';
 import { MapCanvas } from './MapCanvas';
+import type { ColorMode } from './MapCanvas';
 import { emptyFeatures, visibleFeatures } from './map-data';
 
 type View = 'explore' | 'trips' | 'editor';
@@ -13,6 +23,14 @@ function describeLeg(leg: LegRow | undefined): string {
 
 export function App() {
   const [view, setView] = useState<View>('explore');
+  const [filterFrom, setFilterFrom] = useState('');
+  const [filterTo, setFilterTo] = useState('');
+  const [filterMode, setFilterMode] = useState('');
+  const [filterConfidence, setFilterConfidence] = useState<
+    'all' | 'confirmed' | 'estimated' | 'unknown'
+  >('all');
+  const [colorBy, setColorBy] = useState<ColorMode>('trip');
+  const [selectedMapItem, setSelectedMapItem] = useState<Feature['properties'] | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripId, setTripId] = useState<string | null>(null);
   const [days, setDays] = useState<TripDay[]>([]);
@@ -168,8 +186,15 @@ export function App() {
   }, [selectedLeg?.id, selectedLeg?.revision]);
 
   const displayed = useMemo(
-    () => visibleFeatures(features, view === 'explore' ? tripId : tripId),
-    [features, tripId, view],
+    () =>
+      visibleFeatures(features, {
+        tripId,
+        fromDate: view === 'explore' ? filterFrom : '',
+        toDate: view === 'explore' ? filterTo : '',
+        transportMode: view === 'explore' ? filterMode : '',
+        confidence: view === 'explore' ? filterConfidence : 'all',
+      }),
+    [features, tripId, view, filterFrom, filterTo, filterMode, filterConfidence],
   );
 
   async function addTrip() {
@@ -366,7 +391,129 @@ export function App() {
               ))}
             </select>
           </div>
-          <MapCanvas data={displayed} label="Interactive world map of saved visits and routes" />
+          <div className="explore-filters">
+            <label htmlFor="explore-from">
+              From date
+              <input
+                id="explore-from"
+                type="date"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+              />
+            </label>
+            <label htmlFor="explore-to">
+              To date
+              <input
+                id="explore-to"
+                type="date"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+              />
+            </label>
+            <label htmlFor="explore-transport">
+              Transport
+              <select
+                id="explore-transport"
+                value={filterMode}
+                onChange={(e) => setFilterMode(e.target.value)}
+              >
+                <option value="">All transports</option>
+                {[
+                  'walking',
+                  'hiking',
+                  'cycling',
+                  'train',
+                  'metro',
+                  'tram',
+                  'car',
+                  'bus',
+                  'taxi',
+                  'plane',
+                  'boat',
+                  'ferry',
+                ].map((mode) => (
+                  <option key={mode} value={mode}>
+                    {mode}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label htmlFor="explore-certainty">
+              Geometry certainty
+              <select
+                id="explore-certainty"
+                value={filterConfidence}
+                onChange={(e) =>
+                  setFilterConfidence(
+                    e.target.value as 'all' | 'confirmed' | 'estimated' | 'unknown',
+                  )
+                }
+              >
+                <option value="all">All certainty</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="estimated">Estimated</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </label>
+            <label htmlFor="explore-colors">
+              Colors
+              <select
+                id="explore-colors"
+                value={colorBy}
+                onChange={(e) => setColorBy(e.target.value as ColorMode)}
+              >
+                <option value="trip">By trip</option>
+                <option value="transport">By transport</option>
+              </select>
+            </label>
+            <button
+              onClick={() => {
+                setFilterFrom('');
+                setFilterTo('');
+                setFilterMode('');
+                setFilterConfidence('all');
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
+          {filterMode && (
+            <p className="map-filter-note">
+              Transport filters show saved route geometries only. Visits without a route are not
+              assigned a transport.
+            </p>
+          )}
+          <MapCanvas
+            data={displayed}
+            label="Interactive world map of saved visits and routes"
+            colorBy={colorBy}
+            onSelect={setSelectedMapItem}
+          />
+          {selectedMapItem && (
+            <section className="map-selection" aria-label="Selected map feature">
+              <div>
+                <span className="eyebrow">Selected {selectedMapItem.kind ?? 'feature'}</span>
+                <h2>{selectedMapItem.name ?? selectedMapItem.transportMode ?? 'Saved route'}</h2>
+                <p>
+                  Date: {selectedMapItem.localDate ?? 'Unknown'} · Certainty:{' '}
+                  {selectedMapItem.locationConfidence ?? selectedMapItem.confidence ?? 'Unknown'}
+                </p>
+              </div>
+              {selectedMapItem.tripId && (
+                <button
+                  onClick={() => {
+                    setTripId(selectedMapItem.tripId ?? null);
+                    setView('editor');
+                  }}
+                >
+                  Open trip in editor
+                </button>
+              )}
+              <button aria-label="Close map details" onClick={() => setSelectedMapItem(null)}>
+                Close
+              </button>
+            </section>
+          )}
           <div className="info-strip">
             <span>
               {displayed.features.filter((feature) => feature.properties.kind === 'visit').length}{' '}
