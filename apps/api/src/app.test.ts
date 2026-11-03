@@ -18,6 +18,8 @@ function stub(): AtlasStore {
     listDays: async (id: string) => (id === tripId ? [] : null),
     createDay: async (id: string, localDate: string | null) =>
       id === tripId ? { id: dayId, tripId: id, localDate } : null,
+    editDay: async (id: string, dayId: string, revision: number) =>
+      ({ status: 'conflict', currentRevision: revision + 1 }),
     getTimeline: async (id: string, day: string) =>
       id === tripId && day === dayId ? { visits: [], legs: [] } : null,
     listPlaces: async () => [],
@@ -204,5 +206,23 @@ describe('Trip metadata API', () => {
     } finally {
       await app.close();
     }
+  });
+});
+
+describe('Trip day revision API', () => {
+  it('requires an optimistic revision for calendar dates', async () => {
+    const app = buildApp(stub());
+    const url = `/api/v1/trips/${tripId}/days/${dayId}`;
+    try {
+      expect((await app.inject({ method: 'PATCH', url,
+        payload: { localDate: null } })).statusCode).toBe(428);
+      const stale = await app.inject({ method: 'PATCH', url,
+        headers: { 'if-match': '"1"' }, payload: { localDate: '2026-09-12' } });
+      expect(stale.statusCode).toBe(412);
+      expect(stale.headers.etag).toBe('"2"');
+      expect((await app.inject({ method: 'PATCH', url,
+        headers: { 'if-match': '"1"' }, payload: { localDate: 'not a date' } }))
+        .statusCode).toBe(400);
+    } finally { await app.close(); }
   });
 });

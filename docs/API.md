@@ -35,3 +35,10 @@ PATCH /api/v1/trips/:tripId requires an If-Match revision and accepts a nonempty
 trimmed title and/or soft-archival state. GET /trips?includeArchived=true lists
 archived trips for restoration; Explore omits them from mapping by default.
 A stale revision returns 412 rather than overwriting another edit.
+
+## Day dates and Leg local time
+
+PATCH /api/v1/trips/:tripId/days/:dayId changes a day's optional local calendar
+date with the same If-Match/412 precondition semantics. Leg PATCH supports
+independent optional local departure/arrival dates, wall-clock times and
+confidence, without inventing a timezone or UTC timestamp.

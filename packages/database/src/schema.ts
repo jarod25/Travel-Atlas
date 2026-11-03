@@ -60,11 +60,13 @@ export const tripDays = pgTable(
       .references(() => trips.id, { onDelete: 'cascade' }),
     localDate: date('local_date', { mode: 'string' }),
     position: integer('position').notNull(),
+    revision: integer('revision').notNull().default(1),
   },
   (table) => [
     unique('trip_days_trip_position_unique').on(table.tripId, table.position),
     unique('trip_days_trip_id_id_unique').on(table.tripId, table.id),
     check('trip_days_position_nonnegative', sql`${table.position} >= 0`),
+    check('trip_days_revision_positive', sql`${table.revision} > 0`),
   ],
 );
 
