@@ -18,6 +18,8 @@ const transportValues = [
 import {
   check,
   date,
+  doublePrecision,
+  customType,
   foreignKey,
   geometry,
   integer,
@@ -170,6 +172,7 @@ export const legs = pgTable(
       'legs_arrival_time_needs_date',
       sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
     ),
+    unique('legs_trip_id_id_unique').on(table.tripId, table.id),
     index('legs_trip_idx').on(table.tripId),
     uniqueIndex('legs_current_from_unique')
       .on(table.fromVisitId)
@@ -177,5 +180,62 @@ export const legs = pgTable(
     uniqueIndex('legs_current_to_unique')
       .on(table.toVisitId)
       .where(sql`${table.isCurrent} = true`),
+  ],
+);
+
+/**
+ * PostGIS geometry(Geometry,4326) supports both linear geometry variants.
+ * Use parameterized ST_GeomFromGeoJSON for writes and ST_AsGeoJSON for reads.
+ * The driver representation is not assumed to be GeoJSON.
+ */
+const linearGeometry = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return 'geometry(Geometry,4326)';
+  },
+});
+
+export const routeVersions = pgTable(
+  'route_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tripId: uuid('trip_id').notNull(),
+    legId: uuid('leg_id').notNull(),
+    versionNumber: integer('version_number').notNull(),
+    geometry: linearGeometry('geometry'),
+    origin: text('origin', { enum: ['gps', 'calculated', 'manual', 'schematic'] }),
+    confidence: text('confidence', { enum: confidenceValues }).notNull().default('unknown'),
+    distanceMeters: doublePrecision('distance_meters'),
+    provider: text('provider'),
+  },
+  (table) => [
+    foreignKey({
+      name: 'route_versions_same_trip_leg_fk',
+      columns: [table.tripId, table.legId],
+      foreignColumns: [legs.tripId, legs.id],
+    }),
+    unique('route_versions_leg_version_unique').on(table.legId, table.versionNumber),
+    unique('route_versions_leg_id_id_unique').on(table.legId, table.id),
+    check('route_versions_positive_number', sql`${table.versionNumber} > 0`),
+    check('route_versions_distance_nonnegative', sql`${table.distanceMeters} IS NULL OR ${table.distanceMeters} >= 0`),
+    check('route_versions_origin_valid', sql`${table.origin} IS NULL OR ${table.origin} IN ('gps','calculated','manual','schematic')`),
+    check('route_versions_confidence_valid', sql`${table.confidence} IN ('confirmed','estimated','unknown')`),
+    check('route_versions_linear_geometry', sql`${table.geometry} IS NULL OR GeometryType(${table.geometry}) IN ('LINESTRING','MULTILINESTRING')`),
+    index('route_versions_geometry_gist_idx').using('gist', table.geometry),
+  ],
+);
+
+export const routeWaypoints = pgTable(
+  'route_waypoints',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    routeVersionId: uuid('route_version_id')
+      .notNull()
+      .references(() => routeVersions.id),
+    position: integer('position').notNull(),
+    location: geometry('location', { type: 'point', mode: 'tuple', srid: 4326 }).notNull(),
+  },
+  (table) => [
+    unique('route_waypoints_version_position_unique').on(table.routeVersionId, table.position),
+    check('route_waypoints_position_nonnegative', sql`${table.position} >= 0`),
   ],
 );
