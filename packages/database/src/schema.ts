@@ -61,6 +61,7 @@ export const tripDays = pgTable(
     localDate: date('local_date', { mode: 'string' }),
     position: integer('position').notNull(),
     revision: integer('revision').notNull().default(1),
+    isArchived: boolean('is_archived').notNull().default(false),
   },
   (table) => [
     unique('trip_days_trip_position_unique').on(table.tripId, table.position),
