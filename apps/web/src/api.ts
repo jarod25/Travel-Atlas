@@ -119,6 +119,12 @@ export const atlasApi = {
     changes: {
       transportMode?: string | null;
       transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      departureLocalDate?: string | null;
+      departureLocalTime?: string | null;
+      departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      arrivalLocalDate?: string | null;
+      arrivalLocalTime?: string | null;
+      arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
     },
   ) =>
     request<LegRow>(`/legs/${id}`, {
