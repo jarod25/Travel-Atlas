@@ -36,3 +36,9 @@ clock-time controls are collapsed by default and never infer a timezone.
 The explicit Connect to next day control creates a single unknown draft Leg
 between the last active Visit and the following day's first active Visit.
 It never connects days on creation and rejects existing competing endpoints.
+
+Explore supports date ranges (local calendar dates only), transport filters for
+stored route geometries, independent location/route geometry confidence filters,
+and route colors by Trip or transport. Selecting a map feature shows its persisted
+metadata and can open the related Trip. Missing dates are excluded only when a
+calendar filter is active; unknown paths are never drawn as direct lines.
