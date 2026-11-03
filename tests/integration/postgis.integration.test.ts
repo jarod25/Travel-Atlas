@@ -6,7 +6,9 @@ import { sql } from 'drizzle-orm';
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required for integration tests (use a dedicated test database).');
+  throw new Error(
+    'DATABASE_URL is required for integration tests (use a dedicated test database).',
+  );
 }
 
 const client = postgres(databaseUrl, { max: 1 });
@@ -30,8 +32,26 @@ describe('Drizzle / PostGIS geometry round trips', () => {
     `);
     await db.execute(sql`CREATE INDEX atlas_test_geom_gix ON atlas_test_geom USING GIST (geom)`);
 
-    const line = { type: 'LineString', coordinates: [[0, 0], [0, 1]] };
-    const multi = { type: 'MultiLineString', coordinates: [[[0, 0], [0, 1]], [[1, 1], [2, 2]]] };
+    const line = {
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [0, 1],
+      ],
+    };
+    const multi = {
+      type: 'MultiLineString',
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+        ],
+        [
+          [1, 1],
+          [2, 2],
+        ],
+      ],
+    };
 
     await db.execute(sql`
       INSERT INTO atlas_test_geom (id, geom)

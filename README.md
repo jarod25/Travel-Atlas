@@ -13,19 +13,19 @@
 - Filter, analyze, and eventually animate travel histories across devices.
 - Preserve portable data through open formats and keep personal trip records private by design.
 
-**Data integrity matters:** a routing engine produces a *proposed route*, not proof of the route actually traveled. Individual observations and geometries retain their provenance and confidence: **confirmed**, **estimated**, or **unknown**.
+**Data integrity matters:** a routing engine produces a _proposed route_, not proof of the route actually traveled. Individual observations and geometries retain their provenance and confidence: **confirmed**, **estimated**, or **unknown**.
 
 ## Technology
 
-| Area | Selected technology |
-| --- | --- |
-| Web client | React, TypeScript, Vite |
-| API | Fastify, TypeScript |
-| Database | PostgreSQL, PostGIS, Drizzle ORM |
-| Map and route editing (planned) | MapLibre GL JS; geometry editor to be evaluated |
-| Data exchange (planned) | GeoJSON and portable native backups; GPX later |
-| Quality | Vitest, TypeScript, ESLint, Prettier, GitHub Actions |
-| Workspace | pnpm monorepo |
+| Area                            | Selected technology                                  |
+| ------------------------------- | ---------------------------------------------------- |
+| Web client                      | React, TypeScript, Vite                              |
+| API                             | Fastify, TypeScript                                  |
+| Database                        | PostgreSQL, PostGIS, Drizzle ORM                     |
+| Map and route editing (planned) | MapLibre GL JS; geometry editor to be evaluated      |
+| Data exchange (planned)         | GeoJSON and portable native backups; GPX later       |
+| Quality                         | Vitest, TypeScript, ESLint, Prettier, GitHub Actions |
+| Workspace                       | pnpm monorepo                                        |
 
 The repository currently contains a minimal web/API foundation and test infrastructure, **not** the full feature set shown above.
 
