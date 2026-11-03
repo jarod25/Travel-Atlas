@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, date, geometry, integer, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
+import { check, date, foreignKey, geometry, integer, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
 
 /** Trips contain ordered days; no geographic coordinates or times are inferred. */
 export const trips = pgTable(
@@ -35,3 +35,25 @@ export const places = pgTable('places', {
   name: text('name'),
   location: geometry('location', { type: 'point', mode: 'tuple', srid: 4326 }),
 });
+
+/** A visit belongs to a day of the same trip; places can be visited repeatedly. */
+export const visits = pgTable(
+  'visits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tripId: uuid('trip_id').notNull(),
+    tripDayId: uuid('trip_day_id').notNull(),
+    placeId: uuid('place_id').references(() => places.id, { onDelete: 'set null' }),
+    position: integer('position').notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: 'visits_same_trip_day_fk',
+      columns: [table.tripId, table.tripDayId],
+      foreignColumns: [tripDays.tripId, tripDays.id],
+    }).onDelete('cascade'),
+    unique('visits_day_position_unique').on(table.tripDayId, table.position),
+    unique('visits_trip_id_id_unique').on(table.tripId, table.id),
+    check('visits_position_nonnegative', sql`${table.position} >= 0`),
+  ],
+);

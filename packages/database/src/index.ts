@@ -1,1 +1,1 @@
-export { places, tripDays, trips } from './schema';
+export { places, tripDays, trips, visits } from './schema';
