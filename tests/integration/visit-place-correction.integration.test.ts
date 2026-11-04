@@ -35,8 +35,14 @@ afterAll(async () => {
 
 describe('Existing Visit Place correction', () => {
   it('preserves Leg identity and facts while invalidating pending route calculations', async () => {
-    const [firstPlace] = await db.insert(places).values({ name: 'Synthetic old Place' }).returning();
-    const [newPlace] = await db.insert(places).values({ name: 'Synthetic corrected Place' }).returning();
+    const [firstPlace] = await db
+      .insert(places)
+      .values({ name: 'Synthetic old Place' })
+      .returning();
+    const [newPlace] = await db
+      .insert(places)
+      .values({ name: 'Synthetic corrected Place' })
+      .returning();
     placeIds.push(firstPlace.id, newPlace.id);
     const [trip] = await db.insert(trips).values({ title: 'Synthetic correction' }).returning();
     tripIds.push(trip.id);
@@ -86,7 +92,10 @@ describe('Existing Visit Place correction', () => {
     expect(savedLeg.isCurrent).toBe(true);
     expect(savedLeg.transportMode).toBe('train');
     expect(savedLeg.transportConfidence).toBe('confirmed');
-    const [savedProposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, proposal.id));
+    const [savedProposal] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, proposal.id));
     expect(savedProposal.status).toBe('invalidated');
     expect(savedProposal.reviewedAt).toBeInstanceOf(Date);
 
