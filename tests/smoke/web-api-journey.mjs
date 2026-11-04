@@ -94,7 +94,10 @@ try {
     [second.id, first.id, third.id],
   );
   assert.equal(timeline.legs.length, 2);
-  const leg = timeline.legs[0];
+  const leg = timeline.legs.find(
+    (item) => item.fromVisitId === second.id && item.toVisitId === first.id,
+  );
+  assert.ok(leg, 'Expected stable adjacent Leg after reorder');
   await json(
     `/api/v1/legs/${leg.id}`,
     'PATCH',
