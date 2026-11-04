@@ -9,6 +9,9 @@ POST /trips/:tripId/days/:dayId/visits, POST /trips/:tripId/days/:dayId/reorder,
 DELETE /trips/:tripId/days/:dayId/visits/:visitId, GET /explore/geojson.
 All are relative to /api/v1.
 
+Archived Trips and days reject Visit timeline mutations with HTTP 409. Edits to
+historical Legs are refused, and day dates cannot be changed while archived.
+
 No route proposal is automatically created, and an unknown geometry is not fabricated
 as a direct segment. All mutations delegate to database transactions.
 The API is intentionally bound to 127.0.0.1 by default and does not yet support remote
