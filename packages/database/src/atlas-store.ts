@@ -315,6 +315,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .select({
           visitId: visits.id,
           tripId: visits.tripId,
+          dayId: visits.tripDayId,
           placeId: places.id,
           name: places.name,
           location: places.location,
@@ -336,7 +337,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const routes = await db.execute(sql`
         SELECT l.trip_id, l.id AS leg_id, rv.id AS route_version_id,
           l.transport_mode, l.movement_confidence,
-          td.local_date::text AS local_date,
+          td.id AS day_id, td.local_date::text AS local_date,
           ST_AsGeoJSON(rv.geometry) AS geojson, rv.confidence
         FROM legs l JOIN route_versions rv ON rv.id = l.selected_route_version_id
           JOIN visits v ON v.id = l.from_visit_id
@@ -358,6 +359,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
             properties: {
               visitId: point.visitId,
               tripId: point.tripId,
+              dayId: point.dayId,
               placeId: point.placeId,
               name: point.name,
               kind: 'visit',
@@ -370,6 +372,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
             geometry: JSON.parse(String(route.geojson)),
             properties: {
               tripId: route.trip_id,
+              dayId: route.day_id,
               legId: route.leg_id,
               routeVersionId: route.route_version_id,
               confidence: route.confidence,

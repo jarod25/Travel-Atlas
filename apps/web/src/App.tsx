@@ -178,7 +178,9 @@ export function App() {
     timeline.visits.some((visit) => visit.id === leg.fromVisitId),
   );
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
-  const selectedLeg = timeline?.legs.find((leg) => leg.id === selectedLegId);
+  const selectedLeg = [...(timeline?.legs ?? []), ...(timeline?.crossDayLegs ?? [])].find(
+    (leg) => leg.id === selectedLegId,
+  );
   useEffect(() => {
     setVisitPlaceQuery(selectedVisit?.placeName ?? '');
     setVisitPlaceId(selectedVisit?.placeId ?? '');
@@ -220,6 +222,25 @@ export function App() {
       }),
     [features, tripId, view, filterFrom, filterTo, filterMode, filterConfidence],
   );
+
+  function openMapFeature(properties: Feature['properties']) {
+    if (!properties.tripId) return;
+    setTripId(properties.tripId);
+    if (properties.dayId) setDayId(properties.dayId);
+    setSelectedVisitId(properties.kind === 'visit' ? (properties.visitId ?? null) : null);
+    setSelectedLegId(properties.kind === 'route' ? (properties.legId ?? null) : null);
+    setMobilePanel('timeline');
+    setView('editor');
+  }
+
+  function selectEditorMapFeature(properties: Feature['properties']) {
+    if (properties.dayId && days.some((day) => day.id === properties.dayId)) {
+      setDayId(properties.dayId);
+    }
+    setSelectedVisitId(properties.kind === 'visit' ? (properties.visitId ?? null) : null);
+    setSelectedLegId(properties.kind === 'route' ? (properties.legId ?? null) : null);
+    setMobilePanel('timeline');
+  }
 
   async function addTrip() {
     const title = tripName.trim();
@@ -589,13 +610,8 @@ export function App() {
                 </p>
               </div>
               {selectedMapItem.tripId && (
-                <button
-                  onClick={() => {
-                    setTripId(selectedMapItem.tripId ?? null);
-                    setView('editor');
-                  }}
-                >
-                  Open trip in editor
+                <button onClick={() => openMapFeature(selectedMapItem)}>
+                  Open selected item in editor
                 </button>
               )}
               <button aria-label="Close map details" onClick={() => setSelectedMapItem(null)}>
@@ -965,7 +981,11 @@ export function App() {
                   )}
                 </aside>
                 <section className={`editor-map mobile-${mobilePanel}`}>
-                  <MapCanvas data={displayed} label="Map of selected trip and its saved geometry" />
+                  <MapCanvas
+                    data={displayed}
+                    label="Map of selected trip and its saved geometry"
+                    onSelect={selectEditorMapFeature}
+                  />
                   {selectedLeg && (
                     <div className="details-panel leg-details">
                       <div>
