@@ -345,6 +345,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           JOIN trips t ON t.id = l.trip_id
         WHERE l.is_current = true AND t.is_archived = false
           AND td.is_archived = false AND td2.is_archived = false
+          AND v.is_archived = false AND v2.is_archived = false
           AND rv.geometry IS NOT NULL
       `);
       return {
