@@ -50,9 +50,14 @@ export interface AtlasStore {
   createPlace(name: string): Promise<unknown>;
   updatePlace(
     id: string,
+    expectedRevision: number,
     coordinates: [number, number] | null,
     confidence: 'confirmed' | 'estimated' | 'unknown',
-  ): Promise<unknown | null>;
+  ): Promise<
+    | { status: 'not_found' }
+    | { status: 'conflict'; currentRevision: number }
+    | { status: 'updated'; place: typeof places.$inferSelect }
+  >;
   addVisit(tripId: string, dayId: string, placeId: string | null): Promise<unknown>;
   reorderVisits(tripId: string, dayId: string, visitIds: string[]): Promise<unknown>;
   archiveVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
@@ -220,22 +225,33 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const [place] = await db.insert(places).values({ name }).returning();
       return place;
     },
-    updatePlace: (id, coordinates, confidence) =>
+    updatePlace: (id, expectedRevision, coordinates, confidence) =>
       db.transaction(async (tx) => {
         // Lock the shared Place so concurrent coordinate changes cannot interleave
         // with invalidation of route candidates derived from its previous location.
         const [current] = await tx
-          .select({ location: places.location })
+          .select()
           .from(places)
           .where(eq(places.id, id))
           .for('update');
-        if (!current) return null;
+        if (!current) return { status: 'not_found' as const };
+        if (current.revision !== expectedRevision) {
+          return { status: 'conflict' as const, currentRevision: current.revision };
+        }
+        const nextConfidence = coordinates ? confidence : 'unknown';
         const oldLongitude = current.location?.[0];
         const oldLatitude = current.location?.[1];
         const changed = oldLongitude !== coordinates?.[0] || oldLatitude !== coordinates?.[1];
+        if (!changed && current.locationConfidence === nextConfidence) {
+          return { status: 'updated' as const, place: current };
+        }
         const [updated] = await tx
           .update(places)
-          .set({ location: coordinates, locationConfidence: coordinates ? confidence : 'unknown' })
+          .set({
+            location: coordinates,
+            locationConfidence: nextConfidence,
+            revision: current.revision + 1,
+          })
           .where(eq(places.id, id))
           .returning();
 
@@ -253,7 +269,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
               AND (start_visit.place_id = ${id} OR end_visit.place_id = ${id})
           `);
         }
-        return updated;
+        return { status: 'updated' as const, place: updated };
       }),
     addVisit: async (tripId, dayId, placeId) => {
       return appendVisitToDay(db, { tripId, tripDayId: dayId, placeId });
