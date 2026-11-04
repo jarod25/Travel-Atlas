@@ -15,6 +15,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await expect(page.locator('.timeline-panel')).toHaveCSS('resize', 'horizontal');
 
   const trips = await (await request.get('/api/v1/trips')).json();
   const trip = trips.find((item: { title: string }) => item.title === title);
