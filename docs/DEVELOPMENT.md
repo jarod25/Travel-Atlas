@@ -32,7 +32,7 @@ The API defaults to `http://127.0.0.1:3001` and the Vite web app to
 `http://127.0.0.1:5173`. `GET /health` only confirms HTTP startup, not database
 readiness; `pnpm smoke:api` additionally queries the migrated database.
 
-`pnpm dev` builds the internal database package before starting its API watcher.
+`pnpm dev` builds the internal database package before starting its API watcher. CI confirms compiled API startup and PostGIS-backed HTTP responses, not a manually operated local Docker Desktop/Vite development session.
 `pnpm build` builds workspace packages in dependency order. The migrations directory
 is resolved relative to the database module, not the shell working directory.
 
@@ -73,3 +73,7 @@ Create short `fix/*`, `feature/*`, `docs/*` or `chore/*` branches from
 `develop`. Write commits and PRs in English, squash-merge only after successful
 CI, and verify the resulting `develop` checks. Do not modify `main` or
 publish a release during Lot 3 stabilization.
+
+## Lot 0 and external providers
+
+The two OpenRailRouting TGV feasibility requests in the November 3, 2026 reference both failed with DNS `EAI_AGAIN` before receiving route results. Do not represent the trains as computed or confirmed. Routing-adapter implementation is outside Lot 3.
