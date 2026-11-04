@@ -4,7 +4,9 @@ import { once } from 'node:events';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 if (!process.env.DATABASE_URL || process.env.ATLAS_SMOKE_DISPOSABLE !== '1') {
-  throw new Error('Set DATABASE_URL to a disposable migrated PostGIS database and ATLAS_SMOKE_DISPOSABLE=1.');
+  throw new Error(
+    'Set DATABASE_URL to a disposable migrated PostGIS database and ATLAS_SMOKE_DISPOSABLE=1.',
+  );
 }
 
 const apiPort = 3001;
@@ -54,16 +56,24 @@ async function json(path, method = 'GET', body, revision, expectedStatus = 200) 
 try {
   const api = start('apps/api/dist/server.js', [], process.cwd());
   await awaitReady(`http://127.0.0.1:${apiPort}/health`, api);
-  const web = start('node_modules/vite/bin/vite.js', [
-    '--host', '127.0.0.1', '--port', String(webPort), '--strictPort',
-  ], 'apps/web');
+  const web = start(
+    'node_modules/vite/bin/vite.js',
+    ['--host', '127.0.0.1', '--port', String(webPort), '--strictPort'],
+    'apps/web',
+  );
   const page = await awaitReady(webUrl, web);
   assert.match(await page.text(), /<div id="root"><\/div>/);
   const entry = await awaitReady(`${webUrl}/src/main.tsx`, web);
   assert.match(entry.headers.get('content-type') ?? '', /javascript/);
   assert.ok(Array.isArray(await json('/api/v1/trips')), 'Vite must proxy to the compiled API');
 
-  const trip = await json('/api/v1/trips', 'POST', { title: 'Synthetic web proxy smoke' }, undefined, 201);
+  const trip = await json(
+    '/api/v1/trips',
+    'POST',
+    { title: 'Synthetic web proxy smoke' },
+    undefined,
+    201,
+  );
   const root = `/api/v1/trips/${trip.id}`;
   const day = await json(`${root}/days`, 'POST', { localDate: null }, undefined, 201);
   const timelineUrl = `${root}/days/${day.id}/timeline`;
@@ -79,13 +89,25 @@ try {
     visitIds: [second.id, first.id, third.id],
   });
   timeline = await json(timelineUrl);
-  assert.deepEqual(timeline.visits.map((visit) => visit.id), [second.id, first.id, third.id]);
+  assert.deepEqual(
+    timeline.visits.map((visit) => visit.id),
+    [second.id, first.id, third.id],
+  );
   assert.equal(timeline.legs.length, 2);
   const leg = timeline.legs[0];
-  await json(`/api/v1/legs/${leg.id}`, 'PATCH', {
-    transportMode: 'train', transportConfidence: 'confirmed',
-  }, leg.revision);
-  assert.equal((await json(timelineUrl)).legs.find((item) => item.id === leg.id).transportMode, 'train');
+  await json(
+    `/api/v1/legs/${leg.id}`,
+    'PATCH',
+    {
+      transportMode: 'train',
+      transportConfidence: 'confirmed',
+    },
+    leg.revision,
+  );
+  assert.equal(
+    (await json(timelineUrl)).legs.find((item) => item.id === leg.id).transportMode,
+    'train',
+  );
 
   await json(`${visitsUrl}/${third.id}`, 'DELETE');
   timeline = await json(timelineUrl);
@@ -94,19 +116,32 @@ try {
   assert.equal(timeline.legs[0].id, leg.id);
   assert.equal(timeline.legs[0].transportMode, 'train');
 
-  const archived = await json(`${root}/days/${day.id}/archive`, 'PATCH', {
-    isArchived: true,
-  }, day.revision);
-  const restored = await json(`${root}/days/${day.id}/archive`, 'PATCH', {
-    isArchived: false,
-  }, archived.revision);
+  const archived = await json(
+    `${root}/days/${day.id}/archive`,
+    'PATCH',
+    {
+      isArchived: true,
+    },
+    day.revision,
+  );
+  const restored = await json(
+    `${root}/days/${day.id}/archive`,
+    'PATCH',
+    {
+      isArchived: false,
+    },
+    archived.revision,
+  );
   assert.equal(restored.isArchived, false);
   timeline = await json(timelineUrl);
   assert.equal(timeline.legs[0].id, leg.id);
   assert.equal(timeline.legs[0].transportMode, 'train');
   const explore = await json('/api/v1/explore/geojson');
   assert.equal(explore.type, 'FeatureCollection');
-  assert.equal(explore.features.filter((feature) => feature.properties.tripId === trip.id).length, 0);
+  assert.equal(
+    explore.features.filter((feature) => feature.properties.tripId === trip.id).length,
+    0,
+  );
 
   console.log('Vite proxy + compiled API synthetic timeline journey passed.');
 } finally {
