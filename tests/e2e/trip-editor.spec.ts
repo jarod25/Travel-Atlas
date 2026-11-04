@@ -48,13 +48,15 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   await page.locator('#leg-confidence').selectOption('confirmed');
   await page.getByRole('button', { name: 'Save Leg' }).click();
 
-  await expect.poll(async () => {
-    const timeline = await (await request.get(timelineUrl)).json();
-    return timeline.legs.find(
-      (item: { fromVisitId: string; toVisitId: string }) =>
-        item.fromVisitId === second.id && item.toVisitId === first.id,
-    )?.transportMode;
-  }).toBe('train');
+  await expect
+    .poll(async () => {
+      const timeline = await (await request.get(timelineUrl)).json();
+      return timeline.legs.find(
+        (item: { fromVisitId: string; toVisitId: string }) =>
+          item.fromVisitId === second.id && item.toVisitId === first.id,
+      )?.transportMode;
+    })
+    .toBe('train');
   const reordered = await (await request.get(timelineUrl)).json();
   const savedLeg = reordered.legs.find(
     (item: { fromVisitId: string; toVisitId: string }) =>
