@@ -170,6 +170,9 @@ export function buildApp(store?: AtlasStore) {
       if (result.status === 'not_found') {
         return reply.code(404).send({ error: 'Day not found' });
       }
+      if (result.status === 'archived') {
+        return reply.code(409).send({ error: 'Restore the Trip before editing its days' });
+      }
       if (result.status === 'conflict') {
         return reply
           .code(412)
@@ -209,6 +212,9 @@ export function buildApp(store?: AtlasStore) {
       );
       if (result.status === 'not_found') {
         return reply.code(404).send({ error: 'Day not found' });
+      }
+      if (result.status === 'archived') {
+        return reply.code(409).send({ error: 'Restore the Trip before editing its days' });
       }
       if (result.status === 'conflict') {
         return reply
