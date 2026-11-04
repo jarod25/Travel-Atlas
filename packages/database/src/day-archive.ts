@@ -64,24 +64,18 @@ export async function setDayArchivedWithRevision(
           (leg) => owned.has(leg.fromVisitId) && owned.has(leg.toVisitId),
         );
         if (intraDay.length > 0) {
-          await tx.insert(dayRestoreLegs).values(
-            intraDay.map((leg) => ({ dayId: input.dayId, legId: leg.id })),
-          );
+          await tx
+            .insert(dayRestoreLegs)
+            .values(intraDay.map((leg) => ({ dayId: input.dayId, legId: leg.id }));
         }
         const retiredIds = touching.map((leg) => leg.id);
         if (retiredIds.length > 0) {
-          await tx
-            .update(legs)
-            .set({ isCurrent: false })
-            .where(inArray(legs.id, retiredIds));
+          await tx.update(legs).set({ isCurrent: false }).where(inArray(legs.id, retiredIds));
           await tx
             .update(routeProposals)
             .set({ status: 'invalidated', reviewedAt: new Date() })
             .where(
-              and(
-                inArray(routeProposals.legId, retiredIds),
-                eq(routeProposals.status, 'pending'),
-              ),
+              and(inArray(routeProposals.legId, retiredIds), eq(routeProposals.status, 'pending')),
             );
         }
       }
