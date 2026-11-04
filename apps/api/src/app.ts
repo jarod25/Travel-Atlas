@@ -586,7 +586,9 @@ export function buildApp(store?: AtlasStore) {
         result = await store.updateLeg(request.params.legId, Number(match[1]), request.body);
       } catch (error) {
         if (process.env.ATLAS_E2E_DISPOSABLE === '1') {
-          const cause = (error as { cause?: { code?: string; constraint_name?: string; detail?: string } }).cause;
+          const cause = (
+            error as { cause?: { code?: string; constraint_name?: string; detail?: string } }
+          ).cause;
           return reply.code(500).send({
             error: 'Synthetic database diagnostic',
             code: cause?.code ?? null,
