@@ -33,7 +33,6 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --write README.md docs/ARCHITECTURE.md docs/API.md docs/DATABASE.md docs/DEVELOPMENT.md docs/TRIP_EDITOR.md && git diff -- README.md docs/ARCHITECTURE.md docs/API.md docs/DATABASE.md docs/DEVELOPMENT.md docs/TRIP_EDITOR.md
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
