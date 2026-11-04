@@ -105,6 +105,7 @@ export function MapCanvas({
   useEffect(() => {
     if (!ref.current) return;
     let cancelled = false;
+    let mapReady = false;
     let created: MapInstance | undefined;
     async function initialize() {
       try {
@@ -120,7 +121,14 @@ export function MapCanvas({
           attributionControl: true,
         });
         map.current = created;
+        created.on('error', () => {
+          if (!cancelled && !mapReady) {
+            setError('Map style could not be loaded. Your timeline remains available.');
+          }
+        });
         created.on('load', () => {
+          mapReady = true;
+          setError(null);
           if (cancelled || !created) return;
           created.addSource('atlas', { type: 'geojson', data: latest.current });
           created.addLayer({
