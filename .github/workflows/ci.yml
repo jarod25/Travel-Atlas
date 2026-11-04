@@ -33,6 +33,7 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write tests/integration/visit-reorder.integration.test.ts && git diff -- tests/integration/visit-reorder.integration.test.ts
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
