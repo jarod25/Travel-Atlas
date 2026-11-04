@@ -213,6 +213,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       db
         .select({
           id: places.id,
+          revision: places.revision,
           name: places.name,
           location: places.location,
           locationConfidence: places.locationConfidence,
