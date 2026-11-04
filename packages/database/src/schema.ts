@@ -29,6 +29,7 @@ import {
   time,
   index,
   pgTable,
+  primaryKey,
   text,
   unique,
   uniqueIndex,
@@ -219,6 +220,20 @@ export const legs = pgTable(
       .on(table.toVisitId)
       .where(sql`${table.isCurrent} = true`),
   ],
+);
+
+/** Snapshot only the current intra-day Legs while a day is archived. */
+export const dayRestoreLegs = pgTable(
+  'day_restore_legs',
+  {
+    dayId: uuid('day_id')
+      .notNull()
+      .references(() => tripDays.id, { onDelete: 'cascade' }),
+    legId: uuid('leg_id')
+      .notNull()
+      .references(() => legs.id, { onDelete: 'cascade' }),
+  },
+  (table) => [primaryKey({ name: 'day_restore_legs_pk', columns: [table.dayId, table.legId] })],
 );
 
 /**
