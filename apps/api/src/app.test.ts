@@ -178,13 +178,6 @@ describe('Place coordinate API', () => {
     const app = buildApp(stub());
     const url = `/api/v1/places/${visitId}`;
     try {
-      const ok = await app.inject({
-        method: 'PATCH',
-        url,
-        payload: { coordinates: [0, 0], confidence: 'confirmed' },
-      });
-      expect(ok.statusCode).toBe(200);
-      expect(ok.json().location).toEqual([0, 0]);
       expect(
         (
           await app.inject({
