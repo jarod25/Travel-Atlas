@@ -135,7 +135,10 @@ describe('Explicit Connect Days', () => {
     expect(historic.transportMode).toBe('train');
     expect(historic.movementConfidence).toBe('confirmed');
     expect(historic.transportConfidence).toBe('confirmed');
-    const [stale] = await db.select().from(routeProposals).where(eq(routeProposals.id, proposal.id));
+    const [stale] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, proposal.id));
     expect(stale.status).toBe('invalidated');
     expect((await disconnectAdjacentDays(db, { ...input, revision: 1 })).status).toBe('invalid');
     const reconnected = await connectAdjacentDays(db, {

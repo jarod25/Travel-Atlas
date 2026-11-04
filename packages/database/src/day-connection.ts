@@ -181,9 +181,7 @@ export async function disconnectAdjacentDays(
     await tx
       .update(routeProposals)
       .set({ status: 'invalidated', reviewedAt: new Date() })
-      .where(
-        and(eq(routeProposals.legId, retired.id), eq(routeProposals.status, 'pending')),
-      );
+      .where(and(eq(routeProposals.legId, retired.id), eq(routeProposals.status, 'pending')));
     return { status: 'disconnected', leg: retired };
   });
 }
