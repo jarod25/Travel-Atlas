@@ -38,6 +38,10 @@ function stub(): AtlasStore {
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
     reorderVisits: async () => ({ changed: true }),
     archiveVisit: async () => ({ archivedVisitId: visitId }),
+    editVisitPlace: async (id: string, day: string, visit: string, revision: number) => ({
+      status: 'conflict',
+      currentRevision: revision + 1,
+    }),
     updateLeg: async (id: string, revision: number) => ({
       status: 'conflict',
       currentRevision: revision + 1,
@@ -322,6 +326,38 @@ describe('Day archive optimistic locking API', () => {
       });
       expect(stale.statusCode).toBe(412);
       expect(stale.headers.etag).toBe('"2"');
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('Existing Visit Place correction API', () => {
+  it('requires If-Match and validates the proposed Place identifier', async () => {
+    const app = buildApp(stub());
+    const url = `/api/v1/trips/${tripId}/days/${dayId}/visits/${visitId}`;
+    try {
+      const missing = await app.inject({
+        method: 'PATCH',
+        url,
+        payload: { placeId: null },
+      });
+      expect(missing.statusCode).toBe(428);
+      const badPlace = await app.inject({
+        method: 'PATCH',
+        url,
+        headers: { 'if-match': '"1"' },
+        payload: { placeId: 'not-a-uuid' },
+      });
+      expect(badPlace.statusCode).toBe(400);
+      const conflict = await app.inject({
+        method: 'PATCH',
+        url,
+        headers: { 'if-match': '"1"' },
+        payload: { placeId: null },
+      });
+      expect(conflict.statusCode).toBe(412);
+      expect(conflict.headers.etag).toBe('"2"');
     } finally {
       await app.close();
     }

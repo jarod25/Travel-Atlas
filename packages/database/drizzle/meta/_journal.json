@@ -99,6 +99,13 @@
       "when": 1793778000000,
       "tag": "0013_day_restore_legs",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793784000000,
+      "tag": "0014_visit_revisions",
+      "breakpoints": true
     }
   ]
 }

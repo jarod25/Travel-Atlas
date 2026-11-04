@@ -109,6 +109,7 @@ export const visits = pgTable(
     tripDayId: uuid('trip_day_id').notNull(),
     placeId: uuid('place_id').references(() => places.id, { onDelete: 'set null' }),
     position: integer('position').notNull(),
+    revision: integer('revision').notNull().default(1),
     isArchived: boolean('is_archived').notNull().default(false),
   },
   (table) => [
@@ -122,6 +123,7 @@ export const visits = pgTable(
       .where(sql`${table.isArchived} = false`),
     unique('visits_trip_id_id_unique').on(table.tripId, table.id),
     check('visits_position_nonnegative', sql`${table.position} >= 0`),
+    check('visits_revision_positive', sql`${table.revision} > 0`),
   ],
 );
 

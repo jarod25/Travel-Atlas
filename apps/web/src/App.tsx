@@ -52,6 +52,9 @@ export function App() {
   const [placeId, setPlaceId] = useState('');
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('timeline');
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+  const [visitPlaceQuery, setVisitPlaceQuery] = useState('');
+  const [visitPlaceId, setVisitPlaceId] = useState('');
+  const [visitPlaces, setVisitPlaces] = useState<Place[]>([]);
   const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
   const [legMode, setLegMode] = useState('');
   const [departureDate, setDepartureDate] = useState('');
@@ -176,6 +179,24 @@ export function App() {
   );
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = timeline?.legs.find((leg) => leg.id === selectedLegId);
+  useEffect(() => {
+    setVisitPlaceQuery(selectedVisit?.placeName ?? '');
+    setVisitPlaceId(selectedVisit?.placeId ?? '');
+  }, [selectedVisit?.id, selectedVisit?.revision]);
+  useEffect(() => {
+    let active = true;
+    atlasApi
+      .places(visitPlaceQuery)
+      .then((result) => {
+        if (active) setVisitPlaces(result);
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(String(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [visitPlaceQuery]);
   useEffect(() => {
     if (!selectedLeg) return;
     setLegMode(selectedLeg.transportMode ?? '');
@@ -361,6 +382,28 @@ export function App() {
         arrivalLocalTime: arrivalDate && arrivalTime ? arrivalTime + ':00' : null,
         arrivalTimeConfidence: arrivalCertainty,
       });
+      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+    });
+  }
+
+  async function saveVisitPlace() {
+    if (
+      !tripId ||
+      !dayId ||
+      !selectedVisit ||
+      selectedDay?.isArchived ||
+      selectedTrip?.isArchived
+    ) {
+      return;
+    }
+    await execute(async () => {
+      await atlasApi.editVisitPlace(
+        tripId,
+        dayId,
+        selectedVisit.id,
+        selectedVisit.revision,
+        visitPlaceId || null,
+      );
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
     });
   }
@@ -1032,6 +1075,47 @@ export function App() {
                             ? 'Coordinates recorded'
                             : 'No recorded coordinates'}
                         </p>
+                      </div>
+                      <div>
+                        <label htmlFor="visit-place-search">Correct this visit's Place</label>
+                        <input
+                          id="visit-place-search"
+                          value={visitPlaceQuery}
+                          onChange={(event) => setVisitPlaceQuery(event.target.value)}
+                          placeholder="Search existing Places"
+                          disabled={pending || selectedDay?.isArchived || selectedTrip?.isArchived}
+                        />
+                        <select
+                          aria-label="Place for selected visit"
+                          value={visitPlaceId}
+                          onChange={(event) => setVisitPlaceId(event.target.value)}
+                          disabled={pending || selectedDay?.isArchived || selectedTrip?.isArchived}
+                        >
+                          <option value="">Unknown Place</option>
+                          {selectedVisit.placeId &&
+                            !visitPlaces.some((place) => place.id === selectedVisit.placeId) && (
+                              <option value={selectedVisit.placeId}>
+                                {selectedVisit.placeName ?? 'Current Place'}
+                              </option>
+                            )}
+                          {visitPlaces.map((place) => (
+                            <option key={place.id} value={place.id}>
+                              {place.name ?? 'Unnamed Place'}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          disabled={
+                            pending ||
+                            selectedDay?.isArchived ||
+                            selectedTrip?.isArchived ||
+                            visitPlaceId === (selectedVisit.placeId ?? '')
+                          }
+                          onClick={() => void saveVisitPlace()}
+                        >
+                          Save Place correction
+                        </button>
+                        <p>This updates the Visit, not the reusable Place or its saved history.</p>
                       </div>
                       <button onClick={() => void archiveVisit(selectedVisit)} disabled={pending}>
                         Archive visit

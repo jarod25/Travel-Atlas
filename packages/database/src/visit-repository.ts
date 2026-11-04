@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, routeProposals, tripDays, visits } from './schema.js';
+import { legs, places, routeProposals, tripDays, trips, visits } from './schema.js';
 
 function pairKey(fromId: string, toId: string): string {
   return fromId + ':' + toId;
@@ -288,5 +288,96 @@ export async function archiveVisitFromDay(
       newLegCount += 1;
     }
     return { archivedVisitId: input.visitId, archivedLegCount, newLegCount };
+  });
+}
+
+export type VisitPlaceEditResult =
+  | { status: 'not_found' }
+  | { status: 'place_not_found' }
+  | { status: 'archived' }
+  | { status: 'conflict'; currentRevision: number }
+  | { status: 'updated'; visit: typeof visits.$inferSelect };
+
+/**
+ * Correct the reusable Place linked to an existing Visit without destroying
+ * the Visit or any historical Leg, RouteVersion, evidence or confidence.
+ * Invalidate pending route calculations whose endpoints now refer elsewhere.
+ */
+export async function reassignVisitPlace(
+  db: PostgresJsDatabase,
+  input: {
+    tripId: string;
+    tripDayId: string;
+    visitId: string;
+    expectedRevision: number;
+    placeId: string | null;
+  },
+): Promise<VisitPlaceEditResult> {
+  return db.transaction(async (tx) => {
+    const [trip] = await tx
+      .select({ isArchived: trips.isArchived })
+      .from(trips)
+      .where(eq(trips.id, input.tripId))
+      .for('update');
+    if (!trip) return { status: 'not_found' };
+
+    const [day] = await tx
+      .select({ isArchived: tripDays.isArchived })
+      .from(tripDays)
+      .where(and(eq(tripDays.id, input.tripDayId), eq(tripDays.tripId, input.tripId)))
+      .for('update');
+    if (!day) return { status: 'not_found' };
+    if (trip.isArchived || day.isArchived) return { status: 'archived' };
+
+    const [current] = await tx
+      .select()
+      .from(visits)
+      .where(
+        and(
+          eq(visits.id, input.visitId),
+          eq(visits.tripId, input.tripId),
+          eq(visits.tripDayId, input.tripDayId),
+          eq(visits.isArchived, false),
+        ),
+      )
+      .for('update');
+    if (!current) return { status: 'not_found' };
+    if (current.revision !== input.expectedRevision) {
+      return { status: 'conflict', currentRevision: current.revision };
+    }
+    if (current.placeId === input.placeId) return { status: 'updated', visit: current };
+
+    if (input.placeId !== null) {
+      const [place] = await tx
+        .select({ id: places.id })
+        .from(places)
+        .where(eq(places.id, input.placeId));
+      if (!place) return { status: 'place_not_found' };
+    }
+
+    const [visit] = await tx
+      .update(visits)
+      .set({ placeId: input.placeId, revision: current.revision + 1 })
+      .where(eq(visits.id, current.id))
+      .returning();
+
+    const touching = await tx
+      .select({ id: legs.id })
+      .from(legs)
+      .where(
+        and(
+          eq(legs.tripId, input.tripId),
+          eq(legs.isCurrent, true),
+          or(eq(legs.fromVisitId, input.visitId), eq(legs.toVisitId, input.visitId)),
+        ),
+      );
+    const legIds = touching.map((leg) => leg.id);
+    if (legIds.length > 0) {
+      await tx
+        .update(routeProposals)
+        .set({ status: 'invalidated', reviewedAt: new Date() })
+        .where(and(inArray(routeProposals.legId, legIds), eq(routeProposals.status, 'pending')));
+    }
+    return { status: 'updated', visit };
   });
 }

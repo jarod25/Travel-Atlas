@@ -71,3 +71,7 @@ the same non-archived Trip, with the exact last/first active Visit endpoints.
 Disconnecting preserves the historical Leg, RouteVersions and evidence while
 invalidating its pending proposals. A later explicit Connect Days creates a
 **new Unknown** Leg; old Confirmed facts are not transferred automatically.
+
+### Existing Visit Place correction (Lot 3 stabilization)
+
+`PATCH /api/v1/trips/:tripId/days/:dayId/visits/:visitId` requires `If-Match: "<visit revision>"` and a body `{ "placeId": "<uuid>" }` (or `null` for unknown). It changes the referenced reusable Place without recreating the Visit. The response includes the incremented revision and an ETag. A stale revision returns 412, archived trips/days return 409, and invalid or missing references are rejected. Pending route proposals for current adjacent Legs are invalidated; recorded Legs and historical evidence are retained.

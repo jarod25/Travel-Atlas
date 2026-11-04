@@ -7,7 +7,13 @@ import type { DayConnectionResult, DayDisconnectionResult } from './day-connecti
 import type { TripUpdateResult } from './trip-repository.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository.js';
+import {
+  appendVisitToDay,
+  archiveVisitFromDay,
+  reassignVisitPlace,
+  reorderVisitsInDay,
+} from './visit-repository.js';
+import type { VisitPlaceEditResult } from './visit-repository.js';
 import { legs, places, tripDays, trips, visits } from './schema.js';
 import { updateLegWithRevision } from './leg-repository.js';
 import type { LegChanges, LegUpdateResult } from './leg-repository.js';
@@ -50,6 +56,13 @@ export interface AtlasStore {
   addVisit(tripId: string, dayId: string, placeId: string | null): Promise<unknown>;
   reorderVisits(tripId: string, dayId: string, visitIds: string[]): Promise<unknown>;
   archiveVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
+  editVisitPlace(
+    tripId: string,
+    dayId: string,
+    visitId: string,
+    revision: number,
+    placeId: string | null,
+  ): Promise<VisitPlaceEditResult>;
   getExplore(): Promise<unknown>;
   connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
   disconnectDays(
@@ -149,6 +162,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .select({
           id: visits.id,
           position: visits.position,
+          revision: visits.revision,
           placeId: visits.placeId,
           placeName: places.name,
           placeLocation: places.location,
@@ -255,6 +269,14 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         tripId,
         tripDayId: dayId,
         visitId,
+      }),
+    editVisitPlace: (tripId, dayId, visitId, revision, placeId) =>
+      reassignVisitPlace(db, {
+        tripId,
+        tripDayId: dayId,
+        visitId,
+        expectedRevision: revision,
+        placeId,
       }),
     updateLeg: (id, revision, changes) => updateLegWithRevision(db, id, revision, changes),
     connectDays: (tripId, fromDayId, toDayId) =>

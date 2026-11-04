@@ -67,3 +67,7 @@ exists. Once connected, it offers **Disconnect from next day**, with an explicit
 confirmation. The API validates the day boundary and Leg revision before
 retiring the link. The original journey stays in history; reconnecting
 creates a fresh Unknown draft rather than pretending it is the old journey.
+
+### Correcting an existing Visit's Place
+
+Select a Visit, then use **Correct this visit's Place** in Details to search and select a reusable Place (or Unknown Place). Saving updates the existing Visit rather than archiving it and creating a replacement. The API requires the Visit's revision to avoid overwriting a concurrent correction. Editing a Visit in an archived day or trip is refused until restoration. Pending route proposals dependent on that Visit are invalidated, without deleting historical Legs or their evidence.
