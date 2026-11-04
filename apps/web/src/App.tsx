@@ -610,9 +610,7 @@ export function App() {
                 </p>
               </div>
               {selectedMapItem.tripId && (
-                <button
-                  onClick={() => openMapFeature(selectedMapItem)}
-                >
+                <button onClick={() => openMapFeature(selectedMapItem)}>
                   Open selected item in editor
                 </button>
               )}
