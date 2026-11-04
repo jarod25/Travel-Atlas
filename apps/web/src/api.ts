@@ -66,7 +66,10 @@ export interface FeatureCollection {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(prefix + path, {
     ...init,
-    headers: { ...(init?.body != null ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
+    headers: {
+      ...(init?.body != null ? { 'Content-Type': 'application/json' } : {}),
+      ...init?.headers,
+    },
   });
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
