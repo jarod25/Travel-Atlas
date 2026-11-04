@@ -16,6 +16,7 @@ export interface TripDay {
 }
 export interface Place {
   id: string;
+  revision: number;
   name: string | null;
   location: [number, number] | null;
   locationConfidence: 'confirmed' | 'estimated' | 'unknown';
@@ -110,11 +111,13 @@ export const atlasApi = {
   addPlace: (name: string) => post<Place>('/places', { name }),
   updatePlace: (
     id: string,
+    revision: number,
     coordinates: [number, number] | null,
     confidence: 'confirmed' | 'estimated' | 'unknown',
   ) =>
     request<Place>(`/places/${id}`, {
       method: 'PATCH',
+      headers: { 'If-Match': `"${revision}"` },
       body: JSON.stringify({ coordinates, confidence }),
     }),
   editVisitPlace: (
