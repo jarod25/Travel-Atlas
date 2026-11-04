@@ -33,7 +33,6 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --write apps/api/src/app.ts apps/api/src/app.test.ts apps/web/src/App.tsx apps/web/src/api.ts packages/database/src/atlas-store.ts packages/database/src/schema.ts packages/database/drizzle/meta/_journal.json tests/integration/place-location.integration.test.ts docs/API.md docs/DATABASE.md && git diff -- apps/api/src/app.ts apps/api/src/app.test.ts apps/web/src/App.tsx apps/web/src/api.ts packages/database/src/atlas-store.ts packages/database/src/schema.ts packages/database/drizzle/meta/_journal.json tests/integration/place-location.integration.test.ts docs/API.md docs/DATABASE.md
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
