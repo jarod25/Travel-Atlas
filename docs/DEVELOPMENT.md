@@ -67,8 +67,18 @@ ATLAS_SMOKE_DISPOSABLE=1 pnpm smoke:web
 
 In PowerShell, set `$env:ATLAS_SMOKE_DISPOSABLE = '1'` before running
 `pnpm smoke:web`. Never enable this test against a personal or shared database.
-The browser UI and Android layout still require separate visual acceptance
-checks; an HTTP smoke test is not a Playwright browser test.
+The Playwright Chromium browser test is separate from this HTTP smoke check.
+After `pnpm build`, on the same dedicated disposable database, run:
+
+```sh
+pnpm exec playwright install chromium
+ATLAS_E2E_DISPOSABLE=1 pnpm test:e2e
+```
+
+In PowerShell set `$env:ATLAS_E2E_DISPOSABLE = '1'` before `pnpm test:e2e`.
+Playwright starts the compiled API and Vite on ports 3001 and 5173; both
+ports must be free. CI uses Ubuntu 24.04 for supported Chromium binaries.
+Physical Android and MapLibre provider behavior still require separate checks.
 
 ## Shutdown and retention
 
