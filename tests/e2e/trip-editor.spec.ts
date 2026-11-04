@@ -55,7 +55,8 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   await page.locator('#leg-confidence').selectOption('confirmed');
   await expect(page.locator('#leg-transport')).toHaveValue('train');
   const saving = page.waitForResponse(
-    (response) => response.url().includes(`/api/v1/legs/${targetLeg.id}`) &&
+    (response) =>
+      response.url().includes(`/api/v1/legs/${targetLeg.id}`) &&
       response.request().method() === 'PATCH',
   );
   await page.getByRole('button', { name: 'Save Leg' }).click();
