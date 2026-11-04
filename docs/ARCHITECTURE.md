@@ -1,32 +1,42 @@
-# Architecture overview
+# Architecture — verified Lot 3 boundary
 
-This document records **selected directions**, not completed features.
+## Implemented on develop
 
-## Structure
+- `apps/web`: React, TypeScript and Vite; Explore and Trip Editor.
+- `apps/api`: Fastify REST API under `/api/v1`; compiled Node.js ESM with explicit relative `.js` imports.
+- `packages/database`: Drizzle ORM repositories, committed incremental SQL migrations and PostgreSQL/PostGIS geometry storage.
+- `packages/shared`: shared types and domain helpers.
+- `infrastructure/docker/compose.yml`: local PostgreSQL/PostGIS.
+- `tests/integration`: synthetic database fixtures; `tests/smoke/api-start.mjs`: compiled API and HTTP/database smoke test.
 
-- `apps/web`: React + TypeScript + Vite client.
-- `apps/api`: Fastify + TypeScript HTTP API.
-- `packages/shared`: shared domain types and invariants.
-- `tests/integration`: database integration tests with synthetic fixtures.
+The web client communicates with the Fastify API, never directly with PostgreSQL. The CI builds packages in workspace dependency order, migrates a disposable PostGIS database, tests, and launches the **compiled API** to verify real Node execution.
 
-## Domain
+## Domain and history invariants
 
-The intended hierarchy is **Trip → TripDay → Visit → Leg**. A place can be reused by multiple visits. A train station stop used solely as a routing waypoint is not counted as a visit.
+`Trip → TripDay → Visit` organizes history. A reusable `Place` may appear in multiple Visits. `Leg` connects two Visits of the same Trip; its movement, transport, timings, and geometry confidence are independent. `RouteVersion` retains historical geometry and metadata; `RouteProposal` is a separately persisted candidate that is **not evidence of a confirmed journey**.
 
-Confidence is not a single trip-level boolean: route geometry, transport mode, timestamps, and visits may independently be **confirmed**, **estimated**, or **unknown**. Routing results are proposals with provenance and a review state.
+A missing location or route remains null/Unknown, never a fabricated coordinate or straight segment. Visit reorder/archive operations preserve a current Leg when its ordered endpoints remain adjacent. Changed adjacency retires its Leg without deleting historical evidence, recorded RouteVersions or certainty. Day archival snapshots intra-day Leg IDs (migration 0013); restoration reactivates unchanged intra-day connections. Cross-day Legs are never restored automatically and require explicit connect/disconnect actions. Earlier archived days without a snapshot can only reconstruct Unknown drafts.
 
-The shared package now defines initial **Trip**, **TripDay**, **Place**, and **Visit** contracts and a pure `planDraftLegsForDay()` function. Its input is an ordered list of visits for one day. It creates only _draft leg plans_ with unknown geometry and unknown transport, never cross-day links. It deliberately does not assign IDs, persist records, or invent route geometry. The API/database layer must apply timeline changes atomically in a later feature.
+Visit Place corrections retain the Visit ID and its Leg history (migration 0014), using optimistic revisions. Shared Place coordinate corrections use optimistic revisions (migration 0015) and invalidate dependent **pending** proposals transactionally. Known facts are not automatically promoted to Confirmed.
 
-Planned persistence uses PostgreSQL/PostGIS, Drizzle ORM, GeoJSON, explicit geometry SRID 4326, and versioned route proposals. It must be possible to store a Leg without known geometry. These TypeScript interfaces are **not** a completed database model or migration.
+## Mapping, reliability and privacy
 
-## Mapping and routing
+Explore displays saved Point and selected linear geometry through MapLibre GL JS and OpenFreeMap. MapLibre is dynamically imported from a CDN; map tiles and the CDN require network access. If map initialization fails, timeline editing remains available, but a fully offline map is **not** implemented. No server-generated fake geometry is used.
 
-MapLibre GL JS is the planned map renderer; editing tools require separate validation. Railway proposals were tested against OpenRailRouting, but the public server is for experimentation, not a validated production dependency. A result that bypasses Mulhouse-Ville despite a confirmed train stop shows why train-route waypoints need explicit support.
+The code repository is public; only synthetic fixtures may be committed. Personal itinerary data, traces, media, evidence and secrets must remain in private runtime storage. There is no authentication, external sharing, deployment, production-ready authorization, or protected multiuser API yet. Do not expose the local API to the public Internet.
 
-## Privacy
+## Lot boundaries
 
-The source repository is public. Real itineraries, tracks, evidence documents, GPS samples, photographs, and secrets must remain in private application storage, not in Git.
+**Implemented and exercised in CI:** trip/day CRUD foundations and archival, Visit creation/reorder/soft archive/Place correction, basic Leg editing, explicit day connection/disconnection, Explore GeoJSON, PostGIS migrations and compiled API smoke tests.
 
-## Roadmap boundary
+**Partial or requiring hands-on verification:** responsive experience and map selection on actual Android/desktop, full startup via `pnpm dev` on a user workstation, comprehensive end-to-end browser coverage, availability of the external tile CDN, robust global handling of simultaneous edits, proposal input snapshots.
 
-The initial feature branch validates pure domain invariants only. Database tables, Drizzle mappings, persistence/transactions, the map, timeline, visit/leg CRUD, routing integration, evidence handling, backup/export, and statistics belong to later feature branches. The detailed product specifications live in the project's private planning documents.
+**Not implemented in Lot 3:** Lot 4 routing adapters and provider-driven proposals; Lot 5 import/export and portable restore; future Android background GPS, Suggested Visits, narrative import, statistics completion and sharing.
+
+## Lot 0 feasibility — accurately scoped
+
+The November 3, 2026 architecture feasibility record reports **two attempted** OpenRailRouting `tgv_all` calls (Belfort-Montbéliard TGV → Strasbourg and Strasbourg → CDG 2 TGV). **Both failed at DNS resolution (`EAI_AGAIN`) before receiving HTTP responses**. These attempts do not establish route quality, waypoint behavior, or provider availability. No successful TGV route can be claimed from them. The separate Drizzle/PostGIS feasibility scripts had not been run in a live database during Lot 0, although subsequent repository integration tests run with PostGIS in GitHub Actions. The external rail evaluation remains inconclusive and belongs to the routing feasibility follow-up, not to Lot 3 feature development.
+
+## Local verification
+
+For exact install, migration, start, check and shutdown commands, see [Development](DEVELOPMENT.md). For table semantics and additive migrations see [Database](DATABASE.md); for HTTP routes see [API](API.md). The design and scope references are the project's functional specification and technical architecture dated November 3, 2026.

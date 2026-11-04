@@ -14,8 +14,7 @@ as a direct segment. All mutations delegate to database transactions.
 The API is intentionally bound to 127.0.0.1 by default and does not yet support remote
 users or sharing. Do not expose it on a public network without authentication.
 
-The current endpoints are an initial subset; conditional edits/ETags, archival of Trips,
-full Leg editing and pagination remain for later increments.
+The API is an initial subset. Trip, Day, Visit, Place and Leg revision-checked updates are implemented; pagination, authentication and complete route-provider endpoints are not.
 
 ## Leg editing and concurrency
 
@@ -56,8 +55,7 @@ Legs. No connection is inferred automatically.
 PATCH /api/v1/trips/:tripId/days/:dayId/archive accepts `{ "isArchived": true|false }`
 and a required `If-Match: "<revision>"` header. It returns 428 without a revision,
 412 on a stale revision, and ETag on success. Archiving preserves Visit rows and
-historic Legs, while removing current intra-day and inter-day links. Restoring
-reconstructs only unknown intra-day drafts, never an unverified cross-day route.
+historic Legs, while removing current intra-day and inter-day links. Restoring reactivates the snapshotted original intra-day Legs for unchanged ordered endpoints (migration 0013); days archived before that migration restore with Unknown drafts. Cross-day routes are never restored automatically.
 Archived days reject Visit editing (409).
 
 ## Explicit day disconnection

@@ -46,9 +46,7 @@ calendar filter is active; unknown paths are never drawn as direct lines.
 
 Days can now be archived or restored with a revision-checked action. Archive
 preserves all Visits, evidence and historical Legs, but hides the day from Explore
-and closes its current intra-day and cross-day links. Restoring a day creates only
-new Unknown draft legs within that day; cross-day travel is never reconstructed
-automatically. Archived days remain visible in the editor for restoration.
+and closes its current intra-day and cross-day links. Restoring a day reactivates its original snapshotted intra-day Legs when adjacency is unchanged (migration 0013), falling back to Unknown drafts only where no saved matching Leg exists. Cross-day travel is never reconnected automatically. Archived days remain visible in the editor for restoration.
 
 ## Archiving and restoring days
 
@@ -71,3 +69,7 @@ creates a fresh Unknown draft rather than pretending it is the old journey.
 ### Correcting an existing Visit's Place
 
 Select a Visit, then use **Correct this visit's Place** in Details to search and select a reusable Place (or Unknown Place). Saving updates the existing Visit rather than archiving it and creating a replacement. The API requires the Visit's revision to avoid overwriting a concurrent correction. Editing a Visit in an archived day or trip is refused until restoration. Pending route proposals dependent on that Visit are invalidated, without deleting historical Legs or their evidence.
+
+## Known limitations
+
+The current interface still requires external network access for its MapLibre CDN module and map tiles. No browser E2E suite or physical Android responsive acceptance result is recorded here. Places can be corrected without replacing Visits, but the app does not yet calculate new routes or automatically import real travel histories. A missing geometry remains Unknown.

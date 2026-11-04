@@ -37,15 +37,14 @@ Do not edit applied migrations; add a new migration in a later increment.
 - Deleting a day deletes its visits; a Place is never automatically deleted with a visit.
 
 Only synthetic fixtures are used in integration tests. The migrations create
-persistent tables: run them in a disposable database during CI. Geographic
-coordinate bounds and application-level validation remain future work.
+persistent tables: run them in a disposable database during CI. Geographic coordinate bounds and several application-level validations are implemented and covered by PostGIS integration tests.
 
 - `legs` references both endpoint visits using composite `(trip_id, visit_id)` foreign keys.
 - A Leg cannot connect a visit to itself or reuse a current incoming/outgoing endpoint.
 - Historical links may remain with `is_current = false`; deletion of referenced visits is restricted until Leg history is handled.
 - Transport and each confidence dimension are independent. Draft values default to `unknown` and transport to `NULL`.
 - Local calendar dates, wall-clock times and optional timezone strings are preserved without inferred UTC instants. A clock time requires a date.
-- Cross-day Legs can be represented, but only future application-level explicit Connect Days may create them.
+- Cross-day Legs can be represented, but only the explicit Connect Days operation may create them.
 
 ## Atomic append repository
 
@@ -110,11 +109,9 @@ not file contents. `place_external_refs` tracks provider IDs while retaining
 Place reuse. `app_settings` stores JSON preferences. No unknown value is
 silently converted into confirmed geometry, time or presence.
 
-## Remaining Lot 2 validation
+## Current validation boundary
 
-Run migration, constraint and transaction tests against PostgreSQL/PostGIS,
-then review repository-wide consistency and record any limitations before
-advancing to Lot 3.
+CI runs committed migrations and synthetic PostgreSQL/PostGIS tests. This is not a substitute for validating an existing personal database backup or the Android/browser editing experience.
 
 ## Visit archival and timeline integrity
 
