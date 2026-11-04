@@ -34,11 +34,14 @@ The repository contains a functional local Explore and Trip Editor foundation, *
 Requires **Node.js 24** and **pnpm 10.34.9**.
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
+docker compose -f infrastructure/docker/compose.yml up -d
+export DATABASE_URL=postgresql://atlas_local:atlas_local_only@127.0.0.1:55432/atlas_local
+pnpm db:migrate
 pnpm dev
 ```
 
-The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. Trip editing requires a configured PostgreSQL/PostGIS database and applied migrations; no personal travel data is seeded. Map tiles and the current MapLibre CDN bundle require network access. See [database guide](docs/DATABASE.md) for setup.
+The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. The local Docker Compose service provides PostgreSQL/PostGIS using **development-only** credentials; migrations must be applied before starting. No personal travel data is seeded. Set `DATABASE_URL` in the shell (PowerShell instructions below). Map tiles and the current MapLibre CDN bundle require network access. See [database guide](docs/DATABASE.md) for setup.
 
 Quality checks:
 
@@ -48,6 +51,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm smoke:api # requires a migrated disposable database and DATABASE_URL
 ```
 
 Database integration checks require a separate PostgreSQL/PostGIS **test database** and a `DATABASE_URL` environment variable:
@@ -56,7 +60,7 @@ Database integration checks require a separate PostgreSQL/PostGIS **test databas
 pnpm test:integration
 ```
 
-See [development guide](docs/DEVELOPMENT.md) for Windows setup and [architecture notes](docs/ARCHITECTURE.md) for technical boundaries.
+Stop `pnpm dev` with Ctrl+C, and use `docker compose -f infrastructure/docker/compose.yml down` to stop PostgreSQL **without deleting its volume**. See [development guide](docs/DEVELOPMENT.md) for Windows setup and [architecture notes](docs/ARCHITECTURE.md) for technical boundaries.
 
 ## Feasibility findings
 
