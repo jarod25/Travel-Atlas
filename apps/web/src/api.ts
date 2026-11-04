@@ -23,6 +23,7 @@ export interface Place {
 export interface VisitRow {
   id: string;
   position: number;
+  revision: number;
   placeId: string | null;
   placeName: string | null;
   placeLocation: [number, number] | null;
@@ -115,6 +116,18 @@ export const atlasApi = {
     request<Place>(`/places/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ coordinates, confidence }),
+    }),
+  editVisitPlace: (
+    tripId: string,
+    dayId: string,
+    visitId: string,
+    revision: number,
+    placeId: string | null,
+  ) =>
+    request<VisitRow>(`/trips/${tripId}/days/${dayId}/visits/${visitId}`, {
+      method: 'PATCH',
+      headers: { 'If-Match': `"${revision}"` },
+      body: JSON.stringify({ placeId }),
     }),
   addVisit: (id: string, day: string, placeId: string | null) =>
     post<unknown>(`/trips/${id}/days/${day}/visits`, { placeId }),
