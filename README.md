@@ -41,7 +41,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. The local Docker Compose service provides PostgreSQL/PostGIS using **development-only** credentials; migrations must be applied before starting. No personal travel data is seeded. Set `DATABASE_URL` in the shell (PowerShell instructions below). Map tiles and the current MapLibre CDN bundle require network access. See [database guide](docs/DATABASE.md) for setup.
+The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. The local Docker Compose service provides PostgreSQL/PostGIS using **development-only** credentials; migrations must be applied before starting. No personal travel data is seeded. Set `DATABASE_URL` in the shell (PowerShell instructions below). Map tiles and the current MapLibre CDN bundle require network access. No Playwright browser E2E suite is enabled yet. See [database guide](docs/DATABASE.md) for setup.
 
 Quality checks:
 
@@ -62,11 +62,9 @@ pnpm test:integration
 
 Stop `pnpm dev` with Ctrl+C, and use `docker compose -f infrastructure/docker/compose.yml down` to stop PostgreSQL **without deleting its volume**. See [development guide](docs/DEVELOPMENT.md) for Windows setup and [architecture notes](docs/ARCHITECTURE.md) for technical boundaries.
 
-## Feasibility findings
+## Feasibility findings (verified scope)
 
-The first local proof-of-concept passed Drizzle/PostGIS round-trip checks for `LineString`, `MultiLineString`, SRID 4326, and unknown geometries. OpenRailRouting returned two proposed French TGV paths, but a computed shortcut around Mulhouse demonstrated why confirmed intermediate rail stops must be modeled as **routing waypoints**, not additional visits. Public railway routing access also needs a sustainable deployment strategy.
-
-These are **proof-of-concept findings**, not assertions that automated railway routing has been integrated into the application.
+The November 3, 2026 Lot 0 feasibility record reports that **both** OpenRailRouting TGV test calls failed during DNS resolution (`EAI_AGAIN`), before any HTTP or geographic result could be inspected. The two routes, Belfort-Montbéliard TGV → Strasbourg and Strasbourg → CDG 2 TGV, therefore remain **inconclusive**, not successful routing demonstrations. PostGIS/Drizzle feasibility had not yet been run against a live database during Lot 0; the repository now runs migration and geometry integration checks with PostGIS in CI. No routing provider is integrated into the Lot 3 UI.
 
 ## Development workflow
 
