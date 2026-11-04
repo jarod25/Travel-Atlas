@@ -54,6 +54,8 @@ pnpm build
 pnpm smoke:api # requires a migrated disposable database and DATABASE_URL
 ```
 
+The CI also runs `pnpm smoke:web`: it launches the compiled API and Vite, then exercises a synthetic Trip/Day/Visit/Leg journey through the Vite `/api` proxy. This check requires `ATLAS_SMOKE_DISPOSABLE=1` and a **separate disposable database** because it creates records. It is not a browser-driven Playwright E2E test.
+
 Database integration checks require a separate PostgreSQL/PostGIS **test database** and a `DATABASE_URL` environment variable:
 
 ```sh
