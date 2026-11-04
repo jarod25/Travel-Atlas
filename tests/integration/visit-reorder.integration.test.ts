@@ -4,7 +4,14 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { appendVisitToDay, reorderVisitsInDay } from '../../packages/database/src/visit-repository';
-import { legs, routeProposals, routeVersions, tripDays, trips, visits } from '../../packages/database/src/schema';
+import {
+  legs,
+  routeProposals,
+  routeVersions,
+  tripDays,
+  trips,
+  visits,
+} from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
