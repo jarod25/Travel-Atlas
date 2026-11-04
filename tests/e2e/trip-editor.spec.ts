@@ -43,10 +43,24 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
     .toEqual([second.id, first.id, third.id]);
 
   await expect(page.locator('.visit-row').first()).toHaveAttribute('data-visit-id', second.id);
-  await page.locator('.leg-pill').first().click();
+  const beforeEdit = await (await request.get(timelineUrl)).json();
+  const targetLeg = beforeEdit.legs.find(
+    (item: { fromVisitId: string; toVisitId: string }) =>
+      item.fromVisitId === second.id && item.toVisitId === first.id,
+  );
+  expect(targetLeg?.id).toBeTruthy();
+  await page.locator(`.leg-pill[data-leg-id="${targetLeg.id}"]`).click();
+  await expect(page.locator('#leg-transport')).toBeVisible();
   await page.locator('#leg-transport').selectOption('train');
   await page.locator('#leg-confidence').selectOption('confirmed');
+  await expect(page.locator('#leg-transport')).toHaveValue('train');
+  const saving = page.waitForResponse(
+    (response) => response.url().includes(`/api/v1/legs/${targetLeg.id}`) &&
+      response.request().method() === 'PATCH',
+  );
   await page.getByRole('button', { name: 'Save Leg' }).click();
+  const savedResponse = await saving;
+  expect(savedResponse.status(), await savedResponse.text()).toBe(200);
 
   await expect
     .poll(async () => {
