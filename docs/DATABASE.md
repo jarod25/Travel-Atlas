@@ -143,3 +143,7 @@ A disconnect operation locks both adjacent day rows and the exact current
 cross-day Leg, checks its revision and endpoint order, then marks it historical.
 It invalidates pending RouteProposals but preserves evidence and RouteVersions.
 An explicit reconnect creates an independent Unknown draft Leg.
+
+### Place revisions
+
+Migration `0015_place_revisions.sql` adds a positive integer `places.revision` with default 1. Updates lock the Place row, compare the supplied revision, and increment it on a real change. The migration is additive; previously applied migrations are not modified. Existing Place IDs and historical links are preserved.
