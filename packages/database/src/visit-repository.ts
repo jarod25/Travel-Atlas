@@ -1,6 +1,10 @@
 import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, tripDays, visits } from './schema.js';
+import { legs, routeProposals, tripDays, visits } from './schema.js';
+
+function pairKey(fromId: string, toId: string): string {
+  return fromId + ':' + toId;
+}
 
 /**
  * Append a Visit and its optional draft Leg in one transaction.
@@ -35,6 +39,17 @@ export async function appendVisitToDay(
       )
       .orderBy(desc(visits.position))
       .limit(1);
+
+    if (previous) {
+      const [outgoing] = await tx
+        .select({ id: legs.id })
+        .from(legs)
+        .where(and(eq(legs.fromVisitId, previous.id), eq(legs.isCurrent, true)))
+        .limit(1);
+      if (outgoing) {
+        throw new Error('Disconnect the current cross-day Leg before appending to this day');
+      }
+    }
 
     const [visit] = await tx
       .insert(visits)
@@ -127,9 +142,24 @@ export async function reorderVisitsInDay(
       throw new Error('Cannot reorder a day with a current cross-day connection');
     }
 
-    // Retain previously known journey facts in historical records.
+    // Keep the same Leg, route selection and evidence whenever its ordered endpoints survive.
+    const desiredPairs = new Set(
+      requested.slice(1).map((toId, index) => pairKey(requested[index], toId)),
+    );
+    const retainedPairs = new Set<string>();
+    let archivedLegCount = 0;
     for (const leg of current) {
+      const key = pairKey(leg.fromVisitId, leg.toVisitId);
+      if (desiredPairs.has(key)) {
+        retainedPairs.add(key);
+        continue;
+      }
       await tx.update(legs).set({ isCurrent: false }).where(eq(legs.id, leg.id));
+      await tx
+        .update(routeProposals)
+        .set({ status: 'invalidated', reviewedAt: new Date() })
+        .where(and(eq(routeProposals.legId, leg.id), eq(routeProposals.status, 'pending')));
+      archivedLegCount += 1;
     }
 
     // Avoid transient unique-position conflicts while applying a permutation.
@@ -147,19 +177,18 @@ export async function reorderVisitsInDay(
       await tx.update(visits).set({ position: index }).where(eq(visits.id, requested[index]));
     }
 
+    let newLegCount = 0;
     for (let index = 1; index < requested.length; index += 1) {
+      if (retainedPairs.has(pairKey(requested[index - 1], requested[index]))) continue;
       await tx.insert(legs).values({
         tripId: input.tripId,
         fromVisitId: requested[index - 1],
         toVisitId: requested[index],
       });
+      newLegCount += 1;
     }
 
-    return {
-      changed: true,
-      archivedLegCount: current.length,
-      newLegCount: requested.length - 1,
-    };
+    return { changed: true, archivedLegCount, newLegCount };
   });
 }
 
@@ -215,11 +244,26 @@ export async function archiveVisitFromDay(
       throw new Error('Cannot archive a Visit involved in a current cross-day connection');
     }
 
+    const remaining = active.filter((visit) => visit.id !== input.visitId);
+    const desiredPairs = new Set(
+      remaining.slice(1).map((to, index) => pairKey(remaining[index].id, to.id)),
+    );
+    const retainedPairs = new Set<string>();
+    let archivedLegCount = 0;
     for (const leg of current) {
+      const key = pairKey(leg.fromVisitId, leg.toVisitId);
+      if (desiredPairs.has(key)) {
+        retainedPairs.add(key);
+        continue;
+      }
       await tx.update(legs).set({ isCurrent: false }).where(eq(legs.id, leg.id));
+      await tx
+        .update(routeProposals)
+        .set({ status: 'invalidated', reviewedAt: new Date() })
+        .where(and(eq(routeProposals.legId, leg.id), eq(routeProposals.status, 'pending')));
+      archivedLegCount += 1;
     }
     await tx.update(visits).set({ isArchived: true }).where(eq(visits.id, input.visitId));
-    const remaining = active.filter((visit) => visit.id !== input.visitId);
     const base = Math.max(...active.map((visit) => visit.position)) + 1;
     if (base + remaining.length > 2147483647) {
       throw new Error('Visit positions exceed the database integer range');
@@ -233,17 +277,16 @@ export async function archiveVisitFromDay(
     for (let index = 0; index < remaining.length; index += 1) {
       await tx.update(visits).set({ position: index }).where(eq(visits.id, remaining[index].id));
     }
+    let newLegCount = 0;
     for (let index = 1; index < remaining.length; index += 1) {
+      if (retainedPairs.has(pairKey(remaining[index - 1].id, remaining[index].id))) continue;
       await tx.insert(legs).values({
         tripId: input.tripId,
         fromVisitId: remaining[index - 1].id,
         toVisitId: remaining[index].id,
       });
+      newLegCount += 1;
     }
-    return {
-      archivedVisitId: input.visitId,
-      archivedLegCount: current.length,
-      newLegCount: Math.max(remaining.length - 1, 0),
-    };
+    return { archivedVisitId: input.visitId, archivedLegCount, newLegCount };
   });
 }
