@@ -3,13 +3,9 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext"
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

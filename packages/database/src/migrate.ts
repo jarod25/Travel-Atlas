@@ -11,7 +11,9 @@ if (!databaseUrl) {
 const client = postgres(databaseUrl, { max: 1 });
 
 try {
-  await migrate(drizzle(client), { migrationsFolder: fileURLToPath(new URL('../drizzle/', import.meta.url)) });
+  await migrate(drizzle(client), {
+    migrationsFolder: fileURLToPath(new URL('../drizzle/', import.meta.url)),
+  });
   console.log('Database migrations applied.');
 } finally {
   await client.end();
