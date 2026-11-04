@@ -33,16 +33,6 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
-      - run: |
-          pnpm add -Dw @playwright/test@1.56.1
-          echo PW_PACKAGE_BEGIN
-          base64 -w0 package.json
-          echo
-          echo PW_PACKAGE_END
-          echo PW_LOCK_BEGIN
-          base64 -w0 pnpm-lock.yaml
-          echo
-          echo PW_LOCK_END
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
@@ -55,3 +45,7 @@ jobs:
       - run: pnpm smoke:web
         env:
           ATLAS_SMOKE_DISPOSABLE: '1'
+      - run: pnpm exec playwright install chromium
+      - run: pnpm test:e2e
+        env:
+          ATLAS_E2E_DISPOSABLE: '1'
