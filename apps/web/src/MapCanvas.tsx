@@ -127,9 +127,9 @@ export function MapCanvas({
           }
         });
         created.on('load', () => {
+          if (cancelled || !created) return;
           mapReady = true;
           setError(null);
-          if (cancelled || !created) return;
           created.addSource('atlas', { type: 'geojson', data: latest.current });
           created.addLayer({
             id: 'atlas-routes',
