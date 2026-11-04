@@ -105,5 +105,15 @@ describe('Explore GeoJSON metadata', () => {
     expect(route?.properties.transportMode).toBe('train');
     expect(route?.properties.confidence).toBe('estimated');
     expect(route?.properties.localDate).toBe('2026-09-12');
+
+    // A stale current flag must never expose an archived Visit's route in Explore.
+    await db.update(visits).set({ isArchived: true }).where(eq(visits.id, second.id));
+    const afterArchive = (await store.getExplore()) as typeof collection;
+    const visible = afterArchive.features.filter(
+      (feature) => feature.properties.tripId === trip.id,
+    );
+    expect(visible).toHaveLength(1);
+    expect(visible[0].properties.kind).toBe('visit');
+    await db.update(visits).set({ isArchived: false }).where(eq(visits.id, second.id));
   });
 });
