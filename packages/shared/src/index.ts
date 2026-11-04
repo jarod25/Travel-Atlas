@@ -23,7 +23,7 @@ export {
   type Trip,
   type TripDay,
   type Visit,
-} from './travel';
+} from './travel.js';
 
 /**
  * A computed path is a proposal, even if it visually follows the network.

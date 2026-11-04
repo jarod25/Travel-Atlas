@@ -1,4 +1,4 @@
-import type { ConfidenceLevel, TransportMode } from './index';
+import type { ConfidenceLevel, TransportMode } from './index.js';
 
 /**
  * Identifiers here are supplied by persistence. These contracts do not create
