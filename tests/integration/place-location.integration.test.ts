@@ -118,10 +118,7 @@ describe('Place coordinate certainty', () => {
         .where(eq(routeProposals.id, pending.id));
       expect(proposal.status).toBe('pending');
       await store.updatePlace(origin.id, [3, 4], 'estimated');
-      [proposal] = await db
-        .select()
-        .from(routeProposals)
-        .where(eq(routeProposals.id, pending.id));
+      [proposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, pending.id));
       expect(proposal.status).toBe('invalidated');
       expect(proposal.reviewedAt).toBeInstanceOf(Date);
       const [savedLeg] = await db.select().from(legs).where(eq(legs.id, leg.id));
