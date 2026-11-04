@@ -33,6 +33,7 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write packages/database/src/day-archive.ts && git diff -- packages/database/src/day-archive.ts
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
