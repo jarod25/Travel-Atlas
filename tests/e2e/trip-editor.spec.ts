@@ -81,7 +81,14 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
 
   await page.locator('.visit-row .visit-title').last().click();
   page.once('dialog', (dialog) => dialog.accept());
+  const archivingVisit = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/api/v1/trips/${trip.id}/days/${day.id}/visits/`) &&
+      response.request().method() === 'DELETE',
+  );
   await page.getByRole('button', { name: 'Archive visit' }).click();
+  const archivedResponse = await archivingVisit;
+  expect(archivedResponse.status(), await archivedResponse.text()).toBe(200);
   await expect(page.locator('.visit-row')).toHaveCount(2);
 
   page.once('dialog', (dialog) => dialog.accept());
