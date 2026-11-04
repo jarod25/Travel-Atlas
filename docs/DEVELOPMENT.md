@@ -55,6 +55,21 @@ production data. The smoke script starts `apps/api/dist/server.js`, checks
 port 31987 to be free. CI applies migrations on its ephemeral PostGIS service
 and checks the compiled server rather than assuming that a successful build runs.
 
+The additional `pnpm smoke:web` test starts the compiled API on port 3001 and
+Vite on port 31888, exercises a synthetic timeline through the Vite HTTP proxy,
+and shuts down both processes. It **writes synthetic test data**. Only run it
+against a dedicated migrated, disposable PostGIS database with an explicit
+opt-in:
+
+```sh
+ATLAS_SMOKE_DISPOSABLE=1 pnpm smoke:web
+```
+
+In PowerShell, set `$env:ATLAS_SMOKE_DISPOSABLE = '1'` before running
+`pnpm smoke:web`. Never enable this test against a personal or shared database.
+The browser UI and Android layout still require separate visual acceptance
+checks; an HTTP smoke test is not a Playwright browser test.
+
 ## Shutdown and retention
 
 Stop the development servers with Ctrl+C and then stop the local database:

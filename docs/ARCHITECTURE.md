@@ -7,7 +7,7 @@
 - `packages/database`: Drizzle ORM repositories, committed incremental SQL migrations and PostgreSQL/PostGIS geometry storage.
 - `packages/shared`: shared types and domain helpers.
 - `infrastructure/docker/compose.yml`: local PostgreSQL/PostGIS.
-- `tests/integration`: synthetic database fixtures; `tests/smoke/api-start.mjs`: compiled API and HTTP/database smoke test.
+- `tests/integration`: synthetic database fixtures; `tests/smoke/api-start.mjs`: compiled API and HTTP/database smoke test; `tests/smoke/web-api-journey.mjs`: Vite proxy and synthetic timeline lifecycle smoke test.
 
 The web client communicates with the Fastify API, never directly with PostgreSQL. The CI builds packages in workspace dependency order, migrates a disposable PostGIS database, tests, and launches the **compiled API** to verify real Node execution.
 
