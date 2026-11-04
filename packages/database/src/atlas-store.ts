@@ -42,6 +42,7 @@ export interface AtlasStore {
     localDate: string | null,
   ): Promise<
     | { status: 'not_found' }
+    | { status: 'archived' }
     | { status: 'conflict'; currentRevision: number }
     | { status: 'updated'; day: typeof tripDays.$inferSelect }
   >;
@@ -114,11 +115,11 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
     createDay: async (id, localDate) =>
       db.transaction(async (tx) => {
         const [trip] = await tx
-          .select({ id: trips.id })
+          .select({ id: trips.id, isArchived: trips.isArchived })
           .from(trips)
           .where(eq(trips.id, id))
           .for('update');
-        if (!trip) return null;
+        if (!trip || trip.isArchived) return null;
         const [{ count }] = await tx
           .select({ count: sql<number>`count(*)::int` })
           .from(tripDays)
@@ -138,6 +139,14 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       }),
     editDay: (tripId, dayId, revision, localDate) =>
       db.transaction(async (tx) => {
+        const [trip] = await tx
+          .select({ isArchived: trips.isArchived })
+          .from(trips)
+          .where(eq(trips.id, tripId))
+          .for('share');
+        if (!trip) return { status: 'not_found' as const };
+        if (trip.isArchived) return { status: 'archived' as const };
+
         const [day] = await tx
           .select()
           .from(tripDays)

@@ -1,9 +1,10 @@
 import { and, asc, eq, inArray, or } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { dayRestoreLegs, legs, routeProposals, tripDays, visits } from './schema.js';
+import { dayRestoreLegs, legs, routeProposals, tripDays, trips, visits } from './schema.js';
 
 export type DayArchiveResult =
   | { status: 'not_found' }
+  | { status: 'archived' }
   | { status: 'conflict'; currentRevision: number }
   | { status: 'updated'; day: typeof tripDays.$inferSelect };
 
@@ -23,6 +24,14 @@ export async function setDayArchivedWithRevision(
   input: { tripId: string; dayId: string; revision: number; isArchived: boolean },
 ): Promise<DayArchiveResult> {
   return db.transaction(async (tx) => {
+    const [trip] = await tx
+      .select({ isArchived: trips.isArchived })
+      .from(trips)
+      .where(eq(trips.id, input.tripId))
+      .for('share');
+    if (!trip) return { status: 'not_found' };
+    if (trip.isArchived) return { status: 'archived' };
+
     const [current] = await tx
       .select()
       .from(tripDays)
