@@ -124,3 +124,15 @@ links and their evidence. New adjacency receives an unknown draft atomically.
 An active cross-day connection blocks the operation. The per-day unique
 position index applies only to active Visits; archived rows retain their
 historical positions. Append and reorder operations ignore archived Visits.
+
+## Lossless day restoration (migration 0013)
+
+`day_restore_legs` records the IDs of **current intra-day** Legs when their day is
+archived. The archive transaction retains each Leg's route versions, selected
+route, evidence and independent confidence values and invalidates its pending
+route proposals. On restoration it reactivates the original intra-day Legs for
+unchanged ordered Visit pairs; a missing original gets a fresh Unknown draft.
+Explicit **cross-day** Legs remain historical and require a new Connect Days
+operation. Before migration 0013, previously archived days have no snapshots;
+those older days restore with Unknown intra-day drafts instead. No previously
+archived history is overwritten by this migration.

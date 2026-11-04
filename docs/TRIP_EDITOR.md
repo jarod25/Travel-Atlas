@@ -49,3 +49,13 @@ preserves all Visits, evidence and historical Legs, but hides the day from Explo
 and closes its current intra-day and cross-day links. Restoring a day creates only
 new Unknown draft legs within that day; cross-day travel is never reconstructed
 automatically. Archived days remain visible in the editor for restoration.
+
+## Archiving and restoring days
+
+Archiving a day retains its original intra-day Legs and their factual records
+for restoration. Restoring the day reactivates those Legs when the original
+Visit adjacency still exists. Cross-day connections are **not** restored
+automatically: the user must reconnect adjacent days explicitly. Pending
+route proposals on archived Legs are invalidated; historical route versions
+and evidence remain saved. A day archived before migration 0013 does not have
+an intra-day snapshot and restores with Unknown draft Legs instead.
