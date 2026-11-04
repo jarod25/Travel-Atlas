@@ -75,3 +75,7 @@ invalidating its pending proposals. A later explicit Connect Days creates a
 ### Existing Visit Place correction (Lot 3 stabilization)
 
 `PATCH /api/v1/trips/:tripId/days/:dayId/visits/:visitId` requires `If-Match: "<visit revision>"` and a body `{ "placeId": "<uuid>" }` (or `null` for unknown). It changes the referenced reusable Place without recreating the Visit. The response includes the incremented revision and an ETag. A stale revision returns 412, archived trips/days return 409, and invalid or missing references are rejected. Pending route proposals for current adjacent Legs are invalidated; recorded Legs and historical evidence are retained.
+
+### Optimistic Place coordinate edits (Lot 3 stabilization)
+
+`PATCH /api/v1/places/:placeId` now requires `If-Match: "<place revision>"`, alongside `coordinates` and `confidence`. A stale revision returns HTTP 412 and a current ETag; missing `If-Match` returns 428. The response includes the latest Place revision. Coordinate edits and dependent pending RouteProposal invalidations run in one transaction. A certainty-only edit does not invalidate geometry proposals.
