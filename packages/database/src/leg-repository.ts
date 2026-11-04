@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, routeProposals } from './schema';
+import { legs, routeProposals } from './schema.js';
 
 export type LegChanges = Partial<
   Pick<
