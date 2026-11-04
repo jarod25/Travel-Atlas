@@ -315,6 +315,56 @@ export function buildApp(store?: AtlasStore) {
       return place ?? reply.code(404).send({ error: 'Place not found' });
     },
   );
+  app.patch<{
+    Params: { tripId: string; dayId: string; visitId: string };
+    Headers: { 'if-match'?: string };
+    Body: { placeId: string | null };
+  }>(
+    '/api/v1/trips/:tripId/days/:dayId/visits/:visitId',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['tripId', 'dayId', 'visitId'],
+          additionalProperties: false,
+          properties: { tripId: uuid, dayId: uuid, visitId: uuid },
+        },
+        body: {
+          type: 'object',
+          required: ['placeId'],
+          additionalProperties: false,
+          properties: { placeId: { anyOf: [uuid, { type: 'null' }] } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const header = request.headers['if-match'];
+      if (!header) return reply.code(428).send({ error: 'If-Match is required' });
+      const match = /^"([1-9][0-9]*)"$/.exec(header);
+      if (!match) return reply.code(400).send({ error: 'Invalid Visit revision' });
+      const result = await store.editVisitPlace(
+        request.params.tripId,
+        request.params.dayId,
+        request.params.visitId,
+        Number(match[1]),
+        request.body.placeId,
+      );
+      if (result.status === 'not_found' || result.status === 'place_not_found') {
+        return reply.code(404).send({ error: 'Visit, day or Place not found' });
+      }
+      if (result.status === 'archived') {
+        return reply.code(409).send({ error: 'Restore the trip and day before editing Visits' });
+      }
+      if (result.status === 'conflict') {
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Visit was modified; reload before editing' });
+      }
+      return reply.header('ETag', `"${result.visit.revision}"`).send(result.visit);
+    },
+  );
+
   app.post<{ Params: { tripId: string; dayId: string }; Body: { placeId?: string | null } }>(
     '/api/v1/trips/:tripId/days/:dayId/visits',
     {
