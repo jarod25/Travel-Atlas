@@ -171,6 +171,9 @@ export function App() {
   useEffect(() => {
     setEditedDayDate(selectedDay?.localDate ?? '');
   }, [selectedDay?.id, selectedDay?.revision]);
+  const outgoingCrossDay = timeline?.crossDayLegs.find((leg) =>
+    timeline.visits.some((visit) => visit.id === leg.fromVisitId),
+  );
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = timeline?.legs.find((leg) => leg.id === selectedLegId);
   useEffect(() => {
@@ -267,6 +270,23 @@ export function App() {
     if (!window.confirm('Connect the last Visit of this day to the first of the next day?')) return;
     await execute(async () => {
       await atlasApi.connectDays(tripId, selectedDay.id, followingDay.id);
+      await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
+    });
+  }
+
+  async function disconnectFromFollowingDay() {
+    if (!tripId || !selectedDay || !followingDay || !outgoingCrossDay) return;
+    if (!window.confirm('Disconnect these days? The previous Leg and its evidence remain saved.')) {
+      return;
+    }
+    await execute(async () => {
+      await atlasApi.disconnectDays(
+        tripId,
+        selectedDay.id,
+        followingDay.id,
+        outgoingCrossDay.id,
+        outgoingCrossDay.revision,
+      );
       await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
     });
   }
@@ -700,16 +720,19 @@ export function App() {
                 !followingDay.isArchived && (
                   <div className="connect-day">
                     <span>
-                      {(timeline?.crossDayLegs.length ?? 0) > 0
-                        ? 'A cross-day connection exists for the selected day.'
+                      {outgoingCrossDay
+                        ? 'The selected day is connected to the next day.'
                         : 'Days are not linked automatically.'}
                     </span>
-                    <button
-                      disabled={pending || (timeline?.crossDayLegs.length ?? 0) > 0}
-                      onClick={() => void connectToFollowingDay()}
-                    >
-                      Connect to next day
-                    </button>
+                    {outgoingCrossDay ? (
+                      <button disabled={pending} onClick={() => void disconnectFromFollowingDay()}>
+                        Disconnect from next day
+                      </button>
+                    ) : (
+                      <button disabled={pending} onClick={() => void connectToFollowingDay()}>
+                        Connect to next day
+                      </button>
+                    )}
                   </div>
                 )}
               <div className="mobile-tabs" aria-label="Editor panels">

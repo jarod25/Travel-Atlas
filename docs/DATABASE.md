@@ -136,3 +136,10 @@ Explicit **cross-day** Legs remain historical and require a new Connect Days
 operation. Before migration 0013, previously archived days have no snapshots;
 those older days restore with Unknown intra-day drafts instead. No previously
 archived history is overwritten by this migration.
+
+## Explicit cross-day disconnection
+
+A disconnect operation locks both adjacent day rows and the exact current
+cross-day Leg, checks its revision and endpoint order, then marks it historical.
+It invalidates pending RouteProposals but preserves evidence and RouteVersions.
+An explicit reconnect creates an independent Unknown draft Leg.

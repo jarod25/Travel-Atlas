@@ -43,6 +43,7 @@ function stub(): AtlasStore {
       currentRevision: revision + 1,
     }),
     connectDays: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
+    disconnectDays: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
     getExplore: async () => ({ type: 'FeatureCollection', features: [] }),
     close: async () => undefined,
   };
@@ -119,6 +120,27 @@ describe('Trip API', () => {
         payload: { visitIds: [visitId, visitId] },
       });
       expect(invalid.statusCode).toBe(400);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('Explicit day disconnection API', () => {
+  it('requires a Leg revision and refuses invalid disconnects', async () => {
+    const app = buildApp(stub());
+    const url = `/api/v1/trips/${tripId}/disconnect-days`;
+    const payload = { fromDayId: dayId, toDayId: visitId, legId: visitId };
+    try {
+      const missing = await app.inject({ method: 'POST', url, payload });
+      expect(missing.statusCode).toBe(428);
+      const invalid = await app.inject({
+        method: 'POST',
+        url,
+        payload,
+        headers: { 'if-match': '"1"' },
+      });
+      expect(invalid.statusCode).toBe(409);
     } finally {
       await app.close();
     }

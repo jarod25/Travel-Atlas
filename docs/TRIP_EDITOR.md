@@ -59,3 +59,11 @@ automatically: the user must reconnect adjacent days explicitly. Pending
 route proposals on archived Legs are invalidated; historical route versions
 and evidence remain saved. A day archived before migration 0013 does not have
 an intra-day snapshot and restores with Unknown draft Legs instead.
+
+## Explicit day connections
+
+The editor offers **Connect to next day** only when no outgoing cross-day Leg
+exists. Once connected, it offers **Disconnect from next day**, with an explicit
+confirmation. The API validates the day boundary and Leg revision before
+retiring the link. The original journey stays in history; reconnecting
+creates a fresh Unknown draft rather than pretending it is the old journey.

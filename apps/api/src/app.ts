@@ -543,6 +543,46 @@ export function buildApp(store?: AtlasStore) {
       return reply.code(result.created ? 201 : 200).send(result);
     },
   );
+  app.post<{
+    Params: { tripId: string };
+    Body: { fromDayId: string; toDayId: string; legId: string };
+    Headers: { 'if-match'?: string };
+  }>(
+    '/api/v1/trips/:tripId/disconnect-days',
+    {
+      schema: {
+        params: idParams,
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['fromDayId', 'toDayId', 'legId'],
+          properties: { fromDayId: uuid, toDayId: uuid, legId: uuid },
+        },
+      },
+    },
+    async (request, reply) => {
+      const header = request.headers['if-match'];
+      if (!header) return reply.code(428).send({ error: 'If-Match is required' });
+      const match = /^"([1-9][0-9]*)"$/.exec(header);
+      if (!match) return reply.code(400).send({ error: 'Invalid If-Match revision' });
+      const result = await store.disconnectDays(
+        request.params.tripId,
+        request.body.fromDayId,
+        request.body.toDayId,
+        request.body.legId,
+        Number(match[1]),
+      );
+      if (result.status === 'not_found') return reply.code(404).send({ error: 'Day not found' });
+      if (result.status === 'invalid') return reply.code(409).send({ error: result.reason });
+      if (result.status === 'conflict') {
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Leg was modified; reload before disconnecting' });
+      }
+      return reply.header('ETag', `"${result.leg.revision}"`).send(result);
+    },
+  );
   app.get('/api/v1/explore/geojson', async () => store.getExplore());
   return app;
 }

@@ -3,9 +3,12 @@ import { eq } from 'drizzle-orm';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { connectAdjacentDays } from '../../packages/database/src/day-connection';
+import {
+  connectAdjacentDays,
+  disconnectAdjacentDays,
+} from '../../packages/database/src/day-connection';
 import { appendVisitToDay } from '../../packages/database/src/visit-repository';
-import { legs, tripDays, trips, visits } from '../../packages/database/src/schema';
+import { legs, routeProposals, tripDays, trips, visits } from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL must point to a disposable integration-test database.');
@@ -17,6 +20,7 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   for (const id of tripIds) {
+    await db.delete(routeProposals).where(eq(routeProposals.tripId, id));
     await db.delete(legs).where(eq(legs.tripId, id));
     await db.delete(trips).where(eq(trips.id, id));
   }
@@ -86,6 +90,67 @@ describe('Explicit Connect Days', () => {
     expect(await db.select().from(visits).where(eq(visits.tripDayId, f.days[0].id))).toHaveLength(
       1,
     );
+  });
+
+  it('disconnects only the exact current boundary while keeping known history', async () => {
+    const f = await fixture();
+    const connected = await connectAdjacentDays(db, {
+      tripId: f.trip.id,
+      fromDayId: f.days[0].id,
+      toDayId: f.days[1].id,
+    });
+    if (connected.status !== 'connected') throw new Error('Expected connected days');
+    await db
+      .update(legs)
+      .set({
+        transportMode: 'train',
+        movementConfidence: 'confirmed',
+        transportConfidence: 'confirmed',
+      })
+      .where(eq(legs.id, connected.leg.id));
+    const [proposal] = await db
+      .insert(routeProposals)
+      .values({
+        tripId: f.trip.id,
+        legId: connected.leg.id,
+        fromVisitId: connected.leg.fromVisitId,
+        toVisitId: connected.leg.toVisitId,
+        transportMode: 'train',
+      })
+      .returning();
+    const input = {
+      tripId: f.trip.id,
+      fromDayId: f.days[0].id,
+      toDayId: f.days[1].id,
+      legId: connected.leg.id,
+    };
+    expect(await disconnectAdjacentDays(db, { ...input, revision: 3 })).toEqual({
+      status: 'conflict',
+      currentRevision: 1,
+    });
+    const disconnected = await disconnectAdjacentDays(db, { ...input, revision: 1 });
+    expect(disconnected.status).toBe('disconnected');
+    const [historic] = await db.select().from(legs).where(eq(legs.id, connected.leg.id));
+    expect(historic.isCurrent).toBe(false);
+    expect(historic.transportMode).toBe('train');
+    expect(historic.movementConfidence).toBe('confirmed');
+    expect(historic.transportConfidence).toBe('confirmed');
+    const [stale] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, proposal.id));
+    expect(stale.status).toBe('invalidated');
+    expect((await disconnectAdjacentDays(db, { ...input, revision: 1 })).status).toBe('invalid');
+    const reconnected = await connectAdjacentDays(db, {
+      tripId: f.trip.id,
+      fromDayId: f.days[0].id,
+      toDayId: f.days[1].id,
+    });
+    expect(reconnected.status).toBe('connected');
+    if (reconnected.status !== 'connected') throw new Error('Expected reconnected days');
+    expect(reconnected.leg.id).not.toBe(connected.leg.id);
+    expect(reconnected.leg.movementConfidence).toBe('unknown');
+    expect(reconnected.leg.transportMode).toBeNull();
   });
 
   it('rejects backwards and skipped days, and links to another Trip', async () => {

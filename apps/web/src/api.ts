@@ -143,5 +143,17 @@ export const atlasApi = {
     }),
   connectDays: (tripId: string, fromDayId: string, toDayId: string) =>
     post<unknown>(`/trips/${tripId}/connect-days`, { fromDayId, toDayId }),
+  disconnectDays: (
+    tripId: string,
+    fromDayId: string,
+    toDayId: string,
+    legId: string,
+    revision: number,
+  ) =>
+    request<unknown>(`/trips/${tripId}/disconnect-days`, {
+      method: 'POST',
+      headers: { 'If-Match': `"${revision}"` },
+      body: JSON.stringify({ fromDayId, toDayId, legId }),
+    }),
   explore: () => request<FeatureCollection>('/explore/geojson'),
 };

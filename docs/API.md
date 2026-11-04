@@ -59,3 +59,15 @@ and a required `If-Match: "<revision>"` header. It returns 428 without a revisio
 historic Legs, while removing current intra-day and inter-day links. Restoring
 reconstructs only unknown intra-day drafts, never an unverified cross-day route.
 Archived days reject Visit editing (409).
+
+## Explicit day disconnection
+
+`POST /api/v1/trips/:tripId/disconnect-days` accepts the JSON body
+`{ "fromDayId": "<uuid>", "toDayId": "<uuid>", "legId": "<uuid>" }`
+and requires the current Leg's `If-Match: "<revision>"` header. It returns
+428 when missing, 412 on stale revision and 409 for an inconsistent day boundary.
+The connection must be current, between two consecutive non-archived days in
+the same non-archived Trip, with the exact last/first active Visit endpoints.
+Disconnecting preserves the historical Leg, RouteVersions and evidence while
+invalidating its pending proposals. A later explicit Connect Days creates a
+**new Unknown** Leg; old Confirmed facts are not transferred automatically.
