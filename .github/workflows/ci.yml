@@ -33,6 +33,13 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
+      - run: |
+          echo APP_FORMAT_BEGIN
+          pnpm exec prettier apps/web/src/App.tsx
+          echo APP_FORMAT_END
+          echo E2E_FORMAT_BEGIN
+          pnpm exec prettier tests/e2e/trip-editor.spec.ts
+          echo E2E_FORMAT_END
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
