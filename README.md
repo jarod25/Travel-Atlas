@@ -17,15 +17,15 @@
 
 ## Technology
 
-| Area                            | Selected technology                                  |
-| ------------------------------- | ---------------------------------------------------- |
-| Web client                      | React, TypeScript, Vite                              |
-| API                             | Fastify, TypeScript                                  |
-| Database                        | PostgreSQL, PostGIS, Drizzle ORM                     |
-| Interactive map                | MapLibre GL JS (CDN-loaded); OpenFreeMap tiles        |
-| Data exchange (planned)         | GeoJSON and portable native backups; GPX later       |
-| Quality                         | Vitest, TypeScript, ESLint, Prettier, GitHub Actions |
-| Workspace                       | pnpm monorepo                                        |
+| Area                    | Selected technology                                  |
+| ----------------------- | ---------------------------------------------------- |
+| Web client              | React, TypeScript, Vite                              |
+| API                     | Fastify, TypeScript                                  |
+| Database                | PostgreSQL, PostGIS, Drizzle ORM                     |
+| Interactive map         | MapLibre GL JS (CDN-loaded); OpenFreeMap tiles       |
+| Data exchange (planned) | GeoJSON and portable native backups; GPX later       |
+| Quality                 | Vitest, TypeScript, ESLint, Prettier, GitHub Actions |
+| Workspace               | pnpm monorepo                                        |
 
 The repository contains a functional local Explore and Trip Editor foundation, **not** the complete product scope. See [Lot 3 feature guide](docs/TRIP_EDITOR.md) and [API guide](docs/API.md) for supported operations and limitations.
 
