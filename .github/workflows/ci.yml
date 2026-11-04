@@ -33,13 +33,6 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
-      - run: |
-          echo CONFIG_FORMAT_BEGIN
-          pnpm exec prettier playwright.config.ts
-          echo CONFIG_FORMAT_END
-          echo TEST_FORMAT_BEGIN
-          pnpm exec prettier tests/e2e/trip-editor.spec.ts
-          echo TEST_FORMAT_END
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
