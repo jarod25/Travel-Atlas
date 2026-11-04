@@ -262,6 +262,7 @@ export function buildApp(store?: AtlasStore) {
   );
   app.patch<{
     Params: { placeId: string };
+    Headers: { 'if-match'?: string };
     Body: {
       coordinates: [number, number] | null;
       confidence: 'confirmed' | 'estimated' | 'unknown';
@@ -307,12 +308,26 @@ export function buildApp(store?: AtlasStore) {
       if (request.body.coordinates === null && request.body.confidence !== 'unknown') {
         return reply.code(400).send({ error: 'Missing coordinates must be Unknown' });
       }
-      const place = await store.updatePlace(
+      const header = request.headers['if-match'];
+      if (!header) return reply.code(428).send({ error: 'If-Match is required' });
+      const match = /^"([1-9][0-9]*)"$/.exec(header);
+      if (!match) return reply.code(400).send({ error: 'Invalid Place revision' });
+      const result = await store.updatePlace(
         request.params.placeId,
+        Number(match[1]),
         request.body.coordinates,
         request.body.confidence,
       );
-      return place ?? reply.code(404).send({ error: 'Place not found' });
+      if (result.status === 'not_found') {
+        return reply.code(404).send({ error: 'Place not found' });
+      }
+      if (result.status === 'conflict') {
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Place was modified; reload before editing' });
+      }
+      return reply.header('ETag', `"${result.place.revision}"`).send(result.place);
     },
   );
   app.patch<{

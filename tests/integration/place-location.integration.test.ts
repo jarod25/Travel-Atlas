@@ -111,13 +111,17 @@ describe('Place coordinate certainty', () => {
     const store = createAtlasStore(url!);
     try {
       // Certainty-only changes do not alter the inputs used for routing.
-      await store.updatePlace(origin.id, [1, 2], 'confirmed');
+      const firstUpdate = await store.updatePlace(origin.id, 1, [1, 2], 'confirmed');
+      expect(firstUpdate.status).toBe('updated');
       let [proposal] = await db
         .select()
         .from(routeProposals)
         .where(eq(routeProposals.id, pending.id));
       expect(proposal.status).toBe('pending');
-      await store.updatePlace(origin.id, [3, 4], 'estimated');
+      const stale = await store.updatePlace(origin.id, 1, [3, 4], 'estimated');
+      expect(stale).toEqual({ status: 'conflict', currentRevision: 2 });
+      const corrected = await store.updatePlace(origin.id, 2, [3, 4], 'estimated');
+      expect(corrected.status).toBe('updated');
       [proposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, pending.id));
       expect(proposal.status).toBe('invalidated');
       expect(proposal.reviewedAt).toBeInstanceOf(Date);

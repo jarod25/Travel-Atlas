@@ -82,6 +82,7 @@ export const places = pgTable(
     locationConfidence: text('location_confidence', { enum: confidenceValues })
       .notNull()
       .default('unknown'),
+    revision: integer('revision').notNull().default(1),
   },
   (table) => [
     check(

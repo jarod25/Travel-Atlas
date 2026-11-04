@@ -30,10 +30,9 @@ function stub(): AtlasStore {
       id === tripId && day === dayId ? { visits: [], legs: [] } : null,
     listPlaces: async () => [],
     createPlace: async (name: string) => ({ id: 'new-place', name }),
-    updatePlace: async (id: string, coordinates: [number, number] | null, confidence: string) => ({
-      id,
-      location: coordinates,
-      locationConfidence: confidence,
+    updatePlace: async (id: string, revision: number) => ({
+      status: 'conflict',
+      currentRevision: revision + 1,
     }),
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
     reorderVisits: async () => ({ changed: true }),
@@ -179,13 +178,6 @@ describe('Place coordinate API', () => {
     const app = buildApp(stub());
     const url = `/api/v1/places/${visitId}`;
     try {
-      const ok = await app.inject({
-        method: 'PATCH',
-        url,
-        payload: { coordinates: [0, 0], confidence: 'confirmed' },
-      });
-      expect(ok.statusCode).toBe(200);
-      expect(ok.json().location).toEqual([0, 0]);
       expect(
         (
           await app.inject({
@@ -355,6 +347,28 @@ describe('Existing Visit Place correction API', () => {
         url,
         headers: { 'if-match': '"1"' },
         payload: { placeId: null },
+      });
+      expect(conflict.statusCode).toBe(412);
+      expect(conflict.headers.etag).toBe('"2"');
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('Place revisions API', () => {
+  it('requires an If-Match revision and rejects stale updates', async () => {
+    const app = buildApp(stub());
+    const url = '/api/v1/places/44444444-4444-4444-8444-444444444444';
+    const payload = { coordinates: [1, 2], confidence: 'estimated' };
+    try {
+      const missing = await app.inject({ method: 'PATCH', url, payload });
+      expect(missing.statusCode).toBe(428);
+      const conflict = await app.inject({
+        method: 'PATCH',
+        url,
+        payload,
+        headers: { 'if-match': '"1"' },
       });
       expect(conflict.statusCode).toBe(412);
       expect(conflict.headers.etag).toBe('"2"');
