@@ -2,7 +2,7 @@
 
 **Travel Atlas** is an open-standards-based, full-stack geospatial application for reconstructing, organizing, and visualizing travel histories. The project combines interactive maps, multimodal route modeling, chronological trip management, and geographic data provenance.
 
-> **Status:** Early development. The initial technical feasibility checks have been completed, but the trip editor, interactive map, import/export, and routing integrations are not yet implemented in this repository.
+> **Status:** Lot 3 (Explore and Trip Editor foundation) is implemented on `develop`. The interactive map, trip/day/visit editing, evidence-aware filtering, and guarded Leg editing are available. Import/export, automated routing, GPS recording, authentication, and deployment remain future work.
 
 ## Project goals
 
@@ -17,17 +17,17 @@
 
 ## Technology
 
-| Area                            | Selected technology                                  |
-| ------------------------------- | ---------------------------------------------------- |
-| Web client                      | React, TypeScript, Vite                              |
-| API                             | Fastify, TypeScript                                  |
-| Database                        | PostgreSQL, PostGIS, Drizzle ORM                     |
-| Map and route editing (planned) | MapLibre GL JS; geometry editor to be evaluated      |
-| Data exchange (planned)         | GeoJSON and portable native backups; GPX later       |
-| Quality                         | Vitest, TypeScript, ESLint, Prettier, GitHub Actions |
-| Workspace                       | pnpm monorepo                                        |
+| Area                    | Selected technology                                  |
+| ----------------------- | ---------------------------------------------------- |
+| Web client              | React, TypeScript, Vite                              |
+| API                     | Fastify, TypeScript                                  |
+| Database                | PostgreSQL, PostGIS, Drizzle ORM                     |
+| Interactive map         | MapLibre GL JS (CDN-loaded); OpenFreeMap tiles       |
+| Data exchange (planned) | GeoJSON and portable native backups; GPX later       |
+| Quality                 | Vitest, TypeScript, ESLint, Prettier, GitHub Actions |
+| Workspace               | pnpm monorepo                                        |
 
-The repository currently contains a minimal web/API foundation and test infrastructure, **not** the full feature set shown above.
+The repository contains a functional local Explore and Trip Editor foundation, **not** the complete product scope. See [Lot 3 feature guide](docs/TRIP_EDITOR.md) and [API guide](docs/API.md) for supported operations and limitations.
 
 ## Getting started
 
@@ -38,7 +38,7 @@ pnpm install
 pnpm dev
 ```
 
-The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`; no user data or external routing service is required for these initial screens.
+The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. Trip editing requires a configured PostgreSQL/PostGIS database and applied migrations; no personal travel data is seeded. Map tiles and the current MapLibre CDN bundle require network access. See [database guide](docs/DATABASE.md) for setup.
 
 Quality checks:
 
@@ -62,7 +62,7 @@ See [development guide](docs/DEVELOPMENT.md) for Windows setup and [architecture
 
 The first local proof-of-concept passed Drizzle/PostGIS round-trip checks for `LineString`, `MultiLineString`, SRID 4326, and unknown geometries. OpenRailRouting returned two proposed French TGV paths, but a computed shortcut around Mulhouse demonstrated why confirmed intermediate rail stops must be modeled as **routing waypoints**, not additional visits. Public railway routing access also needs a sustainable deployment strategy.
 
-These are **proof-of-concept findings**, not assertions that the corresponding application features are already built.
+These are **proof-of-concept findings**, not assertions that automated railway routing has been integrated into the application.
 
 ## Development workflow
 
