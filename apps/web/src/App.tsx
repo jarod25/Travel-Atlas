@@ -847,6 +847,7 @@ export function App() {
                               )}
                               <div
                                 className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
+                                data-visit-id={visit.id}
                               >
                                 <button
                                   className="visit-title"
