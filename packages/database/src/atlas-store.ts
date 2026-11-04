@@ -206,14 +206,41 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const [place] = await db.insert(places).values({ name }).returning();
       return place;
     },
-    updatePlace: async (id, coordinates, confidence) => {
-      const [updated] = await db
-        .update(places)
-        .set({ location: coordinates, locationConfidence: coordinates ? confidence : 'unknown' })
-        .where(eq(places.id, id))
-        .returning();
-      return updated ?? null;
-    },
+    updatePlace: (id, coordinates, confidence) =>
+      db.transaction(async (tx) => {
+        // Lock the shared Place so concurrent coordinate changes cannot interleave
+        // with invalidation of route candidates derived from its previous location.
+        const [current] = await tx
+          .select({ location: places.location })
+          .from(places)
+          .where(eq(places.id, id))
+          .for('update');
+        if (!current) return null;
+        const oldLongitude = current.location?.[0];
+        const oldLatitude = current.location?.[1];
+        const changed = oldLongitude !== coordinates?.[0] || oldLatitude !== coordinates?.[1];
+        const [updated] = await tx
+          .update(places)
+          .set({ location: coordinates, locationConfidence: coordinates ? confidence : 'unknown' })
+          .where(eq(places.id, id))
+          .returning();
+
+        if (changed) {
+          // Only pending proposals become stale. Accepted routes and historical
+          // versions/evidence remain untouched, even for a shared Place.
+          await tx.execute(sql`
+            UPDATE route_proposals AS proposal
+            SET status = 'invalidated', reviewed_at = NOW()
+            FROM legs AS leg
+            JOIN visits AS start_visit ON start_visit.id = leg.from_visit_id
+            JOIN visits AS end_visit ON end_visit.id = leg.to_visit_id
+            WHERE proposal.leg_id = leg.id
+              AND proposal.status = 'pending'
+              AND (start_visit.place_id = ${id} OR end_visit.place_id = ${id})
+          `);
+        }
+        return updated;
+      }),
     addVisit: async (tripId, dayId, placeId) => {
       return appendVisitToDay(db, { tripId, tripDayId: dayId, placeId });
     },
