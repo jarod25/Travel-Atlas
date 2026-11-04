@@ -1,9 +1,9 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { updateTripWithRevision } from './trip-repository.js';
-import { connectAdjacentDays } from './day-connection.js';
+import { connectAdjacentDays, disconnectAdjacentDays } from './day-connection.js';
 import { setDayArchivedWithRevision } from './day-archive.js';
 import type { DayArchiveResult } from './day-archive.js';
-import type { DayConnectionResult } from './day-connection.js';
+import type { DayConnectionResult, DayDisconnectionResult } from './day-connection.js';
 import type { TripUpdateResult } from './trip-repository.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
@@ -52,6 +52,13 @@ export interface AtlasStore {
   archiveVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
   getExplore(): Promise<unknown>;
   connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
+  disconnectDays(
+    tripId: string,
+    fromDayId: string,
+    toDayId: string,
+    legId: string,
+    revision: number,
+  ): Promise<DayDisconnectionResult>;
   updateLeg(id: string, revision: number, changes: LegChanges): Promise<LegUpdateResult>;
   close(): Promise<void>;
 }
@@ -229,6 +236,8 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         fromDayId,
         toDayId,
       }),
+    disconnectDays: (tripId, fromDayId, toDayId, legId, revision) =>
+      disconnectAdjacentDays(db, { tripId, fromDayId, toDayId, legId, revision }),
     getExplore: async () => {
       const points = await db
         .select({

@@ -43,6 +43,7 @@ function stub(): AtlasStore {
       currentRevision: revision + 1,
     }),
     connectDays: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
+    disconnectDays: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
     getExplore: async () => ({ type: 'FeatureCollection', features: [] }),
     close: async () => undefined,
   };
