@@ -377,3 +377,38 @@ describe('Place revisions API', () => {
     }
   });
 });
+
+describe('Archived Trip timeline HTTP errors', () => {
+  it('returns 409 rather than 500 for all archived Trip Visit writes', async () => {
+    const store = stub();
+    store.addVisit = async () => {
+      throw new Error('Trip is archived');
+    };
+    store.reorderVisits = async () => {
+      throw new Error('Trip is archived');
+    };
+    store.archiveVisit = async () => {
+      throw new Error('Trip is archived');
+    };
+    const app = buildApp(store);
+    const root = `/api/v1/trips/${tripId}/days/${dayId}`;
+    try {
+      const create = await app.inject({ method: 'POST', url: `${root}/visits`, payload: {} });
+      const reorder = await app.inject({
+        method: 'POST',
+        url: `${root}/reorder`,
+        payload: { visitIds: [visitId] },
+      });
+      const archive = await app.inject({
+        method: 'DELETE',
+        url: `${root}/visits/${visitId}`,
+      });
+      for (const response of [create, reorder, archive]) {
+        expect(response.statusCode).toBe(409);
+        expect(response.json().error).toBe('Trip is archived');
+      }
+    } finally {
+      await app.close();
+    }
+  });
+});
