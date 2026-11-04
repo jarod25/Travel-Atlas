@@ -1,6 +1,8 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { updateTripWithRevision } from './trip-repository';
 import { connectAdjacentDays } from './day-connection';
+import { setDayArchivedWithRevision } from './day-archive';
+import type { DayArchiveResult } from './day-archive';
 import type { DayConnectionResult } from './day-connection';
 import type { TripUpdateResult } from './trip-repository';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -21,6 +23,12 @@ export interface AtlasStore {
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
+  archiveDay(
+    tripId: string,
+    dayId: string,
+    revision: number,
+    isArchived: boolean,
+  ): Promise<DayArchiveResult>;
   editDay(
     tripId: string,
     dayId: string,
@@ -95,6 +103,13 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           .values({ tripId: id, localDate, position: count })
           .returning();
         return day;
+      }),
+    archiveDay: (tripId, dayId, revision, archived) =>
+      setDayArchivedWithRevision(db, {
+        tripId,
+        dayId,
+        revision,
+        isArchived: archived,
       }),
     editDay: (tripId, dayId, revision, localDate) =>
       db.transaction(async (tx) => {
@@ -233,6 +248,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           and(
             eq(visits.isArchived, false),
             eq(trips.isArchived, false),
+            eq(tripDays.isArchived, false),
             sql`${places.location} IS NOT NULL`,
           ),
         );
@@ -244,8 +260,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         FROM legs l JOIN route_versions rv ON rv.id = l.selected_route_version_id
           JOIN visits v ON v.id = l.from_visit_id
           JOIN trip_days td ON td.id = v.trip_day_id
+          JOIN visits v2 ON v2.id = l.to_visit_id
+          JOIN trip_days td2 ON td2.id = v2.trip_day_id
           JOIN trips t ON t.id = l.trip_id
-        WHERE l.is_current = true AND t.is_archived = false AND rv.geometry IS NOT NULL
+        WHERE l.is_current = true AND t.is_archived = false
+          AND td.is_archived = false AND td2.is_archived = false
+          AND rv.geometry IS NOT NULL
       `);
       return {
         type: 'FeatureCollection',

@@ -13,7 +13,7 @@ export async function appendVisitToDay(
 ) {
   return db.transaction(async (tx) => {
     const [day] = await tx
-      .select({ id: tripDays.id, tripId: tripDays.tripId })
+      .select({ id: tripDays.id, tripId: tripDays.tripId, isArchived: tripDays.isArchived })
       .from(tripDays)
       .where(and(eq(tripDays.id, input.tripDayId), eq(tripDays.tripId, input.tripId)))
       .for('update');
@@ -21,6 +21,7 @@ export async function appendVisitToDay(
     if (!day) {
       throw new Error('Trip day not found in the specified trip');
     }
+    if (day.isArchived) throw new Error('Trip day is archived');
 
     const [previous] = await tx
       .select({ id: visits.id, position: visits.position })
@@ -72,13 +73,14 @@ export async function reorderVisitsInDay(
 ) {
   return db.transaction(async (tx) => {
     const [day] = await tx
-      .select({ id: tripDays.id })
+      .select({ id: tripDays.id, isArchived: tripDays.isArchived })
       .from(tripDays)
       .where(and(eq(tripDays.id, input.tripDayId), eq(tripDays.tripId, input.tripId)))
       .for('update');
     if (!day) {
       throw new Error('Trip day not found in the specified trip');
     }
+    if (day.isArchived) throw new Error('Trip day is archived');
 
     const existing = await tx
       .select({ id: visits.id, position: visits.position })
@@ -172,13 +174,14 @@ export async function archiveVisitFromDay(
 ) {
   return db.transaction(async (tx) => {
     const [day] = await tx
-      .select({ id: tripDays.id })
+      .select({ id: tripDays.id, isArchived: tripDays.isArchived })
       .from(tripDays)
       .where(and(eq(tripDays.id, input.tripDayId), eq(tripDays.tripId, input.tripId)))
       .for('update');
     if (!day) {
       throw new Error('Trip day not found in the specified trip');
     }
+    if (day.isArchived) throw new Error('Trip day is archived');
     const active = await tx
       .select({ id: visits.id, position: visits.position })
       .from(visits)

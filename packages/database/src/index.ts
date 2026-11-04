@@ -24,3 +24,5 @@ export { updateTripWithRevision } from './trip-repository';
 export type { TripUpdateResult } from './trip-repository';
 export { connectAdjacentDays } from './day-connection';
 export type { DayConnectionResult } from './day-connection';
+export { setDayArchivedWithRevision } from './day-archive';
+export type { DayArchiveResult } from './day-archive';

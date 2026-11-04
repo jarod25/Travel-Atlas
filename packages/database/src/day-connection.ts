@@ -26,6 +26,7 @@ export async function connectAdjacentDays(
       .where(
         and(
           eq(tripDays.tripId, input.tripId),
+          eq(tripDays.isArchived, false),
           inArray(tripDays.id, [input.fromDayId, input.toDayId]),
         ),
       )

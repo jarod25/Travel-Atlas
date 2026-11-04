@@ -12,6 +12,7 @@ export interface TripDay {
   localDate: string | null;
   position: number;
   revision: number;
+  isArchived: boolean;
 }
 export interface Place {
   id: string;
@@ -91,6 +92,12 @@ export const atlasApi = {
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),
   addDay: (id: string, localDate: string | null) =>
     post<TripDay>(`/trips/${id}/days`, { localDate }),
+  archiveDay: (id: string, day: string, revision: number, isArchived: boolean) =>
+    request<TripDay>(`/trips/${id}/days/${day}/archive`, {
+      method: 'PATCH',
+      headers: { 'If-Match': `"${revision}"` },
+      body: JSON.stringify({ isArchived }),
+    }),
   editDay: (id: string, day: string, revision: number, localDate: string | null) =>
     request<TripDay>(`/trips/${id}/days/${day}`, {
       method: 'PATCH',
