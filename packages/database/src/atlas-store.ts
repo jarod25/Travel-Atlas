@@ -209,9 +209,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           .where(eq(places.id, id))
           .for('update');
         if (!current) return null;
-        const changed =
-          current.location?.[0] !== coordinates?.[0] ||
-          current.location?.[1] !== coordinates?.[1];
+        const oldLongitude = current.location?.[0];
+        const oldLatitude = current.location?.[1];
+        const changed = oldLongitude !== coordinates?.[0] || oldLatitude !== coordinates?.[1];
         const [updated] = await tx
           .update(places)
           .set({ location: coordinates, locationConfidence: coordinates ? confidence : 'unknown' })
