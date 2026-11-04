@@ -836,6 +836,7 @@ export function App() {
                               {index > 0 && (
                                 <button
                                   className="leg-pill"
+                                  data-leg-id={incoming?.id ?? ""}
                                   disabled={!incoming}
                                   onClick={() => {
                                     setSelectedLegId(incoming?.id ?? null);
