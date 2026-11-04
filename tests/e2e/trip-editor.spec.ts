@@ -6,9 +6,12 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
 }) => {
   const title = `Synthetic browser trip ${Date.now()}`;
   await page.goto('/');
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', {
-    name: 'Trips',
-  }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', {
+      name: 'Trips',
+    })
+    .click();
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
@@ -32,10 +35,12 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   const before = await (await request.get(timelineUrl)).json();
   const [first, second, third] = before.visits;
   await page.getByRole('button', { name: 'Move visit 2 up' }).click();
-  await expect.poll(async () => {
-    const timeline = await (await request.get(timelineUrl)).json();
-    return timeline.visits.map((item: { id: string }) => item.id);
-  }).toEqual([second.id, first.id, third.id]);
+  await expect
+    .poll(async () => {
+      const timeline = await (await request.get(timelineUrl)).json();
+      return timeline.visits.map((item: { id: string }) => item.id);
+    })
+    .toEqual([second.id, first.id, third.id]);
 
   await page.locator('.leg-pill').first().click();
   await page.locator('#leg-transport').selectOption('train');
@@ -68,8 +73,9 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Map', exact: true }).click();
-  await expect(page.getByRole('img', { name: 'Map of selected trip and its saved geometry' }))
-    .toBeVisible();
+  await expect(
+    page.getByRole('img', { name: 'Map of selected trip and its saved geometry' }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Timeline', exact: true }).click();
   await expect(page.locator('.visit-row')).toHaveCount(2);
   await expect(page.getByRole('alert')).toHaveCount(0);
