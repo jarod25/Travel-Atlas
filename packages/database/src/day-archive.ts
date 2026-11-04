@@ -24,6 +24,10 @@ export async function setDayArchivedWithRevision(
       return { status: 'conflict', currentRevision: current.revision };
     }
 
+    if (current.isArchived === input.isArchived) {
+      return { status: 'updated', day: current };
+    }
+
     const active = await tx.select({ id: visits.id }).from(visits)
       .where(and(eq(visits.tripDayId, input.dayId), eq(visits.isArchived, false)))
       .orderBy(asc(visits.position));

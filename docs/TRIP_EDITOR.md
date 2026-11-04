@@ -42,3 +42,9 @@ stored route geometries, independent location/route geometry confidence filters,
 and route colors by Trip or transport. Selecting a map feature shows its persisted
 metadata and can open the related Trip. Missing dates are excluded only when a
 calendar filter is active; unknown paths are never drawn as direct lines.
+
+Days can now be archived or restored with a revision-checked action. Archive
+preserves all Visits, evidence and historical Legs, but hides the day from Explore
+and closes its current intra-day and cross-day links. Restoring a day creates only
+new Unknown draft legs within that day; cross-day travel is never reconstructed
+automatically. Archived days remain visible in the editor for restoration.

@@ -23,6 +23,7 @@ export interface AtlasStore {
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
+  archiveDay(tripId: string, dayId: string, revision: number, isArchived: boolean): Promise<DayArchiveResult>;
   editDay(
     tripId: string,
     dayId: string,

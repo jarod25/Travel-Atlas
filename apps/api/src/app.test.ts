@@ -18,6 +18,9 @@ function stub(): AtlasStore {
     listDays: async (id: string) => (id === tripId ? [] : null),
     createDay: async (id: string, localDate: string | null) =>
       id === tripId ? { id: dayId, tripId: id, localDate } : null,
+    archiveDay: async (id: string, dayId: string, revision: number) => ({
+      status: 'conflict', currentRevision: revision + 1,
+    }),
     editDay: async (id: string, dayId: string, revision: number) => ({
       status: 'conflict',
       currentRevision: revision + 1,
@@ -264,6 +267,26 @@ describe('Explicit day connections API', () => {
         payload: { fromDayId: dayId, toDayId: visitId },
       });
       expect(blocked.statusCode).toBe(409);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('Day archive optimistic locking API', () => {
+  it('validates the request and rejects stale revisions', async () => {
+    const app = buildApp(stub());
+    const url = `/api/v1/trips/${tripId}/days/${dayId}/archive`;
+    try {
+      expect((await app.inject({ method: 'PATCH', url,
+        payload: { isArchived: true } })).statusCode).toBe(428);
+      expect((await app.inject({ method: 'PATCH', url,
+        headers: { 'if-match': '"1"' }, payload: { isArchived: 'yes' } }))
+        .statusCode).toBe(400);
+      const stale = await app.inject({ method: 'PATCH', url,
+        headers: { 'if-match': '"1"' }, payload: { isArchived: true } });
+      expect(stale.statusCode).toBe(412);
+      expect(stale.headers.etag).toBe('"2"');
     } finally {
       await app.close();
     }

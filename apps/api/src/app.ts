@@ -179,6 +179,42 @@ export function buildApp(store?: AtlasStore) {
       return reply.header('ETag', `"${result.day.revision}"`).send(result.day);
     },
   );
+  app.patch<{
+    Params: { tripId: string; dayId: string };
+    Headers: { 'if-match'?: string };
+    Body: { isArchived: boolean };
+  }>(
+    '/api/v1/trips/:tripId/days/:dayId/archive',
+    {
+      schema: {
+        params: dayParams,
+        body: {
+          type: 'object',
+          required: ['isArchived'],
+          additionalProperties: false,
+          properties: { isArchived: { type: 'boolean' } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const header = request.headers['if-match'];
+      if (!header) return reply.code(428).send({ error: 'If-Match is required' });
+      const match = /^"([1-9][0-9]*)"$/.exec(header);
+      if (!match) return reply.code(400).send({ error: 'Invalid revision' });
+      const result = await store.archiveDay(
+        request.params.tripId, request.params.dayId, Number(match[1]),
+        request.body.isArchived,
+      );
+      if (result.status === 'not_found') {
+        return reply.code(404).send({ error: 'Day not found' });
+      }
+      if (result.status === 'conflict') {
+        return reply.code(412).header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Day was modified; reload before editing' });
+      }
+      return reply.header('ETag', `"${result.day.revision}"`).send(result.day);
+    },
+  );
   app.get<{ Params: { tripId: string; dayId: string } }>(
     '/api/v1/trips/:tripId/days/:dayId/timeline',
     { schema: { params: dayParams } },
@@ -301,6 +337,9 @@ export function buildApp(store?: AtlasStore) {
             ),
           );
       } catch (error) {
+        if (error instanceof Error && error.message === 'Trip day is archived') {
+          return reply.code(409).send({ error: error.message });
+        }
         if (error instanceof Error && error.message.includes('Trip day not found')) {
           return reply.code(404).send({ error: 'Day not found' });
         }
@@ -329,6 +368,9 @@ export function buildApp(store?: AtlasStore) {
           request.body.visitIds,
         );
       } catch (error) {
+        if (error instanceof Error && error.message === 'Trip day is archived') {
+          return reply.code(409).send({ error: error.message });
+        }
         if (error instanceof Error && error.message.includes('exact permutation')) {
           return reply.code(409).send({ error: error.message });
         }
@@ -356,6 +398,9 @@ export function buildApp(store?: AtlasStore) {
           request.params.visitId,
         );
       } catch (error) {
+        if (error instanceof Error && error.message === 'Trip day is archived') {
+          return reply.code(409).send({ error: error.message });
+        }
         if (error instanceof Error && error.message.includes('not found')) {
           return reply.code(404).send({ error: error.message });
         }

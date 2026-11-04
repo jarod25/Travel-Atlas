@@ -50,3 +50,12 @@ ordered days) and atomically creates one unknown draft Leg from the final
 active Visit of one day to the first of the next. Repeating the same connection
 is idempotent. Timeline responses include crossDayLegs separately from intra-day
 Legs. No connection is inferred automatically.
+
+## Day archival
+
+PATCH /api/v1/trips/:tripId/days/:dayId/archive accepts `{ "isArchived": true|false }`
+and a required `If-Match: "<revision>"` header. It returns 428 without a revision,
+412 on a stale revision, and ETag on success. Archiving preserves Visit rows and
+historic Legs, while removing current intra-day and inter-day links. Restoring
+reconstructs only unknown intra-day drafts, never an unverified cross-day route.
+Archived days reject Visit editing (409).
