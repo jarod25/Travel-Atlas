@@ -9,7 +9,7 @@ database with applied migrations. No synthetic travel data is loaded by default.
 - Trips creates a trip and opens the editor.
 - Trip Editor creates days, searches existing Places, creates reusable Places,
   adds visits, reorders/archives visits transactionally and displays draft Legs.
-- Desktop uses timeline left/map right; mobile exposes Timeline and Map tabs.
+- Desktop uses a horizontally resizable timeline (initially 32% width) on the left and a map on the right; mobile exposes Timeline and Map tabs without desktop resizing.
 - Forms default to minimum required fields; dates, coordinates and transports
   remain unknown unless entered.
 
