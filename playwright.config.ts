@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 if (process.env.ATLAS_E2E_DISPOSABLE !== '1' || !process.env.DATABASE_URL) {
-  throw new Error('Playwright E2E requires ATLAS_E2E_DISPOSABLE=1 and a disposable PostGIS DATABASE_URL.');
+  throw new Error(
+    'Playwright E2E requires ATLAS_E2E_DISPOSABLE=1 and a disposable PostGIS DATABASE_URL.',
+  );
 }
 
 export default defineConfig({
