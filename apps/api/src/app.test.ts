@@ -126,6 +126,27 @@ describe('Trip API', () => {
   });
 });
 
+describe('Explicit day disconnection API', () => {
+  it('requires a Leg revision and refuses invalid disconnects', async () => {
+    const app = buildApp(stub());
+    const url = `/api/v1/trips/${tripId}/disconnect-days`;
+    const payload = { fromDayId: dayId, toDayId: visitId, legId: visitId };
+    try {
+      const missing = await app.inject({ method: 'POST', url, payload });
+      expect(missing.statusCode).toBe(428);
+      const invalid = await app.inject({
+        method: 'POST',
+        url,
+        payload,
+        headers: { 'if-match': '"1"' },
+      });
+      expect(invalid.statusCode).toBe(409);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
 describe('Leg optimistic locking API', () => {
   it('requires If-Match and rejects conflicting revisions', async () => {
     const app = buildApp(stub());
