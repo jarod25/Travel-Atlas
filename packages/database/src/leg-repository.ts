@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, routeProposals } from './schema.js';
+import { legs, routeProposals, trips } from './schema.js';
 
 export type LegChanges = Partial<
   Pick<
@@ -32,8 +32,17 @@ export async function updateLegWithRevision(
   changes: LegChanges,
 ): Promise<LegUpdateResult> {
   return db.transaction(async (tx) => {
+    const [target] = await tx.select({ tripId: legs.tripId }).from(legs).where(eq(legs.id, id));
+    if (!target) return { status: 'not_found' };
+    const [trip] = await tx
+      .select({ isArchived: trips.isArchived })
+      .from(trips)
+      .where(eq(trips.id, target.tripId))
+      .for('share');
+    if (!trip || trip.isArchived) return { status: 'not_found' };
+
     const [current] = await tx.select().from(legs).where(eq(legs.id, id)).for('update');
-    if (!current) return { status: 'not_found' };
+    if (!current || !current.isCurrent) return { status: 'not_found' };
     if (current.revision !== expectedRevision) {
       return { status: 'conflict', currentRevision: current.revision };
     }
