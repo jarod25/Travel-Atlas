@@ -38,5 +38,7 @@ jobs:
       - run: pnpm --filter @travel-atlas/database build
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm db:migrate
       - run: pnpm test:integration
       - run: pnpm build
+      - run: pnpm smoke:api
