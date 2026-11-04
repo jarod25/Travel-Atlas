@@ -113,15 +113,13 @@ describe('Leg revision transactions', () => {
   it('rejects changes to archived Trips and historical Legs without rewriting evidence', async () => {
     const { trip, leg } = await fixture();
     await db.update(trips).set({ isArchived: true }).where(eq(trips.id, trip.id));
-    expect(
-      await updateLegWithRevision(db, leg.id, 1, { transportMode: 'bus' }),
-    ).toEqual({ status: 'not_found' });
+    const archivedEdit = await updateLegWithRevision(db, leg.id, 1, { transportMode: 'bus' });
+    expect(archivedEdit).toEqual({ status: 'not_found' });
 
     await db.update(trips).set({ isArchived: false }).where(eq(trips.id, trip.id));
     await db.update(legs).set({ isCurrent: false }).where(eq(legs.id, leg.id));
-    expect(
-      await updateLegWithRevision(db, leg.id, 1, { transportMode: 'bus' }),
-    ).toEqual({ status: 'not_found' });
+    const historicalEdit = await updateLegWithRevision(db, leg.id, 1, { transportMode: 'bus' });
+    expect(historicalEdit).toEqual({ status: 'not_found' });
 
     const [unchanged] = await db.select().from(legs).where(eq(legs.id, leg.id));
     expect(unchanged.transportMode).toBe('train');
