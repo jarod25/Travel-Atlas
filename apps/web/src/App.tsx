@@ -341,8 +341,19 @@ export function App() {
       setError('Coordinates are outside valid longitude/latitude bounds.');
       return;
     }
+    const currentPlace = places.find((place) => place.id === placeId);
+    if (!currentPlace) {
+      setError('Select an existing Place before editing its coordinates.');
+      return;
+    }
     await execute(async () => {
-      await atlasApi.updatePlace(placeId, [lon, lat], placeConfidence);
+      const updated = await atlasApi.updatePlace(
+        placeId,
+        currentPlace.revision,
+        [lon, lat],
+        placeConfidence,
+      );
+      setPlaces((previous) => previous.map((place) => (place.id === updated.id ? updated : place)));
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
     });
   }
