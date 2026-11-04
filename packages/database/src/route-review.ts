@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, routeProposals, routeVersions } from './schema';
+import { legs, routeProposals, routeVersions } from './schema.js';
 
 type ReviewResult =
   { status: 'accepted'; versionId: string; alreadyAccepted: boolean } | { status: 'invalidated' };

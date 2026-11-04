@@ -13,16 +13,16 @@ export {
   trips,
   visitTimeObservations,
   visits,
-} from './schema';
-export { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository';
-export { acceptRouteProposal } from './route-review';
-export { createAtlasStore } from './atlas-store';
-export type { AtlasStore } from './atlas-store';
-export { updateLegWithRevision } from './leg-repository';
-export type { LegChanges, LegUpdateResult } from './leg-repository';
-export { updateTripWithRevision } from './trip-repository';
-export type { TripUpdateResult } from './trip-repository';
-export { connectAdjacentDays } from './day-connection';
-export type { DayConnectionResult } from './day-connection';
-export { setDayArchivedWithRevision } from './day-archive';
-export type { DayArchiveResult } from './day-archive';
+} from './schema.js';
+export { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository.js';
+export { acceptRouteProposal } from './route-review.js';
+export { createAtlasStore } from './atlas-store.js';
+export type { AtlasStore } from './atlas-store.js';
+export { updateLegWithRevision } from './leg-repository.js';
+export type { LegChanges, LegUpdateResult } from './leg-repository.js';
+export { updateTripWithRevision } from './trip-repository.js';
+export type { TripUpdateResult } from './trip-repository.js';
+export { connectAdjacentDays } from './day-connection.js';
+export type { DayConnectionResult } from './day-connection.js';
+export { setDayArchivedWithRevision } from './day-archive.js';
+export type { DayArchiveResult } from './day-archive.js';

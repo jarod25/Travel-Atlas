@@ -6,16 +6,20 @@ migrator. PostgreSQL 18 with PostGIS 3.6 is the current target.
 
 ## Setup
 
-Set `DATABASE_URL` to a **dedicated local database** with PostgreSQL/PostGIS
-installed. Never point integration tests at production or personal travel data.
+For local development use the PostgreSQL/PostGIS Compose service described in
+[Development](DEVELOPMENT.md), or configure an equivalent database. Set `DATABASE_URL`
+explicitly in the shell; `.env.example` is not loaded automatically.
+Never point integration tests at production or personal travel data.
 
 From the repository root:
 
 ```sh
-pnpm --filter @travel-atlas/database db:migrate
+pnpm db:migrate
 pnpm test:integration
 ```
 
+The CLI resolves the migration directory relative to `packages/database/src/migrate.ts`
+(or its compiled output), regardless of the current working directory.
 Migrations are tracked in the `drizzle.__drizzle_migrations` table.
 Do not edit applied migrations; add a new migration in a later increment.
 

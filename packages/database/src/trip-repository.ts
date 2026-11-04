@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { trips } from './schema';
+import { trips } from './schema.js';
 
 export type TripUpdateResult =
   | { status: 'not_found' }

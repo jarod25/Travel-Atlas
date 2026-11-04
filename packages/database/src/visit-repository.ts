@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, tripDays, visits } from './schema';
+import { legs, tripDays, visits } from './schema.js';
 
 /**
  * Append a Visit and its optional draft Leg in one transaction.

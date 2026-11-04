@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, or } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, tripDays, visits } from './schema';
+import { legs, tripDays, visits } from './schema.js';
 
 export type DayArchiveResult =
   | { status: 'not_found' }

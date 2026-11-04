@@ -1,16 +1,16 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { updateTripWithRevision } from './trip-repository';
-import { connectAdjacentDays } from './day-connection';
-import { setDayArchivedWithRevision } from './day-archive';
-import type { DayArchiveResult } from './day-archive';
-import type { DayConnectionResult } from './day-connection';
-import type { TripUpdateResult } from './trip-repository';
+import { updateTripWithRevision } from './trip-repository.js';
+import { connectAdjacentDays } from './day-connection.js';
+import { setDayArchivedWithRevision } from './day-archive.js';
+import type { DayArchiveResult } from './day-archive.js';
+import type { DayConnectionResult } from './day-connection.js';
+import type { TripUpdateResult } from './trip-repository.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository';
-import { legs, places, tripDays, trips, visits } from './schema';
-import { updateLegWithRevision } from './leg-repository';
-import type { LegChanges, LegUpdateResult } from './leg-repository';
+import { appendVisitToDay, archiveVisitFromDay, reorderVisitsInDay } from './visit-repository.js';
+import { legs, places, tripDays, trips, visits } from './schema.js';
+import { updateLegWithRevision } from './leg-repository.js';
+import type { LegChanges, LegUpdateResult } from './leg-repository.js';
 
 export interface AtlasStore {
   listTrips(includeArchived?: boolean): Promise<unknown>;

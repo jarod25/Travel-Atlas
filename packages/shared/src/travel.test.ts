@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planDraftLegsForDay, type Visit } from './travel';
+import { planDraftLegsForDay, type Visit } from './travel.js';
 
 const first: Visit = { id: 'visit-1', tripId: 'trip-1', tripDayId: 'day-1', placeId: 'station' };
 const second: Visit = { id: 'visit-2', tripId: 'trip-1', tripDayId: 'day-1', placeId: 'shop' };
