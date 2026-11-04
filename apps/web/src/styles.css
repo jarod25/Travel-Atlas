@@ -277,13 +277,19 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   width: 145px;
 }
 .editor-layout {
-  display: grid;
-  grid-template-columns: minmax(300px, 32%) minmax(0, 1fr);
+  display: flex;
   min-height: 640px;
   border: 1px solid #dfe8ec;
   background: #fff;
 }
 .timeline-panel {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 32%;
+  min-width: 300px;
+  max-width: 70%;
+  resize: horizontal;
+  overflow: auto;
   border-right: 1px solid #dfe8ec;
   padding: 20px 18px;
   background: #fff;
@@ -384,6 +390,8 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   margin: 4px 0 0;
 }
 .editor-map {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 600px;
   display: flex;
   flex-direction: column;
@@ -478,6 +486,11 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
     min-height: 520px;
   }
   .timeline-panel {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    resize: none;
+    overflow: visible;
     border-right: 0;
   }
   .details-panel {
