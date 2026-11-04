@@ -109,4 +109,23 @@ describe('Leg revision transactions', () => {
       await db.select().from(routeVersions).where(eq(routeVersions.legId, leg.id)),
     ).toHaveLength(1);
   });
+
+  it('rejects changes to archived Trips and historical Legs without rewriting evidence', async () => {
+    const { trip, leg } = await fixture();
+    await db.update(trips).set({ isArchived: true }).where(eq(trips.id, trip.id));
+    expect(
+      await updateLegWithRevision(db, leg.id, 1, { transportMode: 'bus' }),
+    ).toEqual({ status: 'not_found' });
+
+    await db.update(trips).set({ isArchived: false }).where(eq(trips.id, trip.id));
+    await db.update(legs).set({ isCurrent: false }).where(eq(legs.id, leg.id));
+    expect(
+      await updateLegWithRevision(db, leg.id, 1, { transportMode: 'bus' }),
+    ).toEqual({ status: 'not_found' });
+
+    const [unchanged] = await db.select().from(legs).where(eq(legs.id, leg.id));
+    expect(unchanged.transportMode).toBe('train');
+    expect(unchanged.revision).toBe(1);
+    expect(unchanged.isCurrent).toBe(false);
+  });
 });
