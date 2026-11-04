@@ -66,7 +66,7 @@ export async function setDayArchivedWithRevision(
         if (intraDay.length > 0) {
           await tx
             .insert(dayRestoreLegs)
-            .values(intraDay.map((leg) => ({ dayId: input.dayId, legId: leg.id }));
+            .values(intraDay.map((leg) => ({ dayId: input.dayId, legId: leg.id })));
         }
         const retiredIds = touching.map((leg) => leg.id);
         if (retiredIds.length > 0) {
