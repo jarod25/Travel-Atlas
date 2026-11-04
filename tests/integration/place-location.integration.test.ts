@@ -15,7 +15,11 @@ beforeAll(async () => {
   await migrate(db, { migrationsFolder: 'packages/database/drizzle' });
 });
 afterAll(async () => {
-  for (const id of tripIds) await db.delete(trips).where(eq(trips.id, id));
+  for (const id of tripIds) {
+    await db.delete(routeProposals).where(eq(routeProposals.tripId, id));
+    await db.delete(legs).where(eq(legs.tripId, id));
+    await db.delete(trips).where(eq(trips.id, id));
+  }
   for (const id of ids) await db.delete(places).where(eq(places.id, id));
   await client.end();
 });
@@ -50,36 +54,67 @@ describe('Place coordinate certainty', () => {
     ).rejects.toBeDefined();
   });
   it('invalidates pending proposals from a moved shared Place, without altering history', async () => {
-    const [origin] = await db.insert(places).values({
-      name: 'Synthetic shared origin', location: [1, 2], locationConfidence: 'estimated',
-    }).returning();
-    const [destination] = await db.insert(places).values({ name: 'Synthetic destination' }).returning();
+    const [origin] = await db
+      .insert(places)
+      .values({
+        name: 'Synthetic shared origin',
+        location: [1, 2],
+        locationConfidence: 'estimated',
+      })
+      .returning();
+    const [destination] = await db
+      .insert(places)
+      .values({ name: 'Synthetic destination' })
+      .returning();
     ids.push(origin.id, destination.id);
-    const [trip] = await db.insert(trips).values({ title: 'Synthetic proposal dependency' }).returning();
+    const [trip] = await db
+      .insert(trips)
+      .values({ title: 'Synthetic proposal dependency' })
+      .returning();
     tripIds.push(trip.id);
     const [day] = await db.insert(tripDays).values({ tripId: trip.id, position: 0 }).returning();
-    const [from] = await db.insert(visits).values({
-      tripId: trip.id, tripDayId: day.id, position: 0, placeId: origin.id,
-    }).returning();
-    const [to] = await db.insert(visits).values({
-      tripId: trip.id, tripDayId: day.id, position: 1, placeId: destination.id,
-    }).returning();
-    const [leg] = await db.insert(legs).values({
-      tripId: trip.id, fromVisitId: from.id, toVisitId: to.id,
-      transportMode: 'train', transportConfidence: 'confirmed',
-    }).returning();
-    const [pending] = await db.insert(routeProposals).values({
-      tripId: trip.id, legId: leg.id, fromVisitId: from.id, toVisitId: to.id,
-      transportMode: 'train',
-    }).returning();
+    const [from] = await db
+      .insert(visits)
+      .values({ tripId: trip.id, tripDayId: day.id, position: 0, placeId: origin.id })
+      .returning();
+    const [to] = await db
+      .insert(visits)
+      .values({ tripId: trip.id, tripDayId: day.id, position: 1, placeId: destination.id })
+      .returning();
+    const [leg] = await db
+      .insert(legs)
+      .values({
+        tripId: trip.id,
+        fromVisitId: from.id,
+        toVisitId: to.id,
+        transportMode: 'train',
+        transportConfidence: 'confirmed',
+      })
+      .returning();
+    const [pending] = await db
+      .insert(routeProposals)
+      .values({
+        tripId: trip.id,
+        legId: leg.id,
+        fromVisitId: from.id,
+        toVisitId: to.id,
+        transportMode: 'train',
+      })
+      .returning();
     const store = createAtlasStore(url!);
     try {
       // Certainty-only changes do not alter the inputs used for routing.
       await store.updatePlace(origin.id, [1, 2], 'confirmed');
-      let [proposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, pending.id));
+      let [proposal] = await db
+        .select()
+        .from(routeProposals)
+        .where(eq(routeProposals.id, pending.id));
       expect(proposal.status).toBe('pending');
       await store.updatePlace(origin.id, [3, 4], 'estimated');
-      [proposal] = await db.select().from(routeProposals).where(eq(routeProposals.id, pending.id));
+      [proposal] = await db
+        .select()
+        .from(routeProposals)
+        .where(eq(routeProposals.id, pending.id));
       expect(proposal.status).toBe('invalidated');
       expect(proposal.reviewedAt).toBeInstanceOf(Date);
       const [savedLeg] = await db.select().from(legs).where(eq(legs.id, leg.id));
@@ -90,5 +125,4 @@ describe('Place coordinate certainty', () => {
       await store.close();
     }
   });
-
 });
