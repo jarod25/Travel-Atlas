@@ -387,7 +387,13 @@ export function App() {
   }
 
   async function saveVisitPlace() {
-    if (!tripId || !dayId || !selectedVisit || selectedDay?.isArchived || selectedTrip?.isArchived) {
+    if (
+      !tripId ||
+      !dayId ||
+      !selectedVisit ||
+      selectedDay?.isArchived ||
+      selectedTrip?.isArchived
+    ) {
       return;
     }
     await execute(async () => {
