@@ -153,6 +153,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           .where(and(eq(tripDays.tripId, tripId), eq(tripDays.id, dayId)))
           .for('update');
         if (!day) return { status: 'not_found' as const };
+        if (day.isArchived) return { status: 'archived' as const };
         if (day.revision !== revision) {
           return { status: 'conflict' as const, currentRevision: day.revision };
         }
