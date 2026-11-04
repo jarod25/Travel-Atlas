@@ -35,7 +35,7 @@ The code repository is public; only synthetic fixtures may be committed. Persona
 
 ## Lot 0 feasibility — accurately scoped
 
-The November 3, 2026 architecture feasibility record reports **two attempted** OpenRailRouting `tgv_all` calls (Belfort-Montbéliard TGV → Strasbourg and Strasbourg → CDG 2 TGV). **Both failed at DNS resolution (`EAI_AGAIN`) before receiving HTTP responses**. These attempts do not establish route quality, waypoint behavior, or provider availability. No successful TGV route can be claimed from them. The separate Drizzle/PostGIS feasibility scripts had not been run in a live database during Lot 0, although subsequent repository integration tests run with PostGIS in GitHub Actions. The external rail evaluation remains inconclusive and belongs to the routing feasibility follow-up, not to Lot 3 feature development.
+Local feasibility tests performed on November 3, 2026 subsequently succeeded on the user's PC: PostgreSQL 18 / PostGIS 3.6.2 and Drizzle geometry round-trips (LineString, MultiLineString, SRID 4326, GeoJSON, null geometry, distances and type constraints) passed. OpenRailRouting returned HTTP 200 for **both** `tgv_all` routes: Belfort-Montbéliard TGV → Strasbourg (754 points, 151,001.72 m) and Strasbourg → CDG 2 TGV (1,890 points, 418,097.822 m). The geometries were inspected and judged plausible by the user; they remain **estimated** network routes, not confirmed historical GPS tracks. Earlier DNS `EAI_AGAIN` failures occurred in a different analysis environment and were superseded by these successful local tests. These feasibility results do **not** mean the Lot 4 routing adapters are integrated with the Lot 3 application.
 
 ## Local verification
 
