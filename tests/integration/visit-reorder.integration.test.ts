@@ -113,6 +113,36 @@ describe('Atomic visit reordering', () => {
     );
   });
 
+  it('invalidates pending proposals only when their current Leg becomes historical', async () => {
+    const { trip, day, ids } = await fixture();
+    const old = (await db.select().from(legs).where(eq(legs.tripId, trip.id))).find(
+      (leg) => leg.fromVisitId === ids[1] && leg.toVisitId === ids[2],
+    );
+    if (!old) throw new Error('Expected Leg');
+    const [proposal] = await db
+      .insert(routeProposals)
+      .values({
+        tripId: trip.id,
+        legId: old.id,
+        fromVisitId: old.fromVisitId,
+        toVisitId: old.toVisitId,
+        transportMode: old.transportMode,
+      })
+      .returning();
+    await reorderVisitsInDay(db, {
+      tripId: trip.id,
+      tripDayId: day.id,
+      orderedVisitIds: [ids[2], ids[0], ids[1]],
+    });
+    const [after] = await db
+      .select()
+      .from(routeProposals)
+      .where(eq(routeProposals.id, proposal.id));
+    expect(after.status).toBe('invalidated');
+    expect(after.reviewedAt).toBeInstanceOf(Date);
+    expect(after.acceptedRouteVersionId).toBeNull();
+  });
+
   it('does not change existing leg history for an unchanged order', async () => {
     const { trip, day, ids } = await fixture();
     const change = await reorderVisitsInDay(db, {

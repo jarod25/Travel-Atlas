@@ -51,14 +51,17 @@ coordinate bounds and application-level validation remain future work.
 
 `appendVisitToDay()` locks the parent day, creates the new visit and its intra-day
 draft leg in one database transaction. An empty day yields no Leg; an existing day
-links only to its last Visit. Failed Leg inserts roll back the Visit, and concurrent
+links only to its last Visit. If that Visit already has a current outgoing Leg (such as
+an explicit cross-day connection), append rejects the edit until an explicit disconnect. Failed Leg inserts roll back the Visit, and concurrent
 appends are serialized by the parent-day row lock. No inter-day Leg is inferred.
 
 ## Atomic reordering
 
 `reorderVisitsInDay()` locks the day, validates an exact visit permutation,
-archives previous current intra-day Legs and creates new unknown draft Legs
-within one transaction. Temporary positions prevent transient uniqueness errors.
+archives only current intra-day Legs whose adjacency changes and creates unknown
+draft Legs only for newly adjacent pairs within one transaction. Unchanged ordered
+endpoint pairs retain the original current Leg, its confidence, saved route versions
+and evidence. Pending proposals on retired Legs are invalidated. Temporary positions prevent transient uniqueness errors.
 An unchanged order is a no-op. A current cross-day link blocks reordering
 rather than being silently detached.
 
@@ -116,8 +119,8 @@ advancing to Lot 3.
 ## Visit archival and timeline integrity
 
 `archiveVisitFromDay()` marks a Visit archived rather than deleting evidence
-or breaking historical Leg foreign keys. It archives the day's existing current
-links and replaces surviving adjacency with fresh unknown drafts atomically.
+or breaking historical Leg foreign keys. It archives only links affected by the removed Visit, retaining unchanged current
+links and their evidence. New adjacency receives an unknown draft atomically.
 An active cross-day connection blocks the operation. The per-day unique
 position index applies only to active Visits; archived rows retain their
 historical positions. Append and reorder operations ignore archived Visits.
