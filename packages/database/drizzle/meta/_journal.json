@@ -92,6 +92,13 @@
       "when": 1793772000000,
       "tag": "0012_day_archival",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793778000000,
+      "tag": "0013_day_restore_legs",
+      "breakpoints": true
     }
   ]
 }
