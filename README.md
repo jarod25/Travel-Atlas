@@ -41,7 +41,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. The local Docker Compose service provides PostgreSQL/PostGIS using **development-only** credentials; migrations must be applied before starting. No personal travel data is seeded. Set `DATABASE_URL` in the shell (PowerShell instructions below). Map tiles and the current MapLibre CDN bundle require network access. No Playwright browser E2E suite is enabled yet. See [database guide](docs/DATABASE.md) for setup.
+The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. The local Docker Compose service provides PostgreSQL/PostGIS using **development-only** credentials; migrations must be applied before starting. No personal travel data is seeded. Set `DATABASE_URL` in the shell (PowerShell instructions below). Map tiles and the current MapLibre CDN bundle require network access. Playwright Chromium browser acceptance runs in CI using synthetic test data; physical Android acceptance remains outstanding. See [database guide](docs/DATABASE.md) for setup.
 
 Quality checks:
 
@@ -54,7 +54,7 @@ pnpm build
 pnpm smoke:api # requires a migrated disposable database and DATABASE_URL
 ```
 
-The CI also runs `pnpm smoke:web`: it launches the compiled API and Vite, then exercises a synthetic Trip/Day/Visit/Leg journey through the Vite `/api` proxy. This check requires `ATLAS_SMOKE_DISPOSABLE=1` and a **separate disposable database** because it creates records. It is not a browser-driven Playwright E2E test.
+The CI also runs `pnpm smoke:web`: it launches the compiled API and Vite, then exercises a synthetic Trip/Day/Visit/Leg journey through the Vite `/api` proxy. This check requires `ATLAS_SMOKE_DISPOSABLE=1` and a **separate disposable database** because it creates records. It is separate from the browser-driven Playwright E2E suite (`pnpm test:e2e`), which requires `ATLAS_E2E_DISPOSABLE=1` and an isolated migrated PostGIS database.
 
 Database integration checks require a separate PostgreSQL/PostGIS **test database** and a `DATABASE_URL` environment variable:
 
