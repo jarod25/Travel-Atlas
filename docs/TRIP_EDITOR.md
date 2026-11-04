@@ -19,9 +19,10 @@ before deployment. If CDN or tiles fail, the timeline still works. The browser
 sends map views and tile requests to the map provider, which will require a
 privacy disclosure before sharing the app externally.
 
-Still missing for full product scope: detailed Leg edits, trip archival,
-revision/If-Match conflict handling, MapLibre editing controls, geographic
-search providers and guided routing. These belong to subsequent increments.
+Still missing for full product scope: map-based geometry editing, geographic
+search providers, guided routing, import/export, authentication and sharing.
+Trip archival, revision/If-Match conflict handling and basic Leg edits are
+implemented in later Lot 3 increments described below.
 
 The optional coordinate editor attaches a WGS84 point to the selected reusable Place with explicit location confidence. No coordinates are inferred; edits affect all Visits of that Place.
 
