@@ -72,4 +72,4 @@ Select a Visit, then use **Correct this visit's Place** in Details to search and
 
 ## Known limitations
 
-The current interface still requires external network access for its MapLibre CDN module and map tiles. No browser E2E suite or physical Android responsive acceptance result is recorded here. Places can be corrected without replacing Visits, but the app does not yet calculate new routes or automatically import real travel histories. A missing geometry remains Unknown.
+The current interface still requires external network access for its MapLibre CDN module and map tiles. A synthetic API/Vite HTTP journey smoke test runs in CI, but no browser-driven Playwright E2E suite or physical Android responsive acceptance result is recorded here. Places can be corrected without replacing Visits, but the app does not yet calculate new routes or automatically import real travel histories. A missing geometry remains Unknown.
