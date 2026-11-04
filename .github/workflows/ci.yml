@@ -42,3 +42,6 @@ jobs:
       - run: pnpm test:integration
       - run: pnpm build
       - run: pnpm smoke:api
+      - run: pnpm smoke:web
+        env:
+          ATLAS_SMOKE_DISPOSABLE: '1'
