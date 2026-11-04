@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { setDayArchivedWithRevision } from '../../packages/database/src/day-archive';
+import { createAtlasStore } from '../../packages/database/src/atlas-store';
 import {
   appendVisitToDay,
   archiveVisitFromDay,
@@ -302,5 +303,34 @@ describe('Day archive with retained Leg history', () => {
         (visit) => !visit.isArchived,
       ),
     ).toBe(true);
+  });
+
+  it('prevents creating, editing and archiving days while the parent Trip is archived', async () => {
+    const f = await fixture();
+    await db.update(trips).set({ isArchived: true }).where(eq(trips.id, f.trip.id));
+    const store = createAtlasStore(url!);
+    try {
+      expect(await store.createDay(f.trip.id, null)).toBeNull();
+      expect(await store.editDay(f.trip.id, f.days[0].id, 1, '2026-01-02')).toEqual({
+        status: 'archived',
+      });
+      expect(
+        await setDayArchivedWithRevision(db, {
+          tripId: f.trip.id,
+          dayId: f.days[0].id,
+          revision: 1,
+          isArchived: true,
+        }),
+      ).toEqual({ status: 'archived' });
+      const [unchanged] = await db
+        .select()
+        .from(tripDays)
+        .where(eq(tripDays.id, f.days[0].id));
+      expect(unchanged.revision).toBe(1);
+      expect(unchanged.isArchived).toBe(false);
+      expect(unchanged.localDate).toBeNull();
+    } finally {
+      await store.close();
+    }
   });
 });
