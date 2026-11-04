@@ -97,10 +97,7 @@ describe('Atomic visit reordering', () => {
         confidence: 'estimated',
       })
       .returning();
-    await db
-      .update(legs)
-      .set({ selectedRouteVersionId: route.id })
-      .where(eq(legs.id, original.id));
+    await db.update(legs).set({ selectedRouteVersionId: route.id }).where(eq(legs.id, original.id));
 
     const result = await reorderVisitsInDay(db, {
       tripId: trip.id,
