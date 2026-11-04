@@ -43,6 +43,21 @@ describe('Day calendar revision', () => {
     if (cleared.status === 'updated') expect(cleared.day.localDate).toBeNull();
   });
 
+  it('does not change an archived day even with a valid revision', async () => {
+    const [trip] = await db.insert(trips).values({ title: 'Synthetic archived day' }).returning();
+    tripIds.push(trip.id);
+    const [day] = await db
+      .insert(tripDays)
+      .values({ tripId: trip.id, position: 0, isArchived: true })
+      .returning();
+    expect(await store.editDay(trip.id, day.id, day.revision, '2026-09-12')).toEqual({
+      status: 'archived',
+    });
+    const [unchanged] = await db.select().from(tripDays).where(eq(tripDays.id, day.id));
+    expect(unchanged.localDate).toBeNull();
+    expect(unchanged.revision).toBe(day.revision);
+  });
+
   it('does not edit a day belonging to another trip', async () => {
     const [first] = await db.insert(trips).values({ title: 'Synthetic A' }).returning();
     const [second] = await db.insert(trips).values({ title: 'Synthetic B' }).returning();
