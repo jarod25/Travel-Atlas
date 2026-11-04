@@ -18,7 +18,8 @@
     "test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:migrate": "pnpm --filter @travel-atlas/database db:migrate",
-    "smoke:api": "node tests/smoke/api-start.mjs"
+    "smoke:api": "node tests/smoke/api-start.mjs",
+    "smoke:web": "node tests/smoke/web-api-journey.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
