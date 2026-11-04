@@ -272,4 +272,35 @@ describe('Day archive with retained Leg history', () => {
     });
     expect(afterAppend.visit.position).toBe(2);
   });
+
+  it('rejects timeline mutations when the parent Trip is archived, preserving current Legs', async () => {
+    const f = await fixture();
+    const before = await db.select().from(legs).where(eq(legs.tripId, f.trip.id));
+    await db.update(trips).set({ isArchived: true }).where(eq(trips.id, f.trip.id));
+
+    await expect(
+      appendVisitToDay(db, { tripId: f.trip.id, tripDayId: f.days[0].id }),
+    ).rejects.toThrow('Trip is archived');
+    await expect(
+      reorderVisitsInDay(db, {
+        tripId: f.trip.id,
+        tripDayId: f.days[0].id,
+        orderedVisitIds: [f.ids[1], f.ids[0]],
+      }),
+    ).rejects.toThrow('Trip is archived');
+    await expect(
+      archiveVisitFromDay(db, {
+        tripId: f.trip.id,
+        tripDayId: f.days[0].id,
+        visitId: f.ids[0],
+      }),
+    ).rejects.toThrow('Trip is archived');
+
+    expect(await db.select().from(legs).where(eq(legs.tripId, f.trip.id))).toEqual(before);
+    expect(
+      (await db.select().from(visits).where(eq(visits.tripId, f.trip.id))).every(
+        (visit) => !visit.isArchived,
+      ),
+    ).toBe(true);
+  });
 });
