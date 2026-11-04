@@ -115,9 +115,11 @@ describe('Atomic visit reordering', () => {
     expect(preserved?.transportConfidence).toBe('confirmed');
     expect(preserved?.movementConfidence).toBe('confirmed');
     expect(preserved?.selectedRouteVersionId).toBe(route.id);
-    expect((await db.select().from(routeVersions).where(eq(routeVersions.id, route.id))).length).toBe(
-      1,
-    );
+    const savedVersions = await db
+      .select()
+      .from(routeVersions)
+      .where(eq(routeVersions.id, route.id));
+    expect(savedVersions).toHaveLength(1);
   });
 
   it('invalidates pending proposals only when their current Leg becomes historical', async () => {
