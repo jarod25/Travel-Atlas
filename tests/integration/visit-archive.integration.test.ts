@@ -71,6 +71,39 @@ describe('Atomic visit archival', () => {
     ]);
   });
 
+  it('keeps unrelated known Legs current when archiving an edge Visit', async () => {
+    const { trip, day, ids } = await fixture();
+    const known = (await db.select().from(legs).where(eq(legs.tripId, trip.id))).find(
+      (leg) => leg.fromVisitId === ids[1] && leg.toVisitId === ids[2],
+    );
+    if (!known) throw new Error('Expected known Leg');
+    await db
+      .update(legs)
+      .set({
+        transportMode: 'train',
+        transportConfidence: 'confirmed',
+        movementConfidence: 'confirmed',
+      })
+      .where(eq(legs.id, known.id));
+    expect(
+      await archiveVisitFromDay(db, {
+        tripId: trip.id,
+        tripDayId: day.id,
+        visitId: ids[0],
+      }),
+    ).toEqual({
+      archivedVisitId: ids[0],
+      archivedLegCount: 1,
+      newLegCount: 0,
+    });
+    const after = await db.select().from(legs).where(eq(legs.tripId, trip.id));
+    const retained = after.find((leg) => leg.id === known.id);
+    expect(retained?.isCurrent).toBe(true);
+    expect(retained?.transportMode).toBe('train');
+    expect(retained?.movementConfidence).toBe('confirmed');
+    expect(after.filter((leg) => !leg.isCurrent)).toHaveLength(1);
+  });
+
   it('allows append and reorder without touching archived visits', async () => {
     const { trip, day, ids } = await fixture();
     await archiveVisitFromDay(db, { tripId: trip.id, tripDayId: day.id, visitId: ids[1] });

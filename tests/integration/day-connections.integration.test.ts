@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { connectAdjacentDays } from '../../packages/database/src/day-connection';
+import { appendVisitToDay } from '../../packages/database/src/visit-repository';
 import { legs, tripDays, trips, visits } from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
@@ -66,6 +67,25 @@ describe('Explicit Connect Days', () => {
     expect(repeated.status).toBe('connected');
     if (repeated.status === 'connected') expect(repeated.created).toBe(false);
     expect(await db.select().from(legs).where(eq(legs.tripId, f.trip.id))).toHaveLength(1);
+  });
+
+  it('requires an explicit disconnect before appending after a connected day boundary', async () => {
+    const f = await fixture();
+    expect(
+      (
+        await connectAdjacentDays(db, {
+          tripId: f.trip.id,
+          fromDayId: f.days[0].id,
+          toDayId: f.days[1].id,
+        })
+      ).status,
+    ).toBe('connected');
+    await expect(
+      appendVisitToDay(db, { tripId: f.trip.id, tripDayId: f.days[0].id }),
+    ).rejects.toThrow('Disconnect the current cross-day Leg');
+    expect(await db.select().from(visits).where(eq(visits.tripDayId, f.days[0].id))).toHaveLength(
+      1,
+    );
   });
 
   it('rejects backwards and skipped days, and links to another Trip', async () => {
