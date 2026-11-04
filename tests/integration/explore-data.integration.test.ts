@@ -100,11 +100,13 @@ describe('Explore GeoJSON metadata', () => {
     expect(pointFeature?.geometry.coordinates).toEqual([0, 0]);
     expect(pointFeature?.properties.locationConfidence).toBe('confirmed');
     expect(pointFeature?.properties.localDate).toBe('2026-09-12');
+    expect(pointFeature?.properties.dayId).toBe(day.id);
     const route = features.find((feature) => feature.properties.kind === 'route');
     expect(route?.geometry.type).toBe('LineString');
     expect(route?.properties.transportMode).toBe('train');
     expect(route?.properties.confidence).toBe('estimated');
     expect(route?.properties.localDate).toBe('2026-09-12');
+    expect(route?.properties.dayId).toBe(day.id);
 
     // A stale current flag must never expose an archived Visit's route in Explore.
     await db.update(visits).set({ isArchived: true }).where(eq(visits.id, second.id));
