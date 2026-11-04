@@ -230,11 +230,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       db.transaction(async (tx) => {
         // Lock the shared Place so concurrent coordinate changes cannot interleave
         // with invalidation of route candidates derived from its previous location.
-        const [current] = await tx
-          .select()
-          .from(places)
-          .where(eq(places.id, id))
-          .for('update');
+        const [current] = await tx.select().from(places).where(eq(places.id, id)).for('update');
         if (!current) return { status: 'not_found' as const };
         if (current.revision !== expectedRevision) {
           return { status: 'conflict' as const, currentRevision: current.revision };
