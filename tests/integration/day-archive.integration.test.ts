@@ -305,7 +305,7 @@ describe('Day archive with retained Leg history', () => {
     ).toBe(true);
   });
 
-  it('prevents creating, editing and archiving days while the parent Trip is archived', async () => {
+  it('blocks day mutations when the parent Trip is archived', async () => {
     const f = await fixture();
     await db.update(trips).set({ isArchived: true }).where(eq(trips.id, f.trip.id));
     const store = createAtlasStore(url!);
@@ -322,10 +322,7 @@ describe('Day archive with retained Leg history', () => {
           isArchived: true,
         }),
       ).toEqual({ status: 'archived' });
-      const [unchanged] = await db
-        .select()
-        .from(tripDays)
-        .where(eq(tripDays.id, f.days[0].id));
+      const [unchanged] = await db.select().from(tripDays).where(eq(tripDays.id, f.days[0].id));
       expect(unchanged.revision).toBe(1);
       expect(unchanged.isArchived).toBe(false);
       expect(unchanged.localDate).toBeNull();
