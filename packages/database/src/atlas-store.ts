@@ -23,7 +23,12 @@ export interface AtlasStore {
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
-  archiveDay(tripId: string, dayId: string, revision: number, isArchived: boolean): Promise<DayArchiveResult>;
+  archiveDay(
+    tripId: string,
+    dayId: string,
+    revision: number,
+    isArchived: boolean,
+  ): Promise<DayArchiveResult>;
   editDay(
     tripId: string,
     dayId: string,
@@ -99,9 +104,13 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           .returning();
         return day;
       }),
-    archiveDay: (tripId, dayId, revision, archived) => setDayArchivedWithRevision(db, {
-      tripId, dayId, revision, isArchived: archived,
-    }),
+    archiveDay: (tripId, dayId, revision, archived) =>
+      setDayArchivedWithRevision(db, {
+        tripId,
+        dayId,
+        revision,
+        isArchived: archived,
+      }),
     editDay: (tripId, dayId, revision, localDate) =>
       db.transaction(async (tx) => {
         const [day] = await tx

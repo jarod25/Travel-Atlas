@@ -16,7 +16,9 @@ export async function setDayArchivedWithRevision(
   input: { tripId: string; dayId: string; revision: number; isArchived: boolean },
 ): Promise<DayArchiveResult> {
   return db.transaction(async (tx) => {
-    const [current] = await tx.select().from(tripDays)
+    const [current] = await tx
+      .select()
+      .from(tripDays)
       .where(and(eq(tripDays.id, input.dayId), eq(tripDays.tripId, input.tripId)))
       .for('update');
     if (!current) return { status: 'not_found' };
@@ -28,29 +30,45 @@ export async function setDayArchivedWithRevision(
       return { status: 'updated', day: current };
     }
 
-    const active = await tx.select({ id: visits.id }).from(visits)
+    const active = await tx
+      .select({ id: visits.id })
+      .from(visits)
       .where(and(eq(visits.tripDayId, input.dayId), eq(visits.isArchived, false)))
       .orderBy(asc(visits.position));
     const ids = active.map((visit) => visit.id);
 
     if (current.isArchived !== input.isArchived) {
       if (input.isArchived && ids.length > 0) {
-        await tx.update(legs).set({ isCurrent: false })
-          .where(and(eq(legs.tripId, input.tripId), eq(legs.isCurrent, true),
-            or(inArray(legs.fromVisitId, ids), inArray(legs.toVisitId, ids))));
+        await tx
+          .update(legs)
+          .set({ isCurrent: false })
+          .where(
+            and(
+              eq(legs.tripId, input.tripId),
+              eq(legs.isCurrent, true),
+              or(inArray(legs.fromVisitId, ids), inArray(legs.toVisitId, ids)),
+            ),
+          );
       }
       if (!input.isArchived) {
         for (let index = 1; index < ids.length; index += 1) {
           await tx.insert(legs).values({
-            tripId: input.tripId, fromVisitId: ids[index - 1], toVisitId: ids[index],
+            tripId: input.tripId,
+            fromVisitId: ids[index - 1],
+            toVisitId: ids[index],
           });
         }
       }
     }
 
-    const [day] = await tx.update(tripDays).set({
-      isArchived: input.isArchived, revision: current.revision + 1,
-    }).where(eq(tripDays.id, input.dayId)).returning();
+    const [day] = await tx
+      .update(tripDays)
+      .set({
+        isArchived: input.isArchived,
+        revision: current.revision + 1,
+      })
+      .where(eq(tripDays.id, input.dayId))
+      .returning();
     return { status: 'updated', day };
   });
 }

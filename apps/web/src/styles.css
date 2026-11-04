@@ -658,5 +658,15 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   font-size: 0.82rem;
 }
 
-.day-tabs .archived-day { opacity: 0.6; text-decoration: line-through; }
-.archived-day-note { padding: 12px 18px; margin: 0; font-size: 0.83rem; background: #fff6e6; color: #815727; border: 1px solid #e8d7b4; }
+.day-tabs .archived-day {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+.archived-day-note {
+  padding: 12px 18px;
+  margin: 0;
+  font-size: 0.83rem;
+  background: #fff6e6;
+  color: #815727;
+  border: 1px solid #e8d7b4;
+}

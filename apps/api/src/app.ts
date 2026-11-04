@@ -202,14 +202,18 @@ export function buildApp(store?: AtlasStore) {
       const match = /^"([1-9][0-9]*)"$/.exec(header);
       if (!match) return reply.code(400).send({ error: 'Invalid revision' });
       const result = await store.archiveDay(
-        request.params.tripId, request.params.dayId, Number(match[1]),
+        request.params.tripId,
+        request.params.dayId,
+        Number(match[1]),
         request.body.isArchived,
       );
       if (result.status === 'not_found') {
         return reply.code(404).send({ error: 'Day not found' });
       }
       if (result.status === 'conflict') {
-        return reply.code(412).header('ETag', `"${result.currentRevision}"`)
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
           .send({ error: 'Day was modified; reload before editing' });
       }
       return reply.header('ETag', `"${result.day.revision}"`).send(result.day);

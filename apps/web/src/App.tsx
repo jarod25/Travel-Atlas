@@ -241,8 +241,10 @@ export function App() {
   }
   async function toggleDayArchive() {
     if (!tripId || !dayId || !selectedDay) return;
-    if (!selectedDay.isArchived &&
-        !window.confirm('Archive this day? Its visits and historical Legs will be preserved.')) {
+    if (
+      !selectedDay.isArchived &&
+      !window.confirm('Archive this day? Its visits and historical Legs will be preserved.')
+    ) {
       return;
     }
     await execute(async () => {
@@ -639,7 +641,10 @@ export function App() {
                   {days.map((day) => (
                     <button
                       key={day.id}
-                      className={[dayId === day.id ? 'selected' : '', day.isArchived ? 'archived-day' : ''].join(' ')}
+                      className={[
+                        dayId === day.id ? 'selected' : '',
+                        day.isArchived ? 'archived-day' : '',
+                      ].join(' ')}
                       onClick={() => setDayId(day.id)}
                     >
                       {day.localDate ?? `Day ${day.position + 1} · date unknown`}
@@ -689,21 +694,24 @@ export function App() {
                   Historical Legs remain saved.
                 </p>
               )}
-              {selectedDay && !selectedDay.isArchived && followingDay && !followingDay.isArchived && (
-                <div className="connect-day">
-                  <span>
-                    {(timeline?.crossDayLegs.length ?? 0) > 0
-                      ? 'A cross-day connection exists for the selected day.'
-                      : 'Days are not linked automatically.'}
-                  </span>
-                  <button
-                    disabled={pending || (timeline?.crossDayLegs.length ?? 0) > 0}
-                    onClick={() => void connectToFollowingDay()}
-                  >
-                    Connect to next day
-                  </button>
-                </div>
-              )}
+              {selectedDay &&
+                !selectedDay.isArchived &&
+                followingDay &&
+                !followingDay.isArchived && (
+                  <div className="connect-day">
+                    <span>
+                      {(timeline?.crossDayLegs.length ?? 0) > 0
+                        ? 'A cross-day connection exists for the selected day.'
+                        : 'Days are not linked automatically.'}
+                    </span>
+                    <button
+                      disabled={pending || (timeline?.crossDayLegs.length ?? 0) > 0}
+                      onClick={() => void connectToFollowingDay()}
+                    >
+                      Connect to next day
+                    </button>
+                  </div>
+                )}
               <div className="mobile-tabs" aria-label="Editor panels">
                 <button
                   className={mobilePanel === 'timeline' ? 'selected' : ''}
