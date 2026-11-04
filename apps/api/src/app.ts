@@ -581,7 +581,19 @@ export function buildApp(store?: AtlasStore) {
       if (!header) return reply.code(428).send({ error: 'If-Match is required' });
       const match = /^"([1-9][0-9]*)"$/.exec(header);
       if (!match) return reply.code(400).send({ error: 'Invalid If-Match revision' });
-      const result = await store.updateLeg(request.params.legId, Number(match[1]), request.body);
+      // Fastify's AJV coercion may turn JSON null into an empty string when
+      // validating a nullable string. Store unknown calendar values as SQL NULL,
+      // never as an invalid empty PostgreSQL DATE/TIME.
+      const changes = { ...request.body };
+      for (const field of [
+        'departureLocalDate',
+        'departureLocalTime',
+        'arrivalLocalDate',
+        'arrivalLocalTime',
+      ] as const) {
+        if (changes[field] === '') changes[field] = null;
+      }
+      const result = await store.updateLeg(request.params.legId, Number(match[1]), changes);
       if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
       if (result.status === 'conflict') {
         return reply

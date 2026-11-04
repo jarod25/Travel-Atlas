@@ -19,10 +19,12 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:migrate": "pnpm --filter @travel-atlas/database db:migrate",
     "smoke:api": "node tests/smoke/api-start.mjs",
-    "smoke:web": "node tests/smoke/web-api-journey.mjs"
+    "smoke:web": "node tests/smoke/web-api-journey.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@playwright/test": "1.56.1",
     "@types/node": "^24.10.0",
     "drizzle-orm": "^0.44.5",
     "eslint": "^9.39.0",

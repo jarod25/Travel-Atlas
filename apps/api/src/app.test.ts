@@ -412,3 +412,38 @@ describe('Archived Trip timeline HTTP errors', () => {
     }
   });
 });
+
+describe('Nullable Leg calendar fields', () => {
+  it('stores JSON null dates and times as null rather than an empty PostgreSQL string', async () => {
+    const store = stub();
+    let received: unknown;
+    store.updateLeg = async (_id, _revision, changes) => {
+      received = changes;
+      return { status: 'conflict', currentRevision: 2 };
+    };
+    const app = buildApp(store);
+    try {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/legs/${visitId}`,
+        headers: { 'if-match': '"1"' },
+        payload: {
+          transportMode: 'train',
+          departureLocalDate: null,
+          departureLocalTime: null,
+          arrivalLocalDate: null,
+          arrivalLocalTime: null,
+        },
+      });
+      expect(response.statusCode).toBe(412);
+      expect(received).toMatchObject({
+        departureLocalDate: null,
+        departureLocalTime: null,
+        arrivalLocalDate: null,
+        arrivalLocalTime: null,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+});

@@ -54,6 +54,25 @@ async function fixture() {
   return { trip, leg, points };
 }
 describe('Leg revision transactions', () => {
+  it('accepts a complete edit of a fresh Unknown draft with nullable times', async () => {
+    const { leg } = await fixture();
+    await db.update(legs).set({ transportMode: null }).where(eq(legs.id, leg.id));
+    const updated = await updateLegWithRevision(db, leg.id, leg.revision, {
+      transportMode: 'train',
+      transportConfidence: 'confirmed',
+      departureLocalDate: null,
+      departureLocalTime: null,
+      departureTimeConfidence: 'unknown',
+      arrivalLocalDate: null,
+      arrivalLocalTime: null,
+      arrivalTimeConfidence: 'unknown',
+    });
+    expect(updated.status).toBe('updated');
+    if (updated.status === 'updated') {
+      expect(updated.leg.transportMode).toBe('train');
+      expect(updated.leg.transportConfidence).toBe('confirmed');
+    }
+  });
   it('increments revisions and rejects stale concurrent changes', async () => {
     const { leg } = await fixture();
     expect(leg.revision).toBe(1);

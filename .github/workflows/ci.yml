@@ -7,7 +7,7 @@ on:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgis:
         image: postgis/postgis:18-3.6
@@ -45,3 +45,7 @@ jobs:
       - run: pnpm smoke:web
         env:
           ATLAS_SMOKE_DISPOSABLE: '1'
+      - run: pnpm exec playwright install chromium
+      - run: pnpm test:e2e
+        env:
+          ATLAS_E2E_DISPOSABLE: '1'

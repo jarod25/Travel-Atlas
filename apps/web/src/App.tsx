@@ -836,6 +836,7 @@ export function App() {
                               {index > 0 && (
                                 <button
                                   className="leg-pill"
+                                  data-leg-id={incoming?.id ?? ''}
                                   disabled={!incoming}
                                   onClick={() => {
                                     setSelectedLegId(incoming?.id ?? null);
@@ -847,6 +848,7 @@ export function App() {
                               )}
                               <div
                                 className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
+                                data-visit-id={visit.id}
                               >
                                 <button
                                   className="visit-title"
