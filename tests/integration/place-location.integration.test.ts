@@ -3,7 +3,14 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { eq } from 'drizzle-orm';
-import { legs, places, routeProposals, tripDays, trips, visits } from '../../packages/database/src/schema';
+import {
+  legs,
+  places,
+  routeProposals,
+  tripDays,
+  trips,
+  visits,
+} from '../../packages/database/src/schema';
 import { createAtlasStore } from '../../packages/database/src/atlas-store';
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL must point to a disposable integration-test database.');
@@ -53,7 +60,7 @@ describe('Place coordinate certainty', () => {
       db.update(places).set({ locationConfidence: 'confirmed' }).where(eq(places.id, place.id)),
     ).rejects.toBeDefined();
   });
-  it('invalidates pending proposals from a moved shared Place, without altering history', async () => {
+  it('invalidates proposals when shared Place coordinates change', async () => {
     const [origin] = await db
       .insert(places)
       .values({
