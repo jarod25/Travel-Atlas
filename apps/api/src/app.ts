@@ -412,7 +412,10 @@ export function buildApp(store?: AtlasStore) {
             ),
           );
       } catch (error) {
-        if (error instanceof Error && (error.message === 'Trip day is archived' || error.message === 'Trip is archived')) {
+        if (
+          error instanceof Error &&
+          (error.message === 'Trip day is archived' || error.message === 'Trip is archived')
+        ) {
           return reply.code(409).send({ error: error.message });
         }
         if (error instanceof Error && error.message.includes('Trip day not found')) {
@@ -443,7 +446,10 @@ export function buildApp(store?: AtlasStore) {
           request.body.visitIds,
         );
       } catch (error) {
-        if (error instanceof Error && (error.message === 'Trip day is archived' || error.message === 'Trip is archived')) {
+        if (
+          error instanceof Error &&
+          (error.message === 'Trip day is archived' || error.message === 'Trip is archived')
+        ) {
           return reply.code(409).send({ error: error.message });
         }
         if (error instanceof Error && error.message.includes('exact permutation')) {
@@ -473,7 +479,10 @@ export function buildApp(store?: AtlasStore) {
           request.params.visitId,
         );
       } catch (error) {
-        if (error instanceof Error && (error.message === 'Trip day is archived' || error.message === 'Trip is archived')) {
+        if (
+          error instanceof Error &&
+          (error.message === 'Trip day is archived' || error.message === 'Trip is archived')
+        ) {
           return reply.code(409).send({ error: error.message });
         }
         if (error instanceof Error && error.message.includes('not found')) {
