@@ -413,7 +413,6 @@ describe('Archived Trip timeline HTTP errors', () => {
   });
 });
 
-
 describe('Nullable Leg calendar fields', () => {
   it('stores JSON null dates and times as null rather than an empty PostgreSQL string', async () => {
     const store = stub();
