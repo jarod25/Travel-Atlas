@@ -108,7 +108,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   await expect(page.getByRole('button', { name: 'Save date' })).toBeDisabled();
   await expect(page.getByLabel("Selected day's date (optional)")).toBeDisabled();
   await expect(page.getByLabel('Search existing places')).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Create place' })).toBeDisabled();
+  await expect(page.locator('#place-search')).toBeDisabled();
   await page.getByRole('button', { name: 'Restore day' }).click();
   await expect(page.getByRole('button', { name: '+ Add visit' })).toBeEnabled();
   await expect(page.locator('.visit-row')).toHaveCount(2);
@@ -266,4 +266,21 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
 
   const trips = await (await request.get('/api/v1/trips')).json();
   expect(trips.some((trip: { title: string }) => trip.title === title + ' renamed')).toBe(true);
+});
+
+test('Add Visit reuses one field for Place lookup and explicit creation', async ({ page }) => {
+  const tripTitle = `Synthetic place flow ${Date.now()}`;
+  const placeName = `Synthetic Place ${Date.now()}`;
+  await page.goto('/trips');
+  await page.getByLabel('New trip').fill(tripTitle);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.locator('.day-tabs button')).toHaveCount(1);
+
+  await page.locator('#place-search').fill(placeName);
+  await expect(page.getByRole('button', { name: '+ Add visit' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Create new Place from this name' }).click();
+  await expect(page.getByRole('button', { name: '+ Add visit' })).toBeEnabled();
+  await page.getByRole('button', { name: '+ Add visit' }).click();
+  await expect(page.locator('.visit-row')).toContainText(placeName);
 });
