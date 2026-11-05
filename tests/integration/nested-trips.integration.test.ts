@@ -56,6 +56,16 @@ describe('Nested trip boundaries', () => {
     const after = (await store.listTrips(true)) as typeof list;
     expect(after.find((row) => row.id === parent.id)?.manualEndDate).toBe('2026-09-20');
     expect(after.find((row) => row.id === parent.id)?.computedEndDate).toBe('2026-09-15');
+    const combined = await store.listCombinedDays(parent.id) as Array<{ tripId: string }>;
+    expect(combined).toHaveLength(2);
+    expect(new Set(combined.map((day) => day.tripId))).toEqual(new Set([parent.id, grandchild.id]));
+    const cycle = await store.editTrip(parent.id, 2, { parentTripId: grandchild.id });
+    expect(cycle.status).toBe('invalid');
+    const moved = await store.editTrip(child.id, 1, { parentTripId: null });
+    expect(moved.status).toBe('updated');
+    const listAfter = await store.listTrips(true) as typeof list;
+    expect(listAfter.find((row) => row.id === parent.id)?.computedEndDate).toBe('2026-09-10');
+    expect((await store.listCombinedDays(parent.id) as Array<unknown>)).toHaveLength(1);
     expect(
       await store.createTrip('Invalid synthetic child', '00000000-0000-0000-0000-000000000000'),
     ).toBeNull();
