@@ -664,8 +664,12 @@ export function buildApp(store?: AtlasStore) {
       for (const field of [
         'departureLocalDate',
         'departureLocalTime',
+        'departureRangeEndLocalDate',
+        'departureRangeEndLocalTime',
         'arrivalLocalDate',
         'arrivalLocalTime',
+        'arrivalRangeEndLocalDate',
+        'arrivalRangeEndLocalTime',
       ] as const) {
         if (changes[field] === '') changes[field] = null;
       }
