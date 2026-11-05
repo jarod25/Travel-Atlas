@@ -310,11 +310,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .from(visits)
         .leftJoin(places, eq(visits.placeId, places.id))
         .where(
-          and(
-            eq(visits.tripId, tripId),
-            eq(visits.tripDayId, dayId),
-            eq(visits.isArchived, true),
-          ),
+          and(eq(visits.tripId, tripId), eq(visits.tripDayId, dayId), eq(visits.isArchived, true)),
         )
         .orderBy(asc(visits.position)),
     restoreVisit: (tripId, dayId, visitId) =>

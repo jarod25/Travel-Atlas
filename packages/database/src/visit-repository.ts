@@ -407,9 +407,7 @@ export async function restoreVisitToDay(
     const insertAt = Math.min(archived.position, active.length);
     const orderedIds = [...activeIds];
     orderedIds.splice(insertAt, 0, archived.id);
-    const desired = new Set(
-      orderedIds.slice(1).map((to, index) => pairKey(orderedIds[index], to)),
-    );
+    const desired = new Set(orderedIds.slice(1).map((to, index) => pairKey(orderedIds[index], to)));
     const retained = new Set<string>();
     for (const leg of current) {
       const key = pairKey(leg.fromVisitId, leg.toVisitId);

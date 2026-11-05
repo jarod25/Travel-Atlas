@@ -860,64 +860,66 @@ export function App() {
                   {dayId && (
                     <>
                       {visitVisibility !== 'archived' && (
-                      <div className="visit-list">
-                        {timeline?.visits.map((visit, index) => {
-                          const incoming = timeline.legs.find((leg) => leg.toVisitId === visit.id);
-                          return (
-                            <div key={visit.id}>
-                              {index > 0 && (
-                                <button
-                                  className="leg-pill"
-                                  data-leg-id={incoming?.id ?? ''}
-                                  disabled={!incoming}
-                                  onClick={() => {
-                                    setSelectedLegId(incoming?.id ?? null);
-                                    setSelectedVisitId(null);
-                                  }}
-                                >
-                                  {describeLeg(incoming)} · Edit
-                                </button>
-                              )}
-                              <div
-                                className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
-                                data-visit-id={visit.id}
-                              >
-                                <button
-                                  className="visit-title"
-                                  onClick={() => {
-                                    setSelectedVisitId(visit.id);
-                                    setSelectedLegId(null);
-                                  }}
-                                >
-                                  <span className="visit-number">{index + 1}</span>
-                                  <strong>{visit.placeName ?? 'Unknown place'}</strong>
-                                  <small>
-                                    {visit.placeLocation
-                                      ? 'Mapped location'
-                                      : 'Coordinates unknown'}
-                                  </small>
-                                </button>
-                                <div className="order-controls">
+                        <div className="visit-list">
+                          {timeline?.visits.map((visit, index) => {
+                            const incoming = timeline.legs.find(
+                              (leg) => leg.toVisitId === visit.id,
+                            );
+                            return (
+                              <div key={visit.id}>
+                                {index > 0 && (
                                   <button
-                                    aria-label={`Move visit ${index + 1} up`}
-                                    disabled={pending || index === 0}
-                                    onClick={() => void moveVisit(index, -1)}
+                                    className="leg-pill"
+                                    data-leg-id={incoming?.id ?? ''}
+                                    disabled={!incoming}
+                                    onClick={() => {
+                                      setSelectedLegId(incoming?.id ?? null);
+                                      setSelectedVisitId(null);
+                                    }}
                                   >
-                                    ↑
+                                    {describeLeg(incoming)} · Edit
                                   </button>
+                                )}
+                                <div
+                                  className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
+                                  data-visit-id={visit.id}
+                                >
                                   <button
-                                    aria-label={`Move visit ${index + 1} down`}
-                                    disabled={pending || index === timeline.visits.length - 1}
-                                    onClick={() => void moveVisit(index, 1)}
+                                    className="visit-title"
+                                    onClick={() => {
+                                      setSelectedVisitId(visit.id);
+                                      setSelectedLegId(null);
+                                    }}
                                   >
-                                    ↓
+                                    <span className="visit-number">{index + 1}</span>
+                                    <strong>{visit.placeName ?? 'Unknown place'}</strong>
+                                    <small>
+                                      {visit.placeLocation
+                                        ? 'Mapped location'
+                                        : 'Coordinates unknown'}
+                                    </small>
                                   </button>
+                                  <div className="order-controls">
+                                    <button
+                                      aria-label={`Move visit ${index + 1} up`}
+                                      disabled={pending || index === 0}
+                                      onClick={() => void moveVisit(index, -1)}
+                                    >
+                                      ↑
+                                    </button>
+                                    <button
+                                      aria-label={`Move visit ${index + 1} down`}
+                                      disabled={pending || index === timeline.visits.length - 1}
+                                      onClick={() => void moveVisit(index, 1)}
+                                    >
+                                      ↓
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
                       )}
                       {visitVisibility !== 'active' && (
                         <div className="archived-visits" aria-label="Archived visits">
@@ -927,7 +929,9 @@ export function App() {
                             <div className="visit-row" key={visit.id}>
                               <span>{visit.placeName ?? 'Unknown place'}</span>
                               <button
-                                disabled={pending || selectedDay?.isArchived || selectedTrip?.isArchived}
+                                disabled={
+                                  pending || selectedDay?.isArchived || selectedTrip?.isArchived
+                                }
                                 onClick={() => void restoreArchivedVisit(visit)}
                               >
                                 Restore visit

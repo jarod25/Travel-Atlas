@@ -496,8 +496,7 @@ export function buildApp(store?: AtlasStore) {
   app.get<{ Params: { tripId: string; dayId: string } }>(
     '/api/v1/trips/:tripId/days/:dayId/archived-visits',
     { schema: { params: dayParams } },
-    async (request) =>
-      store.listArchivedVisits(request.params.tripId, request.params.dayId),
+    async (request) => store.listArchivedVisits(request.params.tripId, request.params.dayId),
   );
   app.post<{ Params: { tripId: string; dayId: string; visitId: string } }>(
     '/api/v1/trips/:tripId/days/:dayId/visits/:visitId/restore',
