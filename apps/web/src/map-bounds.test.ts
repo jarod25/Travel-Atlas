@@ -32,8 +32,22 @@ describe('Geographic framing', () => {
 
   it('bounds saved points and line geometry together', () => {
     const point = { type: 'Point', coordinates: [7, 48] };
-    const line = { type: 'LineString', coordinates: [[6, 47], [9, 50]] };
-    const multi = { type: 'MultiLineString', coordinates: [[[8, 49], [10, 46]]] };
+    const line = {
+      type: 'LineString',
+      coordinates: [
+        [6, 47],
+        [9, 50],
+      ],
+    };
+    const multi = {
+      type: 'MultiLineString',
+      coordinates: [
+        [
+          [8, 49],
+          [10, 46],
+        ],
+      ],
+    };
     expect(geographicBounds(collection(point, line, multi))).toEqual([
       [6, 46],
       [10, 50],
