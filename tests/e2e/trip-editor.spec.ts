@@ -94,8 +94,14 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
 
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Archive day' }).click();
-  await expect(page.getByRole('button', { name: 'Restore day' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Restore day' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '+ Add visit' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save date' })).toBeDisabled();
+  await expect(page.getByLabel("Selected day's date (optional)")).toBeDisabled();
+  await expect(page.getByLabel('Search existing places')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Create place' })).toBeDisabled();
   await page.getByRole('button', { name: 'Restore day' }).click();
+  await expect(page.getByRole('button', { name: '+ Add visit' })).toBeEnabled();
   await expect(page.locator('.visit-row')).toHaveCount(2);
 
   const after = await (await request.get(timelineUrl)).json();
