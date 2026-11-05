@@ -56,17 +56,39 @@ export async function updateLegWithRevision(
     const schedule = [
       {
         precision: changes.departureTimePrecision ?? current.departureTimePrecision,
-        date: changes.departureLocalDate === undefined ? current.departureLocalDate : changes.departureLocalDate,
-        time: changes.departureLocalTime === undefined ? current.departureLocalTime : changes.departureLocalTime,
-        rangeStart: changes.departureRangeStart === undefined ? current.departureRangeStart : changes.departureRangeStart,
-        rangeEnd: changes.departureRangeEnd === undefined ? current.departureRangeEnd : changes.departureRangeEnd,
+        date:
+          changes.departureLocalDate === undefined
+            ? current.departureLocalDate
+            : changes.departureLocalDate,
+        time:
+          changes.departureLocalTime === undefined
+            ? current.departureLocalTime
+            : changes.departureLocalTime,
+        rangeStart:
+          changes.departureRangeStart === undefined
+            ? current.departureRangeStart
+            : changes.departureRangeStart,
+        rangeEnd:
+          changes.departureRangeEnd === undefined
+            ? current.departureRangeEnd
+            : changes.departureRangeEnd,
       },
       {
         precision: changes.arrivalTimePrecision ?? current.arrivalTimePrecision,
-        date: changes.arrivalLocalDate === undefined ? current.arrivalLocalDate : changes.arrivalLocalDate,
-        time: changes.arrivalLocalTime === undefined ? current.arrivalLocalTime : changes.arrivalLocalTime,
-        rangeStart: changes.arrivalRangeStart === undefined ? current.arrivalRangeStart : changes.arrivalRangeStart,
-        rangeEnd: changes.arrivalRangeEnd === undefined ? current.arrivalRangeEnd : changes.arrivalRangeEnd,
+        date:
+          changes.arrivalLocalDate === undefined
+            ? current.arrivalLocalDate
+            : changes.arrivalLocalDate,
+        time:
+          changes.arrivalLocalTime === undefined
+            ? current.arrivalLocalTime
+            : changes.arrivalLocalTime,
+        rangeStart:
+          changes.arrivalRangeStart === undefined
+            ? current.arrivalRangeStart
+            : changes.arrivalRangeStart,
+        rangeEnd:
+          changes.arrivalRangeEnd === undefined ? current.arrivalRangeEnd : changes.arrivalRangeEnd,
       },
     ];
     for (const clock of schedule) {
@@ -77,7 +99,10 @@ export async function updateLegWithRevision(
       } else if (clock.rangeStart != null || clock.rangeEnd != null) {
         return { status: 'invalid_times' };
       }
-      if ((clock.precision === 'exact' || clock.precision === 'approximate') && (!clock.date || !clock.time)) {
+      if (
+        (clock.precision === 'exact' || clock.precision === 'approximate') &&
+        (!clock.date || !clock.time)
+      ) {
         return { status: 'invalid_times' };
       }
       if (clock.time && !clock.date) return { status: 'invalid_times' };
