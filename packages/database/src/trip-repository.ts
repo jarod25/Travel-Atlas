@@ -118,8 +118,8 @@ export async function updateTripWithRevision(
       })
       .where(eq(trips.id, id))
       .returning();
-    // Archiving a parent retires current edges touching any descendant.
-    // Historic Leg records, route versions and evidence are preserved.
+    // Retire cross-trip edges touching the archived subtree, but retain
+    // intra-trip current Legs so restoring the Trip preserves its timeline.
     if (changes.isArchived === true && !current.isArchived) {
       await tx.execute(sql`
         WITH RECURSIVE descendants AS (
@@ -128,8 +128,10 @@ export async function updateTripWithRevision(
         ), retired AS (
           UPDATE legs l SET is_current = false, revision = revision + 1
           WHERE l.is_current = true AND EXISTS (
-            SELECT 1 FROM visits v WHERE v.id IN (l.from_visit_id, l.to_visit_id)
-            AND v.trip_id IN (SELECT id FROM descendants)
+            SELECT 1 FROM visits v1 JOIN visits v2 ON v2.id = l.to_visit_id
+            WHERE v1.id = l.from_visit_id AND v1.trip_id <> v2.trip_id
+              AND (v1.trip_id IN (SELECT id FROM descendants)
+                OR v2.trip_id IN (SELECT id FROM descendants))
           )
           RETURNING l.id
         )
