@@ -625,7 +625,7 @@ export function App() {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.addVisit(tripId, dayId, placeId || null);
-      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit added',
         message: 'Visit saved.',
@@ -706,7 +706,7 @@ export function App() {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.restoreVisit(tripId, dayId, visit.id);
-      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit restored',
         message: 'Visit active again.',
@@ -733,7 +733,7 @@ export function App() {
     await execute(async () => {
       await atlasApi.archiveVisit(tripId, dayId, visit.id);
       setSelectedVisitId(null);
-      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit archived',
         message: 'Visit history saved.',
