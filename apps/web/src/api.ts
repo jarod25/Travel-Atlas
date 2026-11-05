@@ -29,6 +29,9 @@ export interface VisitRow {
   placeName: string | null;
   placeLocation: [number, number] | null;
 }
+export interface ArchivedVisitRow extends VisitRow {
+  isArchived: true;
+}
 export interface LegRow {
   id: string;
   fromVisitId: string;
@@ -141,6 +144,10 @@ export const atlasApi = {
     post<unknown>(`/trips/${id}/days/${day}/reorder`, { visitIds }),
   archiveVisit: (id: string, day: string, visit: string) =>
     request<unknown>(`/trips/${id}/days/${day}/visits/${visit}`, { method: 'DELETE' }),
+  archivedVisits: (id: string, day: string) =>
+    request<ArchivedVisitRow[]>(`/trips/${id}/days/${day}/archived-visits`),
+  restoreVisit: (id: string, day: string, visit: string) =>
+    post<unknown>(`/trips/${id}/days/${day}/visits/${visit}/restore`, {}),
   updateLeg: (
     id: string,
     revision: number,

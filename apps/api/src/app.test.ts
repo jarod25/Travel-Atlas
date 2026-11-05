@@ -37,6 +37,8 @@ function stub(): AtlasStore {
     addVisit: async () => ({ visit: { id: visitId }, draftLeg: null }),
     reorderVisits: async () => ({ changed: true }),
     archiveVisit: async () => ({ archivedVisitId: visitId }),
+    listArchivedVisits: async () => [],
+    restoreVisit: async () => ({ restoredVisitId: visitId }),
     editVisitPlace: async (id: string, day: string, visit: string, revision: number) => ({
       status: 'conflict',
       currentRevision: revision + 1,

@@ -493,6 +493,47 @@ export function buildApp(store?: AtlasStore) {
     },
   );
 
+  app.get<{ Params: { tripId: string; dayId: string } }>(
+    '/api/v1/trips/:tripId/days/:dayId/archived-visits',
+    { schema: { params: dayParams } },
+    async (request) => store.listArchivedVisits(request.params.tripId, request.params.dayId),
+  );
+  app.post<{ Params: { tripId: string; dayId: string; visitId: string } }>(
+    '/api/v1/trips/:tripId/days/:dayId/visits/:visitId/restore',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['tripId', 'dayId', 'visitId'],
+          properties: { tripId: uuid, dayId: uuid, visitId: uuid },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        return await store.restoreVisit(
+          request.params.tripId,
+          request.params.dayId,
+          request.params.visitId,
+        );
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.message === 'Trip day is archived' ||
+            error.message === 'Trip is archived' ||
+            error.message.includes('cross-day Leg'))
+        ) {
+          return reply.code(409).send({ error: error.message });
+        }
+        if (error instanceof Error && error.message.includes('not found')) {
+          return reply.code(404).send({ error: error.message });
+        }
+        throw error;
+      }
+    },
+  );
+
   app.patch<{
     Params: { legId: string };
     Body: {

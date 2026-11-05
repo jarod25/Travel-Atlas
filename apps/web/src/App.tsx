@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { atlasApi } from './api';
 import type {
   FeatureCollection,
+  ArchivedVisitRow,
   Feature,
   LegRow,
   Place,
@@ -36,6 +37,8 @@ export function App() {
   const [days, setDays] = useState<TripDay[]>([]);
   const [dayId, setDayId] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
+  const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
+  const [visitVisibility, setVisitVisibility] = useState<'active' | 'archived' | 'all'>('active');
   const [places, setPlaces] = useState<Place[]>([]);
   const [features, setFeatures] = useState<FeatureCollection>(emptyFeatures);
   const [tripName, setTripName] = useState('');
@@ -95,7 +98,12 @@ export function App() {
     return data;
   }, []);
   const loadTimeline = useCallback(async (id: string, day: string) => {
-    setTimeline(await atlasApi.timeline(id, day));
+    const [current, archived] = await Promise.all([
+      atlasApi.timeline(id, day),
+      atlasApi.archivedVisits(id, day),
+    ]);
+    setTimeline(current);
+    setArchivedVisits(archived);
   }, []);
   const loadExplore = useCallback(async () => {
     setFeatures(await atlasApi.explore());
@@ -135,13 +143,16 @@ export function App() {
   useEffect(() => {
     if (!tripId || !dayId) {
       setTimeline(null);
+      setArchivedVisits([]);
       return;
     }
     let active = true;
-    atlasApi
-      .timeline(tripId, dayId)
-      .then((result) => {
-        if (active) setTimeline(result);
+    Promise.all([atlasApi.timeline(tripId, dayId), atlasApi.archivedVisits(tripId, dayId)])
+      .then(([result, archived]) => {
+        if (active) {
+          setTimeline(result);
+          setArchivedVisits(archived);
+        }
       })
       .catch((cause: unknown) => {
         if (active) setError(String(cause));
@@ -436,6 +447,14 @@ export function App() {
         selectedVisit.revision,
         visitPlaceId || null,
       );
+      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+    });
+  }
+
+  async function restoreArchivedVisit(visit: ArchivedVisitRow) {
+    if (!tripId || !dayId || selectedDay?.isArchived) return;
+    await execute(async () => {
+      await atlasApi.restoreVisit(tripId, dayId, visit.id);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
     });
   }
@@ -823,69 +842,104 @@ export function App() {
                 <aside className={`timeline-panel mobile-${mobilePanel}`}>
                   <div className="panel-heading">
                     <h2>Timeline</h2>
-                    <span>{timeline?.visits.length ?? 0} visits</span>
+                    <span>{timeline?.visits.length ?? 0} active visits</span>
                   </div>
+                  <label htmlFor="visit-visibility">Show visits</label>
+                  <select
+                    id="visit-visibility"
+                    value={visitVisibility}
+                    onChange={(event) =>
+                      setVisitVisibility(event.target.value as 'active' | 'archived' | 'all')
+                    }
+                  >
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                    <option value="all">All</option>
+                  </select>
                   {!dayId && <p className="empty-state">Add a day to begin.</p>}
                   {dayId && (
                     <>
-                      <div className="visit-list">
-                        {timeline?.visits.map((visit, index) => {
-                          const incoming = timeline.legs.find((leg) => leg.toVisitId === visit.id);
-                          return (
-                            <div key={visit.id}>
-                              {index > 0 && (
-                                <button
-                                  className="leg-pill"
-                                  data-leg-id={incoming?.id ?? ''}
-                                  disabled={!incoming}
-                                  onClick={() => {
-                                    setSelectedLegId(incoming?.id ?? null);
-                                    setSelectedVisitId(null);
-                                  }}
-                                >
-                                  {describeLeg(incoming)} · Edit
-                                </button>
-                              )}
-                              <div
-                                className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
-                                data-visit-id={visit.id}
-                              >
-                                <button
-                                  className="visit-title"
-                                  onClick={() => {
-                                    setSelectedVisitId(visit.id);
-                                    setSelectedLegId(null);
-                                  }}
-                                >
-                                  <span className="visit-number">{index + 1}</span>
-                                  <strong>{visit.placeName ?? 'Unknown place'}</strong>
-                                  <small>
-                                    {visit.placeLocation
-                                      ? 'Mapped location'
-                                      : 'Coordinates unknown'}
-                                  </small>
-                                </button>
-                                <div className="order-controls">
+                      {visitVisibility !== 'archived' && (
+                        <div className="visit-list">
+                          {timeline?.visits.map((visit, index) => {
+                            const incoming = timeline.legs.find(
+                              (leg) => leg.toVisitId === visit.id,
+                            );
+                            return (
+                              <div key={visit.id}>
+                                {index > 0 && (
                                   <button
-                                    aria-label={`Move visit ${index + 1} up`}
-                                    disabled={pending || index === 0}
-                                    onClick={() => void moveVisit(index, -1)}
+                                    className="leg-pill"
+                                    data-leg-id={incoming?.id ?? ''}
+                                    disabled={!incoming}
+                                    onClick={() => {
+                                      setSelectedLegId(incoming?.id ?? null);
+                                      setSelectedVisitId(null);
+                                    }}
                                   >
-                                    ↑
+                                    {describeLeg(incoming)} · Edit
                                   </button>
+                                )}
+                                <div
+                                  className={`visit-row ${selectedVisitId === visit.id ? 'selected' : ''}`}
+                                  data-visit-id={visit.id}
+                                >
                                   <button
-                                    aria-label={`Move visit ${index + 1} down`}
-                                    disabled={pending || index === timeline.visits.length - 1}
-                                    onClick={() => void moveVisit(index, 1)}
+                                    className="visit-title"
+                                    onClick={() => {
+                                      setSelectedVisitId(visit.id);
+                                      setSelectedLegId(null);
+                                    }}
                                   >
-                                    ↓
+                                    <span className="visit-number">{index + 1}</span>
+                                    <strong>{visit.placeName ?? 'Unknown place'}</strong>
+                                    <small>
+                                      {visit.placeLocation
+                                        ? 'Mapped location'
+                                        : 'Coordinates unknown'}
+                                    </small>
                                   </button>
+                                  <div className="order-controls">
+                                    <button
+                                      aria-label={`Move visit ${index + 1} up`}
+                                      disabled={pending || index === 0}
+                                      onClick={() => void moveVisit(index, -1)}
+                                    >
+                                      ↑
+                                    </button>
+                                    <button
+                                      aria-label={`Move visit ${index + 1} down`}
+                                      disabled={pending || index === timeline.visits.length - 1}
+                                      onClick={() => void moveVisit(index, 1)}
+                                    >
+                                      ↓
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {visitVisibility !== 'active' && (
+                        <div className="archived-visits" aria-label="Archived visits">
+                          <h3>Archived visits</h3>
+                          {archivedVisits.length === 0 && <p>No archived visits in this day.</p>}
+                          {archivedVisits.map((visit) => (
+                            <div className="visit-row" key={visit.id}>
+                              <span>{visit.placeName ?? 'Unknown place'}</span>
+                              <button
+                                disabled={
+                                  pending || selectedDay?.isArchived || selectedTrip?.isArchived
+                                }
+                                onClick={() => void restoreArchivedVisit(visit)}
+                              >
+                                Restore visit
+                              </button>
                             </div>
-                          );
-                        })}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                       <div className="composer">
                         <h3>Add a visit</h3>
                         <label htmlFor="place-search">Search existing places</label>

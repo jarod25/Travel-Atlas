@@ -341,6 +341,143 @@ export async function archiveVisitFromDay(
   });
 }
 
+/**
+ * Restore an archived Visit at its former (clamped) position.
+ * Reconcile only intra-day links in one transaction. An explicit current
+ * cross-day connection must be disconnected before changing the day boundary.
+ */
+export async function restoreVisitToDay(
+  db: PostgresJsDatabase,
+  input: { tripId: string; tripDayId: string; visitId: string },
+) {
+  return db.transaction(async (tx) => {
+    const [trip] = await tx
+      .select({ isArchived: trips.isArchived })
+      .from(trips)
+      .where(eq(trips.id, input.tripId))
+      .for('share');
+    if (!trip) throw new Error('Trip not found');
+    if (trip.isArchived) throw new Error('Trip is archived');
+
+    const [day] = await tx
+      .select({ isArchived: tripDays.isArchived })
+      .from(tripDays)
+      .where(and(eq(tripDays.id, input.tripDayId), eq(tripDays.tripId, input.tripId)))
+      .for('update');
+    if (!day) throw new Error('Trip day not found');
+    if (day.isArchived) throw new Error('Trip day is archived');
+
+    const [archived] = await tx
+      .select()
+      .from(visits)
+      .where(
+        and(
+          eq(visits.id, input.visitId),
+          eq(visits.tripId, input.tripId),
+          eq(visits.tripDayId, input.tripDayId),
+          eq(visits.isArchived, true),
+        ),
+      )
+      .for('update');
+    if (!archived) throw new Error('Archived Visit not found');
+
+    const active = await tx
+      .select({ id: visits.id, position: visits.position })
+      .from(visits)
+      .where(and(eq(visits.tripDayId, input.tripDayId), eq(visits.isArchived, false)))
+      .orderBy(asc(visits.position));
+    const activeIds = active.map((visit) => visit.id);
+    const current = activeIds.length
+      ? await tx
+          .select({ id: legs.id, fromVisitId: legs.fromVisitId, toVisitId: legs.toVisitId })
+          .from(legs)
+          .where(
+            and(
+              eq(legs.tripId, input.tripId),
+              eq(legs.isCurrent, true),
+              or(inArray(legs.fromVisitId, activeIds), inArray(legs.toVisitId, activeIds)),
+            ),
+          )
+      : [];
+    const owned = new Set(activeIds);
+    if (current.some((leg) => !owned.has(leg.fromVisitId) || !owned.has(leg.toVisitId))) {
+      throw new Error('Disconnect the current cross-day Leg before restoring a Visit');
+    }
+
+    const insertAt = Math.min(archived.position, active.length);
+    const orderedIds = [...activeIds];
+    orderedIds.splice(insertAt, 0, archived.id);
+    const desired = new Set(orderedIds.slice(1).map((to, index) => pairKey(orderedIds[index], to)));
+    const retained = new Set<string>();
+    for (const leg of current) {
+      const key = pairKey(leg.fromVisitId, leg.toVisitId);
+      if (desired.has(key)) {
+        retained.add(key);
+      } else {
+        await tx.update(legs).set({ isCurrent: false }).where(eq(legs.id, leg.id));
+        await tx
+          .update(routeProposals)
+          .set({ status: 'invalidated', reviewedAt: new Date() })
+          .where(and(eq(routeProposals.legId, leg.id), eq(routeProposals.status, 'pending')));
+      }
+    }
+
+    // Temporarily move active Visits beyond the occupied positions to avoid
+    // transient conflicts with the partial unique index.
+    const temporaryBase = active.length
+      ? Math.max(...active.map((visit) => visit.position)) + active.length + 2
+      : 0;
+    if (temporaryBase + active.length > 2147483647) {
+      throw new Error('Visit positions exceed the database integer range');
+    }
+    for (let index = 0; index < active.length; index += 1) {
+      await tx
+        .update(visits)
+        .set({ position: temporaryBase + index })
+        .where(eq(visits.id, active[index].id));
+    }
+    // Archived Visits do not participate in the active-position unique index.
+    await tx
+      .update(visits)
+      .set({ isArchived: false, position: insertAt, revision: archived.revision + 1 })
+      .where(eq(visits.id, archived.id));
+    for (let index = 0; index < orderedIds.length; index += 1) {
+      if (orderedIds[index] === archived.id) continue;
+      await tx.update(visits).set({ position: index }).where(eq(visits.id, orderedIds[index]));
+    }
+
+    const historical = await tx
+      .select({ id: legs.id, fromVisitId: legs.fromVisitId, toVisitId: legs.toVisitId })
+      .from(legs)
+      .where(
+        and(
+          eq(legs.tripId, input.tripId),
+          eq(legs.isCurrent, false),
+          inArray(legs.fromVisitId, orderedIds),
+          inArray(legs.toVisitId, orderedIds),
+        ),
+      );
+    const historicalPairs = new Map<string, string[]>();
+    for (const leg of historical) {
+      const key = pairKey(leg.fromVisitId, leg.toVisitId);
+      historicalPairs.set(key, [...(historicalPairs.get(key) ?? []), leg.id]);
+    }
+    for (let index = 1; index < orderedIds.length; index += 1) {
+      const fromVisitId = orderedIds[index - 1];
+      const toVisitId = orderedIds[index];
+      const key = pairKey(fromVisitId, toVisitId);
+      if (retained.has(key)) continue;
+      const matches = historicalPairs.get(key) ?? [];
+      if (matches.length === 1) {
+        await tx.update(legs).set({ isCurrent: true }).where(eq(legs.id, matches[0]));
+      } else {
+        await tx.insert(legs).values({ tripId: input.tripId, fromVisitId, toVisitId });
+      }
+    }
+    return { restoredVisitId: archived.id, position: insertAt };
+  });
+}
+
 export type VisitPlaceEditResult =
   | { status: 'not_found' }
   | { status: 'place_not_found' }
