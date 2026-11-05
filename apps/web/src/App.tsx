@@ -1248,7 +1248,9 @@ export function App() {
                                     }}
                                   >
                                     <span className="leg-main">
-                                      <strong className="leg-summary">{describeLeg(incoming)}</strong>
+                                      <strong className="leg-summary">
+                                        {describeLeg(incoming)}
+                                      </strong>
                                       <span className="leg-edit">Edit</span>
                                     </span>
                                     {incoming && (
