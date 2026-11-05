@@ -1099,8 +1099,8 @@ export function App() {
                                   setSelectedVisitId(null);
                                 }}
                               >
-                                From previous day · <span>{describeLeg(leg)} · Edit</span>
-                                  <small className="leg-schedule">{describeLegTimes(leg)}</small>
+                                <span>From previous day · {describeLeg(leg)} · Edit</span>
+                                <small className="leg-schedule">{describeLegTimes(leg)}</small>
                               </button>
                             ))}
                           {timeline?.visits.map((visit, index) => {
@@ -1120,9 +1120,11 @@ export function App() {
                                     }}
                                   >
                                     <span>{describeLeg(incoming)} · Edit</span>
-                                      {incoming && (
-                                        <small className="leg-schedule">{describeLegTimes(incoming)}</small>
-                                      )}
+                                    {incoming && (
+                                      <small className="leg-schedule">
+                                        {describeLegTimes(incoming)}
+                                      </small>
+                                    )}
                                   </button>
                                 )}
                                 <div
@@ -1182,8 +1184,8 @@ export function App() {
                                   setSelectedVisitId(null);
                                 }}
                               >
-                                To next day · <span>{describeLeg(leg)} · Edit</span>
-                                  <small className="leg-schedule">{describeLegTimes(leg)}</small>
+                                <span>To next day · {describeLeg(leg)} · Edit</span>
+                                <small className="leg-schedule">{describeLegTimes(leg)}</small>
                               </button>
                             ))}
                         </div>
