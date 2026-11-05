@@ -776,7 +776,7 @@ export function App() {
                     value={dayDate}
                     onChange={(e) => setDayDate(e.target.value)}
                   />
-                  <button type="submit" disabled={pending}>
+                  <button type="submit" disabled={pending || Boolean(selectedTrip?.isArchived)}>
                     + Day
                   </button>
                 </form>
@@ -921,14 +921,14 @@ export function App() {
                                   <div className="order-controls">
                                     <button
                                       aria-label={`Move visit ${index + 1} up`}
-                                      disabled={pending || index === 0}
+                                      disabled={pending || dayReadOnly || index === 0}
                                       onClick={() => void moveVisit(index, -1)}
                                     >
                                       ↑
                                     </button>
                                     <button
                                       aria-label={`Move visit ${index + 1} down`}
-                                      disabled={pending || index === timeline.visits.length - 1}
+                                      disabled={pending || dayReadOnly || index === timeline.visits.length - 1}
                                       onClick={() => void moveVisit(index, 1)}
                                     >
                                       ↓
@@ -1094,6 +1094,7 @@ export function App() {
                       <label htmlFor="leg-transport">Transport mode</label>
                       <select
                         id="leg-transport"
+                        disabled={dayReadOnly}
                         value={legMode}
                         onChange={(e) => setLegMode(e.target.value)}
                       >
@@ -1120,6 +1121,7 @@ export function App() {
                       <label htmlFor="leg-confidence">Transport certainty</label>
                       <select
                         id="leg-confidence"
+                        disabled={dayReadOnly}
                         value={legConfidence}
                         onChange={(e) =>
                           setLegConfidence(e.target.value as 'confirmed' | 'estimated' | 'unknown')
@@ -1135,6 +1137,7 @@ export function App() {
                         <label htmlFor="departure-date">Departure date</label>
                         <input
                           id="departure-date"
+                        disabled={dayReadOnly}
                           type="date"
                           value={departureDate}
                           onChange={(e) => setDepartureDate(e.target.value)}
@@ -1142,6 +1145,7 @@ export function App() {
                         <label htmlFor="departure-time">Departure clock time</label>
                         <input
                           id="departure-time"
+                        disabled={dayReadOnly}
                           type="time"
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
@@ -1149,6 +1153,7 @@ export function App() {
                         <label htmlFor="departure-confidence">Departure certainty</label>
                         <select
                           id="departure-confidence"
+                        disabled={dayReadOnly}
                           value={departureCertainty}
                           onChange={(e) =>
                             setDepartureCertainty(
@@ -1163,6 +1168,7 @@ export function App() {
                         <label htmlFor="arrival-date">Arrival date</label>
                         <input
                           id="arrival-date"
+                        disabled={dayReadOnly}
                           type="date"
                           value={arrivalDate}
                           onChange={(e) => setArrivalDate(e.target.value)}
@@ -1170,6 +1176,7 @@ export function App() {
                         <label htmlFor="arrival-time">Arrival clock time</label>
                         <input
                           id="arrival-time"
+                        disabled={dayReadOnly}
                           type="time"
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
@@ -1177,6 +1184,7 @@ export function App() {
                         <label htmlFor="arrival-confidence">Arrival certainty</label>
                         <select
                           id="arrival-confidence"
+                        disabled={dayReadOnly}
                           value={arrivalCertainty}
                           onChange={(e) =>
                             setArrivalCertainty(
