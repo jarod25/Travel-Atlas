@@ -44,6 +44,7 @@ export const trips = pgTable(
     title: text('title').notNull(),
     isArchived: boolean('is_archived').notNull().default(false),
     revision: integer('revision').notNull().default(1),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check('trips_title_nonempty', sql`length(btrim(${table.title})) > 0`),
@@ -62,6 +63,7 @@ export const tripDays = pgTable(
     localDate: date('local_date', { mode: 'string' }),
     position: integer('position').notNull(),
     revision: integer('revision').notNull().default(1),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     isArchived: boolean('is_archived').notNull().default(false),
   },
   (table) => [
@@ -111,6 +113,7 @@ export const visits = pgTable(
     placeId: uuid('place_id').references(() => places.id, { onDelete: 'set null' }),
     position: integer('position').notNull(),
     revision: integer('revision').notNull().default(1),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     isArchived: boolean('is_archived').notNull().default(false),
   },
   (table) => [
@@ -144,6 +147,7 @@ export const legs = pgTable(
     toVisitId: uuid('to_visit_id').notNull(),
     isCurrent: boolean('is_current').notNull().default(true),
     revision: integer('revision').notNull().default(1),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     selectedRouteVersionId: uuid('selected_route_version_id'),
     transportMode: text('transport_mode', { enum: transportValues }),
     movementConfidence: text('movement_confidence', { enum: confidenceValues })
