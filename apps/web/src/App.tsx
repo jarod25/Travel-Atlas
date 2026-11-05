@@ -1159,10 +1159,19 @@ export function App() {
                 From dated, active days: {selectedTrip.derivedStartDate ?? 'Unknown'} to{' '}
                 {selectedTrip.derivedEndDate ?? 'Unknown'}. Undated days are not inferred.
               </p>
-              <p>
-                Displayed period: {selectedTrip.effectiveStartDate ?? 'Unknown'} to{' '}
-                {selectedTrip.effectiveEndDate ?? 'Unknown'}
-              </p>
+              {selectedTrip.effectiveStartDate &&
+              selectedTrip.effectiveEndDate &&
+              selectedTrip.effectiveStartDate > selectedTrip.effectiveEndDate ? (
+                <p role="alert">
+                  Trip period conflict: corrected start is after the calculated end, or vice
+                  versa. Adjust the corrections before using these dates.
+                </p>
+              ) : (
+                <p>
+                  Displayed period: {selectedTrip.effectiveStartDate ?? 'Unknown'} to{' '}
+                  {selectedTrip.effectiveEndDate ?? 'Unknown'}
+                </p>
+              )}
               <div className="trip-date-controls">
                 <label htmlFor="trip-start-override">
                   Correct start (optional)
