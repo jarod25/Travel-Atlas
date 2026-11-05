@@ -17,13 +17,34 @@ import { emptyFeatures, visibleFeatures } from './map-data';
 
 type View = 'explore' | 'trips' | 'editor';
 type MobilePanel = 'timeline' | 'map';
+
+function readLocation(): { view: View; tripId: string | null; dayId: string | null } {
+  const path = window.location.pathname;
+  if (path === '/trips') return { view: 'trips', tripId: null, dayId: null };
+  if (path === '/editor') return { view: 'editor', tripId: null, dayId: null };
+  const match = /^\/trips\/([0-9a-f-]{36})$/i.exec(path);
+  if (match) {
+    return {
+      view: 'editor',
+      tripId: match[1],
+      dayId: new URLSearchParams(window.location.search).get('day'),
+    };
+  }
+  return { view: 'explore', tripId: null, dayId: null };
+}
+function urlFor(view: View, tripId: string | null, dayId: string | null): string {
+  if (view === 'trips') return '/trips';
+  if (view !== 'editor') return '/explore';
+  if (!tripId) return '/editor';
+  return '/trips/' + tripId + (dayId ? '?day=' + encodeURIComponent(dayId) : '');
+}
 function describeLeg(leg: LegRow | undefined): string {
   if (!leg) return 'No connected travel leg';
   return `${leg.transportMode ?? 'Transport unknown'} · ${leg.movementConfidence} travel · ${leg.geometryConfidence} route`;
 }
 
 export function App() {
-  const [view, setView] = useState<View>('explore');
+  const [view, setView] = useState<View>(() => readLocation().view);
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
   const [filterMode, setFilterMode] = useState('');
@@ -33,9 +54,9 @@ export function App() {
   const [colorBy, setColorBy] = useState<ColorMode>('trip');
   const [selectedMapItem, setSelectedMapItem] = useState<Feature['properties'] | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [tripId, setTripId] = useState<string | null>(null);
+  const [tripId, setTripId] = useState<string | null>(() => readLocation().tripId);
   const [days, setDays] = useState<TripDay[]>([]);
-  const [dayId, setDayId] = useState<string | null>(null);
+  const [dayId, setDayId] = useState<string | null>(() => readLocation().dayId);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
   const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
   const [visitVisibility, setVisitVisibility] = useState<'active' | 'archived' | 'all'>('active');
@@ -75,6 +96,42 @@ export function App() {
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function navigate(
+    nextView: View,
+    nextTripId: string | null = tripId,
+    nextDayId: string | null = null,
+  ) {
+    const targetView = nextView;
+    const url = urlFor(targetView, nextTripId, nextDayId);
+    if (window.location.pathname + window.location.search !== url) {
+      window.history.pushState(null, '', url);
+    }
+    setView(targetView);
+    if (targetView === 'editor') {
+      setTripId(nextTripId);
+      setDayId(nextDayId);
+    }
+  }
+  useEffect(() => {
+    const onPopState = () => {
+      const next = readLocation();
+      setView(next.view);
+      setTripId(next.tripId);
+      setDayId(next.dayId);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+  useEffect(() => {
+    if (view !== 'editor' || !tripId || window.location.pathname !== '/trips/' + tripId) {
+      return;
+    }
+    const url = urlFor('editor', tripId, dayId);
+    if (window.location.pathname + window.location.search !== url) {
+      window.history.replaceState(null, '', url);
+    }
+  }, [view, tripId, dayId]);
 
   const execute = useCallback(async (action: () => Promise<void>) => {
     setPending(true);
@@ -237,12 +294,10 @@ export function App() {
 
   function openMapFeature(properties: Feature['properties']) {
     if (!properties.tripId) return;
-    setTripId(properties.tripId);
-    if (properties.dayId) setDayId(properties.dayId);
+    navigate('editor', properties.tripId, properties.dayId ?? null);
     setSelectedVisitId(properties.kind === 'visit' ? (properties.visitId ?? null) : null);
     setSelectedLegId(properties.kind === 'route' ? (properties.legId ?? null) : null);
     setMobilePanel('timeline');
-    setView('editor');
   }
 
   function selectEditorMapFeature(properties: Feature['properties']) {
@@ -260,9 +315,8 @@ export function App() {
     await execute(async () => {
       const trip = await atlasApi.addTrip(title);
       await loadTrips();
-      setTripId(trip.id);
       setTripName('');
-      setView('editor');
+      navigate('editor', trip.id);
     });
   }
   async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean }) {
@@ -271,7 +325,7 @@ export function App() {
       await Promise.all([loadTrips(), loadExplore()]);
       if (changes.isArchived && tripId === trip.id) {
         setTripId(null);
-        setView('trips');
+        navigate('trips');
       }
     });
   }
@@ -478,13 +532,16 @@ export function App() {
           <span>Travel Atlas</span>
         </div>
         <nav aria-label="Main navigation">
-          <button className={view === 'explore' ? 'active' : ''} onClick={() => setView('explore')}>
+          <button
+            className={view === 'explore' ? 'active' : ''}
+            onClick={() => navigate('explore')}
+          >
             Explore
           </button>
-          <button className={view === 'trips' ? 'active' : ''} onClick={() => setView('trips')}>
+          <button className={view === 'trips' ? 'active' : ''} onClick={() => navigate('trips')}>
             Trips
           </button>
-          <button className={view === 'editor' ? 'active' : ''} onClick={() => setView('editor')}>
+          <button className={view === 'editor' ? 'active' : ''} onClick={() => navigate('editor')}>
             Trip Editor
           </button>
         </nav>
@@ -732,7 +789,7 @@ export function App() {
             <select
               aria-label="Select trip"
               value={tripId ?? ''}
-              onChange={(e) => setTripId(e.target.value || null)}
+              onChange={(e) => navigate('editor', e.target.value || null)}
             >
               <option value="">Select trip</option>
               {trips.map((trip) => (
