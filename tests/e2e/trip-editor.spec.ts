@@ -250,7 +250,7 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
 
   await page
     .locator('.trip-card')
-    .filter({ hasText: title })
+    .filter({ has: page.getByText(title, { exact: true }) })
     .getByRole('button', { name: 'Rename' })
     .click();
   const modal = page.getByRole('dialog', { name: 'Rename trip' });
@@ -260,12 +260,12 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
 
   await page
     .locator('.trip-card')
-    .filter({ hasText: title })
+    .filter({ has: page.getByText(title, { exact: true }) })
     .getByRole('button', { name: 'Rename' })
     .click();
   await modal.getByRole('textbox', { name: 'Trip name' }).fill(title + ' renamed');
   await modal.getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('.trip-card').filter({ hasText: title + ' renamed' })).toBeVisible();
+  await expect(page.locator('.trip-card').filter({ has: page.getByText(title + ' renamed', { exact: true }) })).toBeVisible();
 
   const trips = await (await request.get('/api/v1/trips')).json();
   expect(trips.some((trip: { title: string }) => trip.title === title + ' renamed')).toBe(true);
