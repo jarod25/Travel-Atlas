@@ -1663,6 +1663,38 @@ export function App() {
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                         />
+                        <label htmlFor="departure-precision">Departure time precision</label>
+                        <select
+                          id="departure-precision"
+                          disabled={dayReadOnly}
+                          value={departureTimePrecision}
+                          onChange={(event) => setDepartureTimePrecision(event.target.value as TimePrecision)}
+                        >
+                          <option value="unspecified">Unspecified or date only</option>
+                          <option value="precise">Precise clock time</option>
+                          <option value="approximate">Around this clock time</option>
+                          <option value="range">Between two moments</option>
+                        </select>
+                        {departureTimePrecision === 'range' && (
+                          <>
+                            <label htmlFor="departure-range-end-date">Departure range end date</label>
+                            <input
+                              id="departure-range-end-date"
+                              disabled={dayReadOnly}
+                              type="date"
+                              value={departureRangeEndDate}
+                              onChange={(event) => setDepartureRangeEndDate(event.target.value)}
+                            />
+                            <label htmlFor="departure-range-end-time">Departure range end clock time</label>
+                            <input
+                              id="departure-range-end-time"
+                              disabled={dayReadOnly}
+                              type="time"
+                              value={departureRangeEndTime}
+                              onChange={(event) => setDepartureRangeEndTime(event.target.value)}
+                            />
+                          </>
+                        )}
                         <label htmlFor="departure-confidence">Departure certainty</label>
                         <select
                           id="departure-confidence"
@@ -1694,6 +1726,38 @@ export function App() {
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
                         />
+                        <label htmlFor="arrival-precision">Arrival time precision</label>
+                        <select
+                          id="arrival-precision"
+                          disabled={dayReadOnly}
+                          value={arrivalTimePrecision}
+                          onChange={(event) => setArrivalTimePrecision(event.target.value as TimePrecision)}
+                        >
+                          <option value="unspecified">Unspecified or date only</option>
+                          <option value="precise">Precise clock time</option>
+                          <option value="approximate">Around this clock time</option>
+                          <option value="range">Between two moments</option>
+                        </select>
+                        {arrivalTimePrecision === 'range' && (
+                          <>
+                            <label htmlFor="arrival-range-end-date">Arrival range end date</label>
+                            <input
+                              id="arrival-range-end-date"
+                              disabled={dayReadOnly}
+                              type="date"
+                              value={arrivalRangeEndDate}
+                              onChange={(event) => setArrivalRangeEndDate(event.target.value)}
+                            />
+                            <label htmlFor="arrival-range-end-time">Arrival range end clock time</label>
+                            <input
+                              id="arrival-range-end-time"
+                              disabled={dayReadOnly}
+                              type="time"
+                              value={arrivalRangeEndTime}
+                              onChange={(event) => setArrivalRangeEndTime(event.target.value)}
+                            />
+                          </>
+                        )}
                         <label htmlFor="arrival-confidence">Arrival certainty</label>
                         <select
                           id="arrival-confidence"
