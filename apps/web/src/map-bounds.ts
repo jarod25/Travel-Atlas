@@ -33,7 +33,11 @@ export function geographicBounds(data: FeatureCollection): MapBounds | null {
     for (const item of value) readCoordinates(item);
   }
   for (const feature of data.features) {
-    if (['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'].includes(feature.geometry.type)) {
+    if (
+      ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'].includes(
+        feature.geometry.type,
+      )
+    ) {
       readCoordinates(feature.geometry.coordinates);
     }
   }
