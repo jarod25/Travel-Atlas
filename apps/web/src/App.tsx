@@ -97,8 +97,12 @@ export function App() {
   const [arrivalTime, setArrivalTime] = useState('');
   const [departureZone, setDepartureZone] = useState('');
   const [arrivalZone, setArrivalZone] = useState('');
-  const [departurePrecision, setDeparturePrecision] = useState<'exact' | 'approximate' | 'unknown'>('unknown');
-  const [arrivalPrecision, setArrivalPrecision] = useState<'exact' | 'approximate' | 'unknown'>('unknown');
+  const [departurePrecision, setDeparturePrecision] = useState<'exact' | 'approximate' | 'unknown'>(
+    'unknown',
+  );
+  const [arrivalPrecision, setArrivalPrecision] = useState<'exact' | 'approximate' | 'unknown'>(
+    'unknown',
+  );
   const [departureCertainty, setDepartureCertainty] = useState<
     'confirmed' | 'estimated' | 'unknown'
   >('unknown');
@@ -346,8 +350,14 @@ export function App() {
     setArrivalTime(selectedLeg.arrivalLocalTime?.slice(0, 5) ?? '');
     setDepartureZone(selectedLeg.departureTimeZone ?? '');
     setArrivalZone(selectedLeg.arrivalTimeZone ?? '');
-    setDeparturePrecision(selectedLeg.departureTimePrecision === 'range' ? 'unknown' : selectedLeg.departureTimePrecision);
-    setArrivalPrecision(selectedLeg.arrivalTimePrecision === 'range' ? 'unknown' : selectedLeg.arrivalTimePrecision);
+    setDeparturePrecision(
+      selectedLeg.departureTimePrecision === 'range'
+        ? 'unknown'
+        : selectedLeg.departureTimePrecision,
+    );
+    setArrivalPrecision(
+      selectedLeg.arrivalTimePrecision === 'range' ? 'unknown' : selectedLeg.arrivalTimePrecision,
+    );
     setDepartureCertainty(selectedLeg.departureTimeConfidence);
     setArrivalCertainty(selectedLeg.arrivalTimeConfidence);
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
@@ -357,7 +367,22 @@ export function App() {
     () =>
       visibleFeatures(features, {
         tripId,
-        tripIds: tripId ? (() => { const ids = new Set([tripId]); let changed = true; while (changed) { changed = false; for (const trip of trips) { if (trip.parentTripId && ids.has(trip.parentTripId) && !ids.has(trip.id)) { ids.add(trip.id); changed = true; } } } return [...ids]; })() : undefined,
+        tripIds: tripId
+          ? (() => {
+              const ids = new Set([tripId]);
+              let changed = true;
+              while (changed) {
+                changed = false;
+                for (const trip of trips) {
+                  if (trip.parentTripId && ids.has(trip.parentTripId) && !ids.has(trip.id)) {
+                    ids.add(trip.id);
+                    changed = true;
+                  }
+                }
+              }
+              return [...ids];
+            })()
+          : undefined,
         fromDate: view === 'explore' ? filterFrom : '',
         toDate: view === 'explore' ? filterTo : '',
         transportMode: view === 'explore' ? filterMode : '',
@@ -416,7 +441,15 @@ export function App() {
       });
     });
   }
-  async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean; manualStartDate?: string | null; manualEndDate?: string | null }) {
+  async function changeTrip(
+    trip: Trip,
+    changes: {
+      title?: string;
+      isArchived?: boolean;
+      manualStartDate?: string | null;
+      manualEndDate?: string | null;
+    },
+  ) {
     await execute(async () => {
       await atlasApi.updateTrip(trip.id, trip.revision, changes);
       await Promise.all([loadTrips(), loadExplore()]);
@@ -668,7 +701,12 @@ export function App() {
     }
     for (const zone of [departureZone, arrivalZone]) {
       if (!zone) continue;
-      try { new Intl.DateTimeFormat('en', { timeZone: zone }); } catch { setError('Invalid IANA time zone: ' + zone); return; }
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: zone });
+      } catch {
+        setError('Invalid IANA time zone: ' + zone);
+        return;
+      }
     }
     await execute(async () => {
       await atlasApi.updateLeg(selectedLeg.id, selectedLeg.revision, {
@@ -1004,9 +1042,17 @@ export function App() {
               required
             />
             <label htmlFor="parent-trip">Inside trip (optional)</label>
-            <select id="parent-trip" value={newTripParentId} onChange={(event) => setNewTripParentId(event.target.value)}>
+            <select
+              id="parent-trip"
+              value={newTripParentId}
+              onChange={(event) => setNewTripParentId(event.target.value)}
+            >
               <option value="">Top-level trip</option>
-              {activeTrips.map((trip) => <option key={trip.id} value={trip.id}>{trip.title}</option>)}
+              {activeTrips.map((trip) => (
+                <option key={trip.id} value={trip.id}>
+                  {trip.title}
+                </option>
+              ))}
             </select>
             <button type="submit" disabled={pending}>
               Create trip
@@ -1024,8 +1070,15 @@ export function App() {
             {displayedTrips.map((trip) => (
               <div className="trip-card" key={trip.id}>
                 <span>{trip.isArchived ? 'ARCHIVED TRIP' : 'TRIP'}</span>
-                <strong>{trip.parentTripId ? '↳ ' : ''}{trip.title}</strong>
-                <small>{trip.manualStartDate ?? trip.computedStartDate ?? 'Start unknown'} — {trip.manualEndDate ?? trip.computedEndDate ?? 'End unknown'}{trip.parentTripId ? ' · Subtrip' : ''}</small>
+                <strong>
+                  {trip.parentTripId ? '↳ ' : ''}
+                  {trip.title}
+                </strong>
+                <small>
+                  {trip.manualStartDate ?? trip.computedStartDate ?? 'Start unknown'} —{' '}
+                  {trip.manualEndDate ?? trip.computedEndDate ?? 'End unknown'}
+                  {trip.parentTripId ? ' · Subtrip' : ''}
+                </small>
                 <div className="trip-actions">
                   {!trip.isArchived && (
                     <button
@@ -1036,7 +1089,34 @@ export function App() {
                       Open timeline
                     </button>
                   )}
-                  <button onClick={() => { const start = window.prompt('Override start date (YYYY-MM-DD, blank = automatic)', trip.manualStartDate ?? ''); if (start === null) return; const end = window.prompt('Override end date (YYYY-MM-DD, blank = automatic)', trip.manualEndDate ?? ''); if (end === null) return; if ((start && !/^\d{4}-\d{2}-\d{2}$/.test(start)) || (end && !/^\d{4}-\d{2}-\d{2}$/.test(end))) { setError('Use YYYY-MM-DD or leave blank.'); return; } void changeTrip(trip, { manualStartDate: start || null, manualEndDate: end || null }); }} disabled={pending}>Edit dates</button>
+                  <button
+                    onClick={() => {
+                      const start = window.prompt(
+                        'Override start date (YYYY-MM-DD, blank = automatic)',
+                        trip.manualStartDate ?? '',
+                      );
+                      if (start === null) return;
+                      const end = window.prompt(
+                        'Override end date (YYYY-MM-DD, blank = automatic)',
+                        trip.manualEndDate ?? '',
+                      );
+                      if (end === null) return;
+                      if (
+                        (start && !/^\d{4}-\d{2}-\d{2}$/.test(start)) ||
+                        (end && !/^\d{4}-\d{2}-\d{2}$/.test(end))
+                      ) {
+                        setError('Use YYYY-MM-DD or leave blank.');
+                        return;
+                      }
+                      void changeTrip(trip, {
+                        manualStartDate: start || null,
+                        manualEndDate: end || null,
+                      });
+                    }}
+                    disabled={pending}
+                  >
+                    Edit dates
+                  </button>
                   <button onClick={() => void renameTrip(trip)} disabled={pending}>
                     Rename
                   </button>
@@ -1540,7 +1620,10 @@ export function App() {
                       </select>
                       <details className="time-details">
                         <summary>Departure and arrival times (optional)</summary>
-                        <p className="muted">Local time at each endpoint. Enter an IANA zone if known (e.g. Europe/Paris, Asia/Tokyo). No zone is guessed.</p>
+                        <p className="muted">
+                          Local time at each endpoint. Enter an IANA zone if known (e.g.
+                          Europe/Paris, Asia/Tokyo). No zone is guessed.
+                        </p>
                         <label htmlFor="departure-date">Departure date</label>
                         <input
                           id="departure-date"
@@ -1558,10 +1641,27 @@ export function App() {
                           onChange={(e) => setDepartureTime(e.target.value)}
                         />
                         <label htmlFor="departure-zone">Departure time zone (IANA, optional)</label>
-                        <input id="departure-zone" disabled={dayReadOnly} value={departureZone} placeholder="Europe/Paris" onChange={(e) => setDepartureZone(e.target.value)} />
+                        <input
+                          id="departure-zone"
+                          disabled={dayReadOnly}
+                          value={departureZone}
+                          placeholder="Europe/Paris"
+                          onChange={(e) => setDepartureZone(e.target.value)}
+                        />
                         <label htmlFor="departure-precision">Departure precision</label>
-                        <select id="departure-precision" disabled={dayReadOnly} value={departurePrecision} onChange={(e) => setDeparturePrecision(e.target.value as 'exact' | 'approximate' | 'unknown')}>
-                          <option value="unknown">Unknown</option><option value="approximate">Approximate</option><option value="exact">Exact</option>
+                        <select
+                          id="departure-precision"
+                          disabled={dayReadOnly}
+                          value={departurePrecision}
+                          onChange={(e) =>
+                            setDeparturePrecision(
+                              e.target.value as 'exact' | 'approximate' | 'unknown',
+                            )
+                          }
+                        >
+                          <option value="unknown">Unknown</option>
+                          <option value="approximate">Approximate</option>
+                          <option value="exact">Exact</option>
                         </select>
                         <label htmlFor="departure-confidence">Departure certainty</label>
                         <select
@@ -1595,10 +1695,27 @@ export function App() {
                           onChange={(e) => setArrivalTime(e.target.value)}
                         />
                         <label htmlFor="arrival-zone">Arrival time zone (IANA, optional)</label>
-                        <input id="arrival-zone" disabled={dayReadOnly} value={arrivalZone} placeholder="Asia/Tokyo" onChange={(e) => setArrivalZone(e.target.value)} />
+                        <input
+                          id="arrival-zone"
+                          disabled={dayReadOnly}
+                          value={arrivalZone}
+                          placeholder="Asia/Tokyo"
+                          onChange={(e) => setArrivalZone(e.target.value)}
+                        />
                         <label htmlFor="arrival-precision">Arrival precision</label>
-                        <select id="arrival-precision" disabled={dayReadOnly} value={arrivalPrecision} onChange={(e) => setArrivalPrecision(e.target.value as 'exact' | 'approximate' | 'unknown')}>
-                          <option value="unknown">Unknown</option><option value="approximate">Approximate</option><option value="exact">Exact</option>
+                        <select
+                          id="arrival-precision"
+                          disabled={dayReadOnly}
+                          value={arrivalPrecision}
+                          onChange={(e) =>
+                            setArrivalPrecision(
+                              e.target.value as 'exact' | 'approximate' | 'unknown',
+                            )
+                          }
+                        >
+                          <option value="unknown">Unknown</option>
+                          <option value="approximate">Approximate</option>
+                          <option value="exact">Exact</option>
                         </select>
                         <label htmlFor="arrival-confidence">Arrival certainty</label>
                         <select

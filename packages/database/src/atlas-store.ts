@@ -26,7 +26,12 @@ export interface AtlasStore {
   editTrip(
     id: string,
     revision: number,
-    changes: { title?: string; isArchived?: boolean; manualStartDate?: string | null; manualEndDate?: string | null },
+    changes: {
+      title?: string;
+      isArchived?: boolean;
+      manualStartDate?: string | null;
+      manualEndDate?: string | null;
+    },
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
@@ -107,8 +112,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           parentTripId: trips.parentTripId,
           manualStartDate: trips.manualStartDate,
           manualEndDate: trips.manualEndDate,
-          computedStartDate: sql<string | null>`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MIN(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
-          computedEndDate: sql<string | null>`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MAX(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
+          computedStartDate: sql<
+            string | null
+          >`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MIN(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
+          computedEndDate: sql<
+            string | null
+          >`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MAX(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
           isArchived: trips.isArchived,
           revision: trips.revision,
           updatedAt: trips.updatedAt,
@@ -120,7 +129,10 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
     },
     createTrip: async (title, parentTripId = null) => {
       if (parentTripId) {
-        const [parent] = await db.select({ id: trips.id, isArchived: trips.isArchived }).from(trips).where(eq(trips.id, parentTripId));
+        const [parent] = await db
+          .select({ id: trips.id, isArchived: trips.isArchived })
+          .from(trips)
+          .where(eq(trips.id, parentTripId));
         if (!parent || parent.isArchived) return null;
       }
       const [trip] = await db.insert(trips).values({ title, parentTripId }).returning();
@@ -129,8 +141,14 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
     getTrip: async (id) => {
       const [trip] = await db.select().from(trips).where(eq(trips.id, id));
       if (!trip) return null;
-      const dates = await db.execute(sql`WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${id} UNION ALL SELECT child.id FROM trips child JOIN descendants d ON child.parent_trip_id = d.id) SELECT MIN(local_date)::text AS start_date, MAX(local_date)::text AS end_date FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants)`);
-      return { ...trip, computedStartDate: dates[0]?.start_date ?? null, computedEndDate: dates[0]?.end_date ?? null };
+      const dates = await db.execute(
+        sql`WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${id} UNION ALL SELECT child.id FROM trips child JOIN descendants d ON child.parent_trip_id = d.id) SELECT MIN(local_date)::text AS start_date, MAX(local_date)::text AS end_date FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants)`,
+      );
+      return {
+        ...trip,
+        computedStartDate: dates[0]?.start_date ?? null,
+        computedEndDate: dates[0]?.end_date ?? null,
+      };
     },
     editTrip: (id, revision, changes) => updateTripWithRevision(db, id, revision, changes),
     listDays: async (id) => {

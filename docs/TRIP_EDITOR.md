@@ -121,7 +121,6 @@ Decisions deliberately deferred until a separate design review:
 Lot 4 routing proposals remain separate from evidence of journeys actually
 taken. Do not mark Lot 3 accepted before the manual acceptance above.
 
-
 ## Stabilization extension — nested trips and temporal metadata
 
 A new Trip can have an existing, active parent Trip. Parent selection is immutable in this increment; users cannot reparent existing Trips, avoiding cycles at creation. Selecting a parent trip on the map includes all descendant Trips recursively; each saved Visit/Leg remains stored once and belongs to its original Trip. The editor still edits a single Trip's own days; cross-trip transitions are not connected automatically.
