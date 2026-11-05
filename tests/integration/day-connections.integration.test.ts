@@ -148,9 +148,51 @@ describe('Explicit Connect Days', () => {
     });
     expect(reconnected.status).toBe('connected');
     if (reconnected.status !== 'connected') throw new Error('Expected reconnected days');
-    expect(reconnected.leg.id).not.toBe(connected.leg.id);
-    expect(reconnected.leg.movementConfidence).toBe('unknown');
+    expect(reconnected.created).toBe(false);
+    expect(reconnected.leg.id).toBe(connected.leg.id);
+    expect(reconnected.leg.movementConfidence).toBe('confirmed');
+    expect(reconnected.leg.transportMode).toBe('train');
+    expect(reconnected.leg.transportConfidence).toBe('confirmed');
+    expect(reconnected.leg.revision).toBe(3);
+    expect(await db.select().from(legs).where(eq(legs.tripId, f.trip.id))).toHaveLength(1);
+  });
+
+  it('keeps ambiguous cross-day leg history without choosing a transport', async () => {
+    const f = await fixture();
+    const first = await connectAdjacentDays(db, {
+      tripId: f.trip.id,
+      fromDayId: f.days[0].id,
+      toDayId: f.days[1].id,
+    });
+    if (first.status !== 'connected') throw new Error('Expected initial Leg');
+    const disconnected = await disconnectAdjacentDays(db, {
+      tripId: f.trip.id,
+      fromDayId: f.days[0].id,
+      toDayId: f.days[1].id,
+      legId: first.leg.id,
+      revision: first.leg.revision,
+    });
+    expect(disconnected.status).toBe('disconnected');
+    await db.insert(legs).values({
+      tripId: f.trip.id,
+      fromVisitId: f.points[0].id,
+      toVisitId: f.points[1].id,
+      isCurrent: false,
+      transportMode: 'bus',
+    });
+    const reconnected = await connectAdjacentDays(db, {
+      tripId: f.trip.id,
+      fromDayId: f.days[0].id,
+      toDayId: f.days[1].id,
+    });
+    expect(reconnected.status).toBe('connected');
+    if (reconnected.status !== 'connected') throw new Error('Expected reconnect');
+    expect(reconnected.created).toBe(true);
     expect(reconnected.leg.transportMode).toBeNull();
+    expect(reconnected.leg.movementConfidence).toBe('unknown');
+    const all = await db.select().from(legs).where(eq(legs.tripId, f.trip.id));
+    expect(all.filter((leg) => leg.isCurrent)).toHaveLength(1);
+    expect(all.filter((leg) => !leg.isCurrent)).toHaveLength(2);
   });
 
   it('rejects backwards and skipped days, and links to another Trip', async () => {
