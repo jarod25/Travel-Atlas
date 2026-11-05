@@ -1,7 +1,13 @@
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
 import postgres from 'postgres';
 import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+
+// Share the local API .env for first-time migrations, without overriding CI settings.
+const localEnvPath = fileURLToPath(new URL('../../../apps/api/.env', import.meta.url));
+if (existsSync(localEnvPath)) loadEnvFile(localEnvPath);
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

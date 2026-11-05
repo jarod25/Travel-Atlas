@@ -1,5 +1,13 @@
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
+import { fileURLToPath } from 'node:url';
 import { createAtlasStore } from '@travel-atlas/database';
 import { buildApp } from './app.js';
+
+// Load local development configuration without overriding environment variables.
+// Works from both src/server.ts and dist/server.js.
+const localEnvPath = fileURLToPath(new URL('../.env', import.meta.url));
+if (existsSync(localEnvPath)) loadEnvFile(localEnvPath);
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

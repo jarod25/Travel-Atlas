@@ -36,12 +36,13 @@ Requires **Node.js 24** and **pnpm 10.34.9**.
 ```sh
 pnpm install --frozen-lockfile
 docker compose -f infrastructure/docker/compose.yml up -d
-export DATABASE_URL=postgresql://atlas_local:atlas_local_only@127.0.0.1:55432/atlas_local
+cp apps/api/.env.example apps/api/.env
+# The API loads apps/api/.env automatically; adjust DATABASE_URL as needed.
 pnpm db:migrate
 pnpm dev
 ```
 
-The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. The local Docker Compose service provides PostgreSQL/PostGIS using **development-only** credentials; migrations must be applied before starting. No personal travel data is seeded. Set `DATABASE_URL` in the shell (PowerShell instructions below). Map tiles and the current MapLibre CDN bundle require network access. Playwright Chromium browser acceptance runs in CI using synthetic test data; physical Android acceptance remains outstanding. See [database guide](docs/DATABASE.md) for setup.
+The web development server starts on Vite's default local port (normally `5173`), and the API listens on `127.0.0.1:3001`. The API exposes `GET /health`. The local Docker Compose service provides PostgreSQL/PostGIS using **development-only** credentials; migrations must be applied before starting. No personal travel data is seeded. The API loads `apps/api/.env` automatically; an explicit shell `DATABASE_URL` takes precedence. The real `.env` is ignored by Git. Do not put production secrets into the example. Map tiles and the current MapLibre CDN bundle require network access. Playwright Chromium browser acceptance runs in CI using synthetic test data; physical Android acceptance remains outstanding. See [database guide](docs/DATABASE.md) for setup.
 
 Quality checks:
 
