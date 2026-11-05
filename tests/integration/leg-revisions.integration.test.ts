@@ -89,7 +89,9 @@ describe('Leg revision transactions', () => {
     expect(changed.leg.departureRangeStart).toContain('2026-09-12');
     expect(changed.leg.departureRangeEnd).toContain('2026-09-12');
     const cleared = await updateLegWithRevision(db, leg.id, changed.leg.revision, {
-      departureTimePrecision: 'unknown', departureRangeStart: null, departureRangeEnd: null,
+      departureTimePrecision: 'unknown',
+      departureRangeStart: null,
+      departureRangeEnd: null,
     });
     expect(cleared.status).toBe('updated');
   });

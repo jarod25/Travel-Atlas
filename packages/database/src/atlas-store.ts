@@ -130,7 +130,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .from(trips)
         .where(includeArchived ? undefined : eq(trips.isArchived, false))
         .orderBy(sql`${activity} DESC`, asc(trips.title));
-      const hierarchy = await db.select({ id: trips.id, parentTripId: trips.parentTripId, archived: trips.isArchived }).from(trips);
+      const hierarchy = await db
+        .select({ id: trips.id, parentTripId: trips.parentTripId, archived: trips.isArchived })
+        .from(trips);
       const byId = new Map(hierarchy.map((item) => [item.id, item]));
       const archivedByParent = (id: string): boolean => {
         const seen = new Set<string>([id]);

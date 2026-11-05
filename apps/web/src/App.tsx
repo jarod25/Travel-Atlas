@@ -50,7 +50,11 @@ function urlFor(view: View, tripId: string | null, dayId: string | null): string
   return '/trips/' + tripId + (dayId ? '?day=' + encodeURIComponent(dayId) : '');
 }
 
-function TripDateEditor({ trip, disabled, onSave }: {
+function TripDateEditor({
+  trip,
+  disabled,
+  onSave,
+}: {
   trip: Trip;
   disabled: boolean;
   onSave: (changes: { manualStartDate: string | null; manualEndDate: string | null }) => void;
@@ -66,23 +70,42 @@ function TripDateEditor({ trip, disabled, onSave }: {
   return (
     <details className="trip-dates">
       <summary>Edit dates</summary>
-      <form onSubmit={(event) => {
-        event.preventDefault();
-        if (start && end && start > end) { setInvalid(true); return; }
-        setInvalid(false);
-        onSave({ manualStartDate: start || null, manualEndDate: end || null });
-      }}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (start && end && start > end) {
+            setInvalid(true);
+            return;
+          }
+          setInvalid(false);
+          onSave({ manualStartDate: start || null, manualEndDate: end || null });
+        }}
+      >
         <label>
           Start date override (optional)
-          <input type="date" value={start} disabled={disabled} onChange={(event) => setStart(event.target.value)} />
+          <input
+            type="date"
+            value={start}
+            disabled={disabled}
+            onChange={(event) => setStart(event.target.value)}
+          />
         </label>
         <label>
           End date override (optional)
-          <input type="date" value={end} disabled={disabled} onChange={(event) => setEnd(event.target.value)} />
+          <input
+            type="date"
+            value={end}
+            disabled={disabled}
+            onChange={(event) => setEnd(event.target.value)}
+          />
         </label>
-        <p className="muted">Leave empty to use dates calculated from recorded days and subtrips.</p>
+        <p className="muted">
+          Leave empty to use dates calculated from recorded days and subtrips.
+        </p>
         {invalid && <p role="alert">End date cannot be before start date.</p>}
-        <button type="submit" disabled={disabled}>Save trip dates</button>
+        <button type="submit" disabled={disabled}>
+          Save trip dates
+        </button>
       </form>
     </details>
   );
@@ -105,7 +128,9 @@ export function App() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripId, setTripId] = useState<string | null>(() => readLocation().tripId);
   const [days, setDays] = useState<TripDay[]>([]);
-  const [combinedDays, setCombinedDays] = useState<(TripDay & { tripTitle: string; depth: number })[]>([]);
+  const [combinedDays, setCombinedDays] = useState<
+    (TripDay & { tripTitle: string; depth: number })[]
+  >([]);
   const [dayId, setDayId] = useState<string | null>(() => readLocation().dayId);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
   const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
@@ -359,9 +384,18 @@ export function App() {
   useEffect(() => {
     let active = true;
     setCombinedDays([]);
-    if (tripId) atlasApi.combinedDays(tripId).then((result) => { if (active) setCombinedDays(result); })
-      .catch(() => { if (active) setCombinedDays([]); });
-    return () => { active = false; };
+    if (tripId)
+      atlasApi
+        .combinedDays(tripId)
+        .then((result) => {
+          if (active) setCombinedDays(result);
+        })
+        .catch(() => {
+          if (active) setCombinedDays([]);
+        });
+    return () => {
+      active = false;
+    };
   }, [tripId, trips, days]);
   const selectedTrip = trips.find((trip) => trip.id === tripId);
   const relatedTrips = useMemo(() => {
@@ -418,7 +452,9 @@ export function App() {
     };
   }, [connectionTargetTripId, connectionTargetDayId]);
   const selectedDay = days.find((day) => day.id === dayId);
-  const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived || selectedTrip?.archivedByParent);
+  const dayReadOnly = Boolean(
+    selectedDay?.isArchived || selectedTrip?.isArchived || selectedTrip?.archivedByParent,
+  );
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
   useEffect(() => {
     let active = true;
@@ -1353,8 +1389,15 @@ export function App() {
                   <button onClick={() => void renameTrip(trip)} disabled={pending}>
                     Rename
                   </button>
-                  <button onClick={() => void toggleTripArchive(trip)} disabled={pending || trip.archivedByParent}>
-                    {trip.archivedByParent ? 'Restore parent first' : trip.isArchived ? 'Restore' : 'Archive'}
+                  <button
+                    onClick={() => void toggleTripArchive(trip)}
+                    disabled={pending || trip.archivedByParent}
+                  >
+                    {trip.archivedByParent
+                      ? 'Restore parent first'
+                      : trip.isArchived
+                        ? 'Restore'
+                        : 'Archive'}
                   </button>
                 </div>
               </div>
@@ -1479,9 +1522,17 @@ export function App() {
                 <p>Only recorded days are included. Select one to open its editable timeline.</p>
                 <div className="recent-trip-grid">
                   {combinedDays.map((entry) => (
-                    <button key={entry.id} onClick={() => navigate('editor', entry.tripId, entry.id)}>
-                      <strong>{'↳ '.repeat(entry.depth)}{entry.tripTitle}</strong>
-                      <span>{entry.localDate ?? 'Date unknown'} · Day {entry.position + 1}</span>
+                    <button
+                      key={entry.id}
+                      onClick={() => navigate('editor', entry.tripId, entry.id)}
+                    >
+                      <strong>
+                        {'↳ '.repeat(entry.depth)}
+                        {entry.tripTitle}
+                      </strong>
+                      <span>
+                        {entry.localDate ?? 'Date unknown'} · Day {entry.position + 1}
+                      </span>
                     </button>
                   ))}
                 </div>

@@ -59,9 +59,10 @@ export async function updateTripWithRevision(
           UNION ALL SELECT p.id, p.parent_trip_id FROM trips p JOIN a ON a.parent_trip_id = p.id
         ) SELECT id FROM a WHERE parent_trip_id IS NULL
       `);
-      const [nextRoot] = changes.parentTripId === null
-        ? [{ id }]
-        : await tx.execute(sql`
+      const [nextRoot] =
+        changes.parentTripId === null
+          ? [{ id }]
+          : await tx.execute(sql`
           WITH RECURSIVE a AS (
             SELECT id, parent_trip_id FROM trips WHERE id = ${changes.parentTripId}
             UNION ALL SELECT p.id, p.parent_trip_id FROM trips p JOIN a ON a.parent_trip_id = p.id
@@ -81,18 +82,26 @@ export async function updateTripWithRevision(
           LIMIT 1
         `);
         if (crossing.length) {
-          return { status: 'invalid', reason: 'Disconnect or reorganize cross-trip Legs before moving to another trip family' };
+          return {
+            status: 'invalid',
+            reason: 'Disconnect or reorganize cross-trip Legs before moving to another trip family',
+          };
         }
       }
     }
-    if (changes.isArchived === false && current.parentTripId && changes.parentTripId === undefined) {
+    if (
+      changes.isArchived === false &&
+      current.parentTripId &&
+      changes.parentTripId === undefined
+    ) {
       const archivedAncestors = await tx.execute(sql`
         WITH RECURSIVE a AS (
           SELECT id, parent_trip_id, is_archived FROM trips WHERE id = ${current.parentTripId}
           UNION ALL SELECT p.id, p.parent_trip_id, p.is_archived FROM trips p JOIN a ON a.parent_trip_id = p.id
         ) SELECT 1 FROM a WHERE is_archived LIMIT 1
       `);
-      if (archivedAncestors.length) return { status: 'invalid', reason: 'Restore parent trips first' };
+      if (archivedAncestors.length)
+        return { status: 'invalid', reason: 'Restore parent trips first' };
     }
     const start =
       changes.manualStartDate === undefined ? current.manualStartDate : changes.manualStartDate;

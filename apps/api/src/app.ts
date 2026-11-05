@@ -707,8 +707,12 @@ export function buildApp(store?: AtlasStore) {
       }
       const validZone = (zone: string): boolean => {
         if (!/^(?:[A-Za-z_+-]+(?:\/[A-Za-z0-9_+-]+)+|UTC)$/.test(zone)) return false;
-        try { new Intl.DateTimeFormat('en', { timeZone: zone }); return true; }
-        catch { return false; }
+        try {
+          new Intl.DateTimeFormat('en', { timeZone: zone });
+          return true;
+        } catch {
+          return false;
+        }
       };
       for (const zone of [changes.departureTimeZone, changes.arrivalTimeZone]) {
         if (zone != null && !validZone(zone)) {
@@ -722,8 +726,13 @@ export function buildApp(store?: AtlasStore) {
         const end = changes[`${key}RangeEnd`];
         if (start !== undefined || end !== undefined || precision === 'range') {
           if (precision === 'range') {
-            if (!start || !end || !localTimestamp.test(start) ||
-                !localTimestamp.test(end) || start > end) {
+            if (
+              !start ||
+              !end ||
+              !localTimestamp.test(start) ||
+              !localTimestamp.test(end) ||
+              start > end
+            ) {
               return reply.code(400).send({ error: 'Invalid local time range' });
             }
           } else if (start != null || end != null) {
