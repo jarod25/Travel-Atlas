@@ -50,6 +50,44 @@ function urlFor(view: View, tripId: string | null, dayId: string | null): string
   return '/trips/' + tripId + (dayId ? '?day=' + encodeURIComponent(dayId) : '');
 }
 
+function TripDateEditor({ trip, disabled, onSave }: {
+  trip: Trip;
+  disabled: boolean;
+  onSave: (changes: { manualStartDate: string | null; manualEndDate: string | null }) => void;
+}) {
+  const [start, setStart] = useState(trip.manualStartDate ?? '');
+  const [end, setEnd] = useState(trip.manualEndDate ?? '');
+  const [invalid, setInvalid] = useState(false);
+  useEffect(() => {
+    setStart(trip.manualStartDate ?? '');
+    setEnd(trip.manualEndDate ?? '');
+    setInvalid(false);
+  }, [trip.id, trip.revision, trip.manualStartDate, trip.manualEndDate]);
+  return (
+    <details className="trip-dates">
+      <summary>Edit dates</summary>
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        if (start && end && start > end) { setInvalid(true); return; }
+        setInvalid(false);
+        onSave({ manualStartDate: start || null, manualEndDate: end || null });
+      }}>
+        <label>
+          Start date override (optional)
+          <input type="date" value={start} disabled={disabled} onChange={(event) => setStart(event.target.value)} />
+        </label>
+        <label>
+          End date override (optional)
+          <input type="date" value={end} disabled={disabled} onChange={(event) => setEnd(event.target.value)} />
+        </label>
+        <p className="muted">Leave empty to use dates calculated from recorded days and subtrips.</p>
+        {invalid && <p role="alert">End date cannot be before start date.</p>}
+        <button type="submit" disabled={disabled}>Save trip dates</button>
+      </form>
+    </details>
+  );
+}
+
 export function App() {
   const addVisitRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>(() => readLocation().view);
@@ -1281,34 +1319,11 @@ export function App() {
                       Open timeline
                     </button>
                   )}
-                  <button
-                    onClick={() => {
-                      const start = window.prompt(
-                        'Override start date (YYYY-MM-DD, blank = automatic)',
-                        trip.manualStartDate ?? '',
-                      );
-                      if (start === null) return;
-                      const end = window.prompt(
-                        'Override end date (YYYY-MM-DD, blank = automatic)',
-                        trip.manualEndDate ?? '',
-                      );
-                      if (end === null) return;
-                      if (
-                        (start && !/^\d{4}-\d{2}-\d{2}$/.test(start)) ||
-                        (end && !/^\d{4}-\d{2}-\d{2}$/.test(end))
-                      ) {
-                        setError('Use YYYY-MM-DD or leave blank.');
-                        return;
-                      }
-                      void changeTrip(trip, {
-                        manualStartDate: start || null,
-                        manualEndDate: end || null,
-                      });
-                    }}
-                    disabled={pending}
-                  >
-                    Edit dates
-                  </button>
+                  <TripDateEditor
+                    trip={trip}
+                    disabled={pending || trip.isArchived || trip.archivedByParent}
+                    onSave={(dates) => void changeTrip(trip, dates)}
+                  />
                   <label>
                     Parent trip
                     <select
