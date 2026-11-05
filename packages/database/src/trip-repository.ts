@@ -52,6 +52,48 @@ export async function updateTripWithRevision(
         return { status: 'invalid', reason: 'Restore parent ancestors before moving a trip' };
       }
     }
+    if (changes.parentTripId !== undefined && changes.parentTripId !== current.parentTripId) {
+      const [previousRoot] = await tx.execute(sql`
+        WITH RECURSIVE a AS (
+          SELECT id, parent_trip_id FROM trips WHERE id = ${id}
+          UNION ALL SELECT p.id, p.parent_trip_id FROM trips p JOIN a ON a.parent_trip_id = p.id
+        ) SELECT id FROM a WHERE parent_trip_id IS NULL
+      `);
+      const [nextRoot] = changes.parentTripId === null
+        ? [{ id }]
+        : await tx.execute(sql`
+          WITH RECURSIVE a AS (
+            SELECT id, parent_trip_id FROM trips WHERE id = ${changes.parentTripId}
+            UNION ALL SELECT p.id, p.parent_trip_id FROM trips p JOIN a ON a.parent_trip_id = p.id
+          ) SELECT id FROM a WHERE parent_trip_id IS NULL
+        `);
+      if (previousRoot?.id !== nextRoot?.id) {
+        const crossing = await tx.execute(sql`
+          WITH RECURSIVE subtree AS (
+            SELECT id FROM trips WHERE id = ${id}
+            UNION ALL SELECT t.id FROM trips t JOIN subtree s ON t.parent_trip_id = s.id
+          )
+          SELECT 1 FROM legs l
+          JOIN visits v1 ON v1.id = l.from_visit_id
+          JOIN visits v2 ON v2.id = l.to_visit_id
+          WHERE (v1.trip_id IN (SELECT id FROM subtree)) <>
+                (v2.trip_id IN (SELECT id FROM subtree))
+          LIMIT 1
+        `);
+        if (crossing.length) {
+          return { status: 'invalid', reason: 'Disconnect or reorganize cross-trip Legs before moving to another trip family' };
+        }
+      }
+    }
+    if (changes.isArchived === false && current.parentTripId && changes.parentTripId === undefined) {
+      const archivedAncestors = await tx.execute(sql`
+        WITH RECURSIVE a AS (
+          SELECT id, parent_trip_id, is_archived FROM trips WHERE id = ${current.parentTripId}
+          UNION ALL SELECT p.id, p.parent_trip_id, p.is_archived FROM trips p JOIN a ON a.parent_trip_id = p.id
+        ) SELECT 1 FROM a WHERE is_archived LIMIT 1
+      `);
+      if (archivedAncestors.length) return { status: 'invalid', reason: 'Restore parent trips first' };
+    }
     const start =
       changes.manualStartDate === undefined ? current.manualStartDate : changes.manualStartDate;
     const end = changes.manualEndDate === undefined ? current.manualEndDate : changes.manualEndDate;
