@@ -535,7 +535,7 @@ export function App() {
     if (!tripId || !selectedDay || !followingDay) return;
     confirmAction(
       'Connect days',
-      'Connect the last Visit of this day to the first of the next day?',
+      'Create an Unknown draft Leg between the last Visit of this day and the first Visit of the next? Confirm only if these days should be linked.',
       'Connect',
       performConnectToFollowingDay,
     );
