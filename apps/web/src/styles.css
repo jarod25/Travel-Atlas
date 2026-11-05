@@ -750,3 +750,27 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
     min-width: 0;
   }
 }
+
+.visit-place-editor {
+  width: 100%;
+  max-width: 440px;
+  border-top: 1px solid #dae7ed;
+  padding-top: 12px;
+}
+.visit-place-editor summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #27556c;
+}
+.visit-place-editor[open] {
+  display: grid;
+  gap: 10px;
+}
+.visit-place-editor input,
+.visit-place-editor select {
+  width: 100%;
+}
+.visit-place-editor p {
+  margin: 0;
+  font-size: 0.82rem;
+}
