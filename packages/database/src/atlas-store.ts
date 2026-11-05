@@ -73,6 +73,7 @@ export interface AtlasStore {
     placeId: string | null,
   ): Promise<VisitPlaceEditResult>;
   getExplore(): Promise<unknown>;
+  getLegEndpointCoordinates(legId: string): Promise<{ from: [number, number] | null; to: [number, number] | null } | null>;
   connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
   disconnectDays(
     tripId: string,
@@ -337,6 +338,24 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         }
         return { status: 'updated' as const, place: updated };
       }),
+    getLegEndpointCoordinates: async (legId) => {
+      const [row] = await db.execute(sql`
+        SELECT
+          ST_X(p1.location) AS from_lon, ST_Y(p1.location) AS from_lat,
+          ST_X(p2.location) AS to_lon, ST_Y(p2.location) AS to_lat
+        FROM legs l
+        JOIN visits v1 ON l.from_visit_id = v1.id
+        JOIN visits v2 ON l.to_visit_id = v2.id
+        LEFT JOIN places p1 ON p1.id = v1.place_id
+        LEFT JOIN places p2 ON p2.id = v2.place_id
+        WHERE l.id = ${legId} AND l.is_current = true
+      `);
+      if (!row) return null;
+      return {
+        from: row.from_lon === null || row.from_lat === null ? null : [Number(row.from_lon), Number(row.from_lat)],
+        to: row.to_lon === null || row.to_lat === null ? null : [Number(row.to_lon), Number(row.to_lat)],
+      };
+    },
     addVisit: async (tripId, dayId, placeId) => {
       return appendVisitToDay(db, { tripId, tripDayId: dayId, placeId });
     },

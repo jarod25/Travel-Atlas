@@ -98,6 +98,7 @@ export function App() {
   const [arrivalTime, setArrivalTime] = useState('');
   const [departureZone, setDepartureZone] = useState('');
   const [arrivalZone, setArrivalZone] = useState('');
+  const [suggestedZones, setSuggestedZones] = useState<{ departure: string[]; arrival: string[] } | null>(null);
   const [departurePrecision, setDeparturePrecision] = useState<
     'exact' | 'approximate' | 'range' | 'unknown'
   >('unknown');
@@ -396,6 +397,16 @@ export function App() {
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
   }, [selectedLeg?.id, selectedLeg?.revision, selectedDay?.localDate, timeline?.visits]);
 
+  useEffect(() => {
+    let active = true;
+    setSuggestedZones(null);
+    if (selectedLeg?.id) {
+      atlasApi.suggestLegTimeZones(selectedLeg.id).then((suggestions) => {
+        if (active) setSuggestedZones(suggestions);
+      }).catch(() => { if (active) setSuggestedZones(null); });
+    }
+    return () => { active = false; };
+  }, [selectedLeg?.id]);
   const displayed = useMemo(
     () =>
       visibleFeatures(features, {
@@ -1720,6 +1731,11 @@ export function App() {
                           placeholder="Europe/Paris"
                           onChange={(e) => setDepartureZone(e.target.value)}
                         />
+                        {suggestedZones?.departure.map((zone) => (
+                          <button key={zone} type="button" disabled={dayReadOnly} onClick={() => setDepartureZone(zone)}>
+                            Use suggested departure zone: {zone}
+                          </button>
+                        ))}
                         <label htmlFor="departure-precision">Departure precision</label>
                         <select
                           id="departure-precision"
@@ -1777,6 +1793,11 @@ export function App() {
                           placeholder="Asia/Tokyo"
                           onChange={(e) => setArrivalZone(e.target.value)}
                         />
+                        {suggestedZones?.arrival.map((zone) => (
+                          <button key={zone} type="button" disabled={dayReadOnly} onClick={() => setArrivalZone(zone)}>
+                            Use suggested arrival zone: {zone}
+                          </button>
+                        ))}
                         <label htmlFor="arrival-precision">Arrival precision</label>
                         <select
                           id="arrival-precision"

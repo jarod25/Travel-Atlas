@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { find as findTimeZones } from 'geo-tz';
 import type { AtlasStore } from '@travel-atlas/database';
 
 const uuid = { type: 'string', format: 'uuid' } as const;
@@ -550,6 +551,31 @@ export function buildApp(store?: AtlasStore) {
     },
   );
 
+  app.get<{ Params: { legId: string } }>(
+    '/api/v1/legs/:legId/time-zone-suggestions',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['legId'],
+          properties: { legId: uuid },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const positions = await store.getLegEndpointCoordinates(request.params.legId);
+      if (!positions) return reply.code(404).send({ error: 'Current Leg not found' });
+      const suggest = (point: [number, number] | null) =>
+        point ? findTimeZones(point[1], point[0]) : [];
+      return {
+        departure: suggest(positions.from),
+        arrival: suggest(positions.to),
+        source: 'recorded-place-coordinates',
+        confirmed: false,
+      };
+    },
+  );
   app.patch<{
     Params: { legId: string };
     Body: {

@@ -168,6 +168,10 @@ export const atlasApi = {
     request<ArchivedVisitRow[]>(`/trips/${id}/days/${day}/archived-visits`),
   restoreVisit: (id: string, day: string, visit: string) =>
     post<unknown>(`/trips/${id}/days/${day}/visits/${visit}/restore`, {}),
+  suggestLegTimeZones: (id: string) =>
+    request<{ departure: string[]; arrival: string[]; source: string; confirmed: false }>(
+      `/legs/${id}/time-zone-suggestions`,
+    ),
   updateLeg: (
     id: string,
     revision: number,
