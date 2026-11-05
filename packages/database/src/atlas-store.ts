@@ -238,19 +238,33 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         ),
       };
     },
-    listPlaces: async (search) =>
-      db
-        .select({
-          id: places.id,
-          revision: places.revision,
-          name: places.name,
-          location: places.location,
-          locationConfidence: places.locationConfidence,
-        })
+    listPlaces: async (search) => {
+      const term = search.trim();
+      const columns = {
+        id: places.id,
+        revision: places.revision,
+        name: places.name,
+        location: places.location,
+        locationConfidence: places.locationConfidence,
+      };
+      if (!term) return db.select(columns).from(places).orderBy(asc(places.name)).limit(30);
+
+      // Normalize accents, spaces and punctuation while preserving non-Latin
+      // letters (for example, Japanese Place names).
+      const normalized = sql<string>`trim(regexp_replace(lower(unaccent(${places.name})), '[[:space:][:punct:]]+', ' ', 'g'))`;
+      const input = sql<string>`trim(regexp_replace(lower(unaccent(${term})), '[[:space:][:punct:]]+', ' ', 'g'))`;
+      const similarityScore = sql<number>`similarity(${normalized}, ${input})`;
+      return db
+        .select(columns)
         .from(places)
-        .where(sql`${places.name} ILIKE ${'%' + search + '%'}`)
-        .orderBy(asc(places.name))
-        .limit(30),
+        .where(sql`${normalized} LIKE '%' || ${input} || '%' OR ${similarityScore} >= 0.3`)
+        .orderBy(
+          sql`CASE WHEN ${normalized} = ${input} THEN 0 WHEN ${normalized} LIKE ${input} || '%' THEN 1 ELSE 2 END`,
+          sql`${similarityScore} DESC`,
+          asc(places.name),
+        )
+        .limit(30);
+    },
     createPlace: async (name) => {
       const [place] = await db.insert(places).values({ name }).returning();
       return place;
