@@ -26,10 +26,7 @@ export async function updateTripWithRevision(
     if (current.revision !== expectedRevision) {
       return { status: 'conflict', currentRevision: current.revision };
     }
-    if (
-      changes.startDateOverride !== undefined ||
-      changes.endDateOverride !== undefined
-    ) {
+    if (changes.startDateOverride !== undefined || changes.endDateOverride !== undefined) {
       const [bounds] = await tx
         .select({
           start: sql<string | null>`min(${tripDays.localDate})::text`,
@@ -37,12 +34,14 @@ export async function updateTripWithRevision(
         })
         .from(tripDays)
         .where(and(eq(tripDays.tripId, id), eq(tripDays.isArchived, false)));
-      const start = (changes.startDateOverride === undefined
-        ? current.startDateOverride
-        : changes.startDateOverride) ?? bounds.start;
-      const end = (changes.endDateOverride === undefined
-        ? current.endDateOverride
-        : changes.endDateOverride) ?? bounds.end;
+      const start =
+        (changes.startDateOverride === undefined
+          ? current.startDateOverride
+          : changes.startDateOverride) ?? bounds.start;
+      const end =
+        (changes.endDateOverride === undefined
+          ? current.endDateOverride
+          : changes.endDateOverride) ?? bounds.end;
       if (start && end && start > end) return { status: 'invalid_dates' };
     }
     const [trip] = await tx
