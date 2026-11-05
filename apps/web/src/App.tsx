@@ -175,7 +175,7 @@ export function App() {
     setEditedDayDate(selectedDay?.localDate ?? '');
   }, [selectedDay?.id, selectedDay?.revision]);
   const outgoingCrossDay = timeline?.crossDayLegs.find((leg) =>
-    timeline.visits.some((visit) => visit.id === leg.fromVisitId),
+    timeline?.visits.some((visit) => visit.id === leg.fromVisitId),
   );
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = [...(timeline?.legs ?? []), ...(timeline?.crossDayLegs ?? [])].find(
@@ -831,7 +831,7 @@ export function App() {
                       <div className="visit-list">
                         {timeline?.crossDayLegs
                           .filter((leg) =>
-                            timeline.visits.some((visit) => visit.id === leg.toVisitId),
+                            timeline?.visits.some((visit) => visit.id === leg.toVisitId),
                           )
                           .map((leg) => (
                             <button
