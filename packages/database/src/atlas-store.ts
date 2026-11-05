@@ -12,6 +12,7 @@ import {
   archiveVisitFromDay,
   reassignVisitPlace,
   reorderVisitsInDay,
+  restoreVisitToDay,
 } from './visit-repository.js';
 import type { VisitPlaceEditResult } from './visit-repository.js';
 import { legs, places, tripDays, trips, visits } from './schema.js';
@@ -62,6 +63,8 @@ export interface AtlasStore {
   addVisit(tripId: string, dayId: string, placeId: string | null): Promise<unknown>;
   reorderVisits(tripId: string, dayId: string, visitIds: string[]): Promise<unknown>;
   archiveVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
+  listArchivedVisits(tripId: string, dayId: string): Promise<unknown[]>;
+  restoreVisit(tripId: string, dayId: string, visitId: string): Promise<unknown>;
   editVisitPlace(
     tripId: string,
     dayId: string,
@@ -293,6 +296,29 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         tripDayId: dayId,
         visitId,
       }),
+    listArchivedVisits: (tripId, dayId) =>
+      db
+        .select({
+          id: visits.id,
+          position: visits.position,
+          revision: visits.revision,
+          placeId: visits.placeId,
+          placeName: places.name,
+          placeLocation: places.location,
+          isArchived: visits.isArchived,
+        })
+        .from(visits)
+        .leftJoin(places, eq(visits.placeId, places.id))
+        .where(
+          and(
+            eq(visits.tripId, tripId),
+            eq(visits.tripDayId, dayId),
+            eq(visits.isArchived, true),
+          ),
+        )
+        .orderBy(asc(visits.position)),
+    restoreVisit: (tripId, dayId, visitId) =>
+      restoreVisitToDay(db, { tripId, tripDayId: dayId, visitId }),
     editVisitPlace: (tripId, dayId, visitId, revision, placeId) =>
       reassignVisitPlace(db, {
         tripId,
