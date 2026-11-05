@@ -361,7 +361,11 @@ export function App() {
       await loadTrips();
       setTripName('');
       navigate('editor', trip.id);
-      notifications.show({ title: 'Trip created', message: title, color: 'teal' });
+      notifications.show({
+        title: 'Trip created',
+        message: title,
+        color: 'teal',
+      });
     });
   }
   async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean }) {
@@ -421,7 +425,11 @@ export function App() {
       await loadDays(tripId);
       setDayId(created.id);
       setDayDate('');
-      notifications.show({ title: 'Day created', message: 'Day saved.', color: 'teal' });
+      notifications.show({
+        title: 'Day created',
+        message: 'Day saved.',
+        color: 'teal',
+      });
     });
   }
   async function toggleDayArchive() {
@@ -460,7 +468,11 @@ export function App() {
     await execute(async () => {
       await atlasApi.editDay(tripId, dayId, selectedDay.revision, editedDayDate || null);
       await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId)]);
-      notifications.show({ title: 'Day date saved', message: 'Changes saved.', color: 'teal' });
+      notifications.show({
+        title: 'Day date saved',
+        message: 'Changes saved.',
+        color: 'teal',
+      });
     });
   }
 
@@ -561,7 +573,11 @@ export function App() {
       );
       setPlaces((previous) => previous.map((place) => (place.id === updated.id ? updated : place)));
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
-      notifications.show({ title: 'Coordinates saved', message: 'Place updated.', color: 'teal' });
+      notifications.show({
+        title: 'Coordinates saved',
+        message: 'Place updated.',
+        color: 'teal',
+      });
     });
   }
 
@@ -570,7 +586,11 @@ export function App() {
     await execute(async () => {
       await atlasApi.addVisit(tripId, dayId, placeId || null);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
-      notifications.show({ title: 'Visit added', message: 'Visit saved.', color: 'teal' });
+      notifications.show({
+        title: 'Visit added',
+        message: 'Visit saved.',
+        color: 'teal',
+      });
     });
   }
   async function moveVisit(index: number, direction: -1 | 1) {
@@ -582,7 +602,11 @@ export function App() {
     await execute(async () => {
       await atlasApi.reorder(tripId, dayId, next);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
-      notifications.show({ title: 'Visit order saved', message: 'Timeline updated.', color: 'teal' });
+      notifications.show({
+        title: 'Visit order saved',
+        message: 'Timeline updated.',
+        color: 'teal',
+      });
     });
   }
   async function saveLeg() {
@@ -603,7 +627,11 @@ export function App() {
         arrivalTimeConfidence: arrivalCertainty,
       });
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
-      notifications.show({ title: 'Leg saved', message: 'Travel details updated.', color: 'teal' });
+      notifications.show({
+        title: 'Leg saved',
+        message: 'Travel details updated.',
+        color: 'teal',
+      });
     });
   }
 
@@ -626,7 +654,11 @@ export function App() {
         visitPlaceId || null,
       );
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
-      notifications.show({ title: 'Visit place saved', message: 'Visit updated.', color: 'teal' });
+      notifications.show({
+        title: 'Visit place saved',
+        message: 'Visit updated.',
+        color: 'teal',
+      });
     });
   }
 
@@ -635,7 +667,11 @@ export function App() {
     await execute(async () => {
       await atlasApi.restoreVisit(tripId, dayId, visit.id);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
-      notifications.show({ title: 'Visit restored', message: 'Visit active again.', color: 'teal' });
+      notifications.show({
+        title: 'Visit restored',
+        message: 'Visit active again.',
+        color: 'teal',
+      });
     });
   }
 
