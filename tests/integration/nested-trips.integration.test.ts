@@ -4,7 +4,7 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { createAtlasStore } from '../../packages/database/src/atlas-store';
-import { trips, tripDays } from '../../packages/database/src/schema';
+import { trips } from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL must point to a disposable integration-test database.');
