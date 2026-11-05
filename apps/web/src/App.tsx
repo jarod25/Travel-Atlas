@@ -475,7 +475,7 @@ export function App() {
     if (!tripId) return;
     await execute(async () => {
       const created = await atlasApi.addDay(tripId, dayDate || null);
-      await loadDays(tripId);
+      await Promise.all([loadDays(tripId), loadTrips()]);
       setDayId(created.id);
       setDayDate('');
       notifications.show({
@@ -508,7 +508,7 @@ export function App() {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadDays(tripId), loadTrips(), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Day saved',
         message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',
@@ -520,7 +520,7 @@ export function App() {
     if (!tripId || !dayId || !selectedDay) return;
     await execute(async () => {
       await atlasApi.editDay(tripId, dayId, selectedDay.revision, editedDayDate || null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId)]);
+      await Promise.all([loadDays(tripId), loadTrips(), loadTimeline(tripId, dayId)]);
       notifications.show({
         title: 'Day date saved',
         message: 'Changes saved.',
