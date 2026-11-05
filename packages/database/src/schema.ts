@@ -153,9 +153,15 @@ export const legs = pgTable(
   'legs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    tripId: uuid('trip_id').notNull().references(() => trips.id),
-    fromVisitId: uuid('from_visit_id').notNull().references(() => visits.id),
-    toVisitId: uuid('to_visit_id').notNull().references(() => visits.id),
+    tripId: uuid('trip_id')
+      .notNull()
+      .references(() => trips.id),
+    fromVisitId: uuid('from_visit_id')
+      .notNull()
+      .references(() => visits.id),
+    toVisitId: uuid('to_visit_id')
+      .notNull()
+      .references(() => visits.id),
     isCurrent: boolean('is_current').notNull().default(true),
     revision: integer('revision').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

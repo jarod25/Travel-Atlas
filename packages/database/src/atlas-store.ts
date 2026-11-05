@@ -256,7 +256,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           geometryConfidence: legs.geometryConfidence,
         })
         .from(legs)
-        .where(and(eq(legs.isCurrent, true), sql`(${legs.tripId} = ${tripId} OR EXISTS (SELECT 1 FROM visits v WHERE v.id = ${legs.toVisitId} AND v.trip_id = ${tripId}))`));
+        .where(
+          and(
+            eq(legs.isCurrent, true),
+            sql`(${legs.tripId} = ${tripId} OR EXISTS (SELECT 1 FROM visits v WHERE v.id = ${legs.toVisitId} AND v.trip_id = ${tripId}))`,
+          ),
+        );
       const memberIds = new Set(ordered.map((visit) => visit.id));
       return {
         day,
