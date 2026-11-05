@@ -34,7 +34,6 @@ jobs:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prettier --write tests/e2e/responsive.spec.ts && git diff -- tests/e2e/responsive.spec.ts
-      - run: pnpm exec prettier --write apps/web/src/App.tsx && git diff -- apps/web/src/App.tsx
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
