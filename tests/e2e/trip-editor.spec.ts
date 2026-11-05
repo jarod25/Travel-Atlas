@@ -138,3 +138,49 @@ test('Empty-state layout keeps page footer at bottom and editor aligned with Exp
   expect(Math.abs(editor!.x - explore!.x)).toBeLessThanOrEqual(2);
   expect(Math.abs(editor!.width - explore!.width)).toBeLessThanOrEqual(2);
 });
+
+test('Connected days expose the same editable Leg on both timelines', async ({ page, request }) => {
+  const title = `Synthetic cross-day trip ${Date.now()}`;
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trips' })
+    .click();
+  await page.getByLabel('New trip').fill(title);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  const trips = await (await request.get('/api/v1/trips')).json();
+  const trip = trips.find((item: { title: string }) => item.title === title);
+  expect(trip?.id).toBeTruthy();
+
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.locator('.day-tabs button')).toHaveCount(1);
+  await page.getByRole('button', { name: '+ Add visit' }).click();
+  await expect(page.locator('.visit-row')).toHaveCount(1);
+
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.locator('.day-tabs button')).toHaveCount(2);
+  await page.getByRole('button', { name: '+ Add visit' }).click();
+  await expect(page.locator('.visit-row')).toHaveCount(1);
+
+  const days = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
+  await page.locator('.day-tabs button').first().click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Connect to next day' }).click();
+  const timelineUrl = `/api/v1/trips/${trip.id}/days/${days[0].id}/timeline`;
+  await expect
+    .poll(async () => {
+      const timeline = await (await request.get(timelineUrl)).json();
+      return timeline.crossDayLegs.length;
+    })
+    .toBe(1);
+  const first = await (await request.get(timelineUrl)).json();
+  const legId = first.crossDayLegs[0].id;
+  const link = page.locator(`.cross-day-leg[data-leg-id="${legId}"]`);
+  await expect(link).toContainText('To next day');
+  await link.click();
+  await expect(page.locator('#leg-transport')).toBeVisible();
+
+  await page.locator('.day-tabs button').nth(1).click();
+  const nextDayLink = page.locator(`.cross-day-leg[data-leg-id="${legId}"]`);
+  await expect(nextDayLink).toContainText('From previous day');
+});

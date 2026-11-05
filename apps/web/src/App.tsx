@@ -861,6 +861,23 @@ export function App() {
                     <>
                       {visitVisibility !== 'archived' && (
                         <div className="visit-list">
+                          {timeline?.crossDayLegs
+                            .filter((leg) =>
+                              timeline?.visits.some((visit) => visit.id === leg.toVisitId),
+                            )
+                            .map((leg) => (
+                              <button
+                                key={leg.id}
+                                className="leg-pill cross-day-leg"
+                                data-leg-id={leg.id}
+                                onClick={() => {
+                                  setSelectedLegId(leg.id);
+                                  setSelectedVisitId(null);
+                                }}
+                              >
+                                From previous day · {describeLeg(leg)} · Edit
+                              </button>
+                            ))}
                           {timeline?.visits.map((visit, index) => {
                             const incoming = timeline.legs.find(
                               (leg) => leg.toVisitId === visit.id,
@@ -919,6 +936,23 @@ export function App() {
                               </div>
                             );
                           })}
+                          {timeline?.crossDayLegs
+                            .filter((leg) =>
+                              timeline?.visits.some((visit) => visit.id === leg.fromVisitId),
+                            )
+                            .map((leg) => (
+                              <button
+                                key={leg.id}
+                                className="leg-pill cross-day-leg"
+                                data-leg-id={leg.id}
+                                onClick={() => {
+                                  setSelectedLegId(leg.id);
+                                  setSelectedVisitId(null);
+                                }}
+                              >
+                                To next day · {describeLeg(leg)} · Edit
+                              </button>
+                            ))}
                         </div>
                       )}
                       {visitVisibility !== 'active' && (
