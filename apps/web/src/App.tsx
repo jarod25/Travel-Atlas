@@ -68,6 +68,7 @@ export function App() {
   const [days, setDays] = useState<TripDay[]>([]);
   const [dayId, setDayId] = useState<string | null>(() => readLocation().dayId);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
+  const [nextDayHasVisit, setNextDayHasVisit] = useState(false);
   const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
   const [visitVisibility, setVisitVisibility] = useState<'active' | 'archived' | 'all'>('active');
   const [places, setPlaces] = useState<Place[]>([]);
@@ -311,6 +312,23 @@ export function App() {
   const outgoingCrossDay = timeline?.crossDayLegs.find((leg) =>
     timeline.visits.some((visit) => visit.id === leg.fromVisitId),
   );
+  const canSuggestDayConnection = (timeline?.visits.length ?? 0) > 0 && nextDayHasVisit;
+  useEffect(() => {
+    let active = true;
+    setNextDayHasVisit(false);
+    if (!tripId || !followingDay || followingDay.isArchived) return;
+    void atlasApi
+      .timeline(tripId, followingDay.id)
+      .then((result) => {
+        if (active) setNextDayHasVisit(result.visits.length > 0);
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(String(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [tripId, followingDay?.id, followingDay?.isArchived, dayId]);
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = [...(timeline?.legs ?? []), ...(timeline?.crossDayLegs ?? [])].find(
     (leg) => leg.id === selectedLegId,
@@ -538,7 +556,7 @@ export function App() {
     if (!tripId || !selectedDay || !followingDay) return;
     confirmAction(
       'Connect days',
-      'Connect the last Visit of this day to the first of the next day?',
+      'Create an Unknown draft Leg between the last Visit of this day and the first Visit of the next? Confirm only if these days should be linked.',
       'Connect',
       performConnectToFollowingDay,
     );
@@ -646,7 +664,7 @@ export function App() {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.addVisit(tripId, dayId, placeId || null);
-      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit added',
         message: 'Visit saved.',
@@ -727,7 +745,7 @@ export function App() {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.restoreVisit(tripId, dayId, visit.id);
-      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit restored',
         message: 'Visit active again.',
@@ -754,7 +772,7 @@ export function App() {
     await execute(async () => {
       await atlasApi.archiveVisit(tripId, dayId, visit.id);
       setSelectedVisitId(null);
-      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit archived',
         message: 'Visit history saved.',
@@ -1217,19 +1235,28 @@ export function App() {
                 followingDay &&
                 !followingDay.isArchived && (
                   <div className="connect-day">
-                    <span>
-                      {outgoingCrossDay
-                        ? 'The selected day is connected to the next day.'
-                        : 'Days are not linked automatically.'}
-                    </span>
                     {outgoingCrossDay ? (
-                      <button disabled={pending} onClick={() => void disconnectFromFollowingDay()}>
-                        Disconnect from next day
-                      </button>
+                      <>
+                        <span>The selected day is connected to the next day.</span>
+                        <button
+                          disabled={pending}
+                          onClick={() => void disconnectFromFollowingDay()}
+                        >
+                          Disconnect from next day
+                        </button>
+                      </>
+                    ) : canSuggestDayConnection ? (
+                      <>
+                        <span role="status">
+                          Suggested connection: this day's last Visit to the next day's first Visit.
+                          No movement is assumed until you confirm.
+                        </span>
+                        <button disabled={pending} onClick={() => void connectToFollowingDay()}>
+                          Review suggested connection
+                        </button>
+                      </>
                     ) : (
-                      <button disabled={pending} onClick={() => void connectToFollowingDay()}>
-                        Connect to next day
-                      </button>
+                      <span>No connection suggestion: both days need an active Visit.</span>
                     )}
                   </div>
                 )}
