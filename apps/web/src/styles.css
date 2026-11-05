@@ -122,6 +122,9 @@ p {
   margin: 0 auto;
   padding: 36px 30px;
 }
+.trips-page {
+  flex: 1;
+}
 .explore select,
 .editor-top select,
 .composer select,
@@ -232,6 +235,8 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
 }
 .editor {
   flex: 1;
+  width: min(1400px, 100%);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   padding: 24px 22px 0;
