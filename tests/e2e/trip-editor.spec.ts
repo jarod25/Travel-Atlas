@@ -366,7 +366,7 @@ test('Trip dates derive from active days and allow explicit reversible correctio
   );
   await page.locator('#edit-day-date').fill('2026-09-01');
   await page.getByRole('button', { name: 'Save date' }).click();
-  await expect(page.getByRole('alert')).toContainText('Trip period conflict');
+  await expect(page.locator('.trip-date-editor [role="alert"]')).toContainText('Trip period conflict');
 });
 
 test('Leg editor saves independent clock precision and an explicit date range', async ({
