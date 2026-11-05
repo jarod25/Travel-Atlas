@@ -599,11 +599,15 @@ export function buildApp(store?: AtlasStore) {
       departureLocalTime?: string | null;
       departureTimeZone?: string | null;
       departureTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      departureRangeStart?: string | null;
+      departureRangeEnd?: string | null;
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
       arrivalTimeZone?: string | null;
       arrivalTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      arrivalRangeStart?: string | null;
+      arrivalRangeEnd?: string | null;
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
     };
     Headers: { 'if-match'?: string };
@@ -653,6 +657,8 @@ export function buildApp(store?: AtlasStore) {
               type: 'string',
               enum: ['exact', 'approximate', 'range', 'unknown'],
             },
+            departureRangeStart: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            departureRangeEnd: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             departureTimeConfidence: {
               type: 'string',
               enum: ['confirmed', 'estimated', 'unknown'],
@@ -664,6 +670,8 @@ export function buildApp(store?: AtlasStore) {
               type: 'string',
               enum: ['exact', 'approximate', 'range', 'unknown'],
             },
+            arrivalRangeStart: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            arrivalRangeEnd: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             arrivalTimeConfidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
           },
         },
@@ -683,6 +691,10 @@ export function buildApp(store?: AtlasStore) {
         'departureLocalTime',
         'arrivalLocalDate',
         'arrivalLocalTime',
+        'departureRangeStart',
+        'departureRangeEnd',
+        'arrivalRangeStart',
+        'arrivalRangeEnd',
       ] as const) {
         if (changes[field] === '') changes[field] = null;
       }

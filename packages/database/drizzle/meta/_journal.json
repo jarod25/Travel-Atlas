@@ -134,6 +134,13 @@
       "when": 1793886000000,
       "tag": "0018_trip_hierarchy_and_time_precision",
       "breakpoints": false
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793911000000,
+      "tag": "0019_time_ranges",
+      "breakpoints": true
     }
   ]
 }

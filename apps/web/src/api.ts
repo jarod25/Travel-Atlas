@@ -49,11 +49,15 @@ export interface LegRow {
   departureLocalTime: string | null;
   departureTimeZone: string | null;
   departureTimePrecision: 'exact' | 'approximate' | 'range' | 'unknown';
+  departureRangeStart: string | null;
+  departureRangeEnd: string | null;
   departureTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   arrivalLocalDate: string | null;
   arrivalLocalTime: string | null;
   arrivalTimeZone: string | null;
   arrivalTimePrecision: 'exact' | 'approximate' | 'range' | 'unknown';
+  arrivalRangeStart: string | null;
+  arrivalRangeEnd: string | null;
   arrivalTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   movementConfidence: string;
   transportConfidence: string;
@@ -183,11 +187,15 @@ export const atlasApi = {
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
       departureTimeZone?: string | null;
       departureTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      departureRangeStart?: string | null;
+      departureRangeEnd?: string | null;
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
       arrivalTimeZone?: string | null;
       arrivalTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      arrivalRangeStart?: string | null;
+      arrivalRangeEnd?: string | null;
     },
   ) =>
     request<LegRow>(`/legs/${id}`, {

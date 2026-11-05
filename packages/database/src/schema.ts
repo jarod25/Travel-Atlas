@@ -173,6 +173,8 @@ export const legs = pgTable(
     departureLocalDate: date('departure_local_date', { mode: 'string' }),
     departureLocalTime: time('departure_local_time'),
     departureTimeZone: text('departure_time_zone'),
+    departureRangeStart: timestamp('departure_range_start', { mode: 'string' }),
+    departureRangeEnd: timestamp('departure_range_end', { mode: 'string' }),
     departureTimePrecision: text('departure_time_precision', {
       enum: ['exact', 'approximate', 'range', 'unknown'],
     })
@@ -184,6 +186,8 @@ export const legs = pgTable(
     arrivalLocalDate: date('arrival_local_date', { mode: 'string' }),
     arrivalLocalTime: time('arrival_local_time'),
     arrivalTimeZone: text('arrival_time_zone'),
+    arrivalRangeStart: timestamp('arrival_range_start', { mode: 'string' }),
+    arrivalRangeEnd: timestamp('arrival_range_end', { mode: 'string' }),
     arrivalTimePrecision: text('arrival_time_precision', {
       enum: ['exact', 'approximate', 'range', 'unknown'],
     })
@@ -246,6 +250,14 @@ export const legs = pgTable(
       'legs_arrival_precision_valid',
       sql`${table.arrivalTimePrecision} IN ('exact','approximate','range','unknown')`,
     ),
+    check('legs_departure_range_complete',
+      sql`(${table.departureRangeStart} IS NULL AND ${table.departureRangeEnd} IS NULL AND ${table.departureTimePrecision} <> 'range')
+      OR (${table.departureRangeStart} IS NOT NULL AND ${table.departureRangeEnd} IS NOT NULL AND ${table.departureTimePrecision} = 'range'
+      AND ${table.departureRangeStart} <= ${table.departureRangeEnd})`),
+    check('legs_arrival_range_complete',
+      sql`(${table.arrivalRangeStart} IS NULL AND ${table.arrivalRangeEnd} IS NULL AND ${table.arrivalTimePrecision} <> 'range')
+      OR (${table.arrivalRangeStart} IS NOT NULL AND ${table.arrivalRangeEnd} IS NOT NULL AND ${table.arrivalTimePrecision} = 'range'
+      AND ${table.arrivalRangeStart} <= ${table.arrivalRangeEnd})`),
     // The circular selected-version FK is enforced by migration 0004.
     unique('legs_trip_id_id_unique').on(table.tripId, table.id),
     index('legs_trip_idx').on(table.tripId),
