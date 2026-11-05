@@ -318,6 +318,22 @@ export function App() {
     [features, tripId, view, filterFrom, filterTo, filterMode, filterConfidence],
   );
 
+  const focusFeatures = useMemo(() => {
+    if (view !== 'editor') return displayed;
+    const bySelection = selectedVisitId
+      ? displayed.features.filter((feature) => feature.properties.visitId === selectedVisitId)
+      : selectedLegId
+        ? displayed.features.filter((feature) => feature.properties.legId === selectedLegId)
+        : [];
+    const byDay = dayId
+      ? displayed.features.filter((feature) => feature.properties.dayId === dayId)
+      : [];
+    return {
+      type: 'FeatureCollection' as const,
+      features: selectedVisitId || selectedLegId ? bySelection : byDay.length ? byDay : displayed.features,
+    };
+  }, [displayed, view, dayId, selectedVisitId, selectedLegId]);
+
   function openMapFeature(properties: Feature['properties']) {
     if (!properties.tripId) return;
     navigate('editor', properties.tripId, properties.dayId ?? null);
@@ -1312,6 +1328,8 @@ export function App() {
                     data={displayed}
                     label="Map of selected trip and its saved geometry"
                     onSelect={selectEditorMapFeature}
+                    fitData={focusFeatures}
+                    focusKey={`${tripId ?? ''}:${dayId ?? ''}:${selectedVisitId ?? ''}:${selectedLegId ?? ''}`}
                   />
                   {selectedLeg && (
                     <div className="details-panel leg-details">
