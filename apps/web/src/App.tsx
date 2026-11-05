@@ -7,7 +7,6 @@ import type {
   FeatureCollection,
   ArchivedVisitRow,
   Feature,
-  LegRow,
   Place,
   Timeline,
   Trip,
