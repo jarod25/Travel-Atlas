@@ -114,10 +114,10 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           manualEndDate: trips.manualEndDate,
           computedStartDate: sql<
             string | null
-          >`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MIN(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
+          >`(WITH RECURSIVE descendants AS (SELECT ${trips.id} AS id UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MIN(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
           computedEndDate: sql<
             string | null
-          >`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MAX(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
+          >`(WITH RECURSIVE descendants AS (SELECT ${trips.id} AS id UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MAX(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
           isArchived: trips.isArchived,
           revision: trips.revision,
           updatedAt: trips.updatedAt,
