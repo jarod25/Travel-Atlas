@@ -33,6 +33,7 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write apps/web/src/App.tsx tests/e2e/explore-filters.spec.ts && git diff -- apps/web/src/App.tsx tests/e2e/explore-filters.spec.ts
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
