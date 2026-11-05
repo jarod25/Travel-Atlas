@@ -86,8 +86,14 @@ describe('Cross-trip boundary connections', () => {
     expect(edge.isCurrent).toBe(false);
   });
   it('preserves intra-trip draft Legs when a parent Trip is archived and restored', async () => {
-    const [parent] = await db.insert(trips).values({ title: 'Synthetic archive parent' }).returning();
-    const [child] = await db.insert(trips).values({ title: 'Synthetic archive child', parentTripId: parent.id }).returning();
+    const [parent] = await db
+      .insert(trips)
+      .values({ title: 'Synthetic archive parent' })
+      .returning();
+    const [child] = await db
+      .insert(trips)
+      .values({ title: 'Synthetic archive child', parentTripId: parent.id })
+      .returning();
     tripIds.push(parent.id, child.id);
     const day = (await store.createDay(child.id, '2026-11-03')) as { id: string };
     await store.addVisit(child.id, day.id, null);
@@ -105,5 +111,4 @@ describe('Cross-trip boundary connections', () => {
     expect(after[0].isCurrent).toBe(true);
     expect(after[0].id).toBe(before[0].id);
   });
-
 });
