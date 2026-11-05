@@ -1334,7 +1334,7 @@ export function App() {
                           value={placeId}
                           onChange={(e) => setPlaceId(e.target.value)}
                         >
-                          <option value="">Unknown place (clear search)</option>
+                          <option value="">Unknown place</option>
                           {places.map((place) => (
                             <option key={place.id} value={place.id}>
                               {place.name ?? 'Unnamed place'}
@@ -1348,15 +1348,26 @@ export function App() {
                           + Add visit
                         </button>
                         {placeQuery.trim() && !placeId && (
-                          <button disabled={pending || dayReadOnly} onClick={() => void addPlace()}>
-                            Create new Place from this name
-                          </button>
-                        )}
-                        {!placeId && placeQuery.trim() && (
-                          <p className="muted">
-                            Select an existing Place or create one. Clear the search to record an
-                            Unknown place.
-                          </p>
+                          <>
+                            <button
+                              disabled={pending || dayReadOnly}
+                              onClick={() => void addPlace()}
+                            >
+                              Create new Place from this name
+                            </button>
+                            <button
+                              disabled={pending || dayReadOnly}
+                              onClick={() => {
+                                setPlaceQuery('');
+                                setPlaceId('');
+                              }}
+                            >
+                              Use unknown place
+                            </button>
+                            <p className="muted">
+                              Select a Place, create one, or record an unknown location.
+                            </p>
+                          </>
                         )}
                         <details className="coordinate-editor">
                           <summary>Coordinates (optional)</summary>

@@ -284,3 +284,20 @@ test('Add Visit reuses one field for Place lookup and explicit creation', async 
   await page.getByRole('button', { name: '+ Add visit' }).click();
   await expect(page.locator('.visit-row')).toContainText(placeName);
 });
+
+test('Unknown Place stays an explicit recoverable choice after typing a name', async ({ page }) => {
+  const tripTitle = `Synthetic unknown Place trip ${Date.now()}`;
+  await page.goto('/trips');
+  await page.getByLabel('New trip').fill(tripTitle);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.locator('.day-tabs button')).toHaveCount(1);
+
+  await page.locator('#place-search').fill('Unidentified stop');
+  await expect(page.getByRole('button', { name: '+ Add visit' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Use unknown place' }).click();
+  await expect(page.locator('#place-search')).toHaveValue('');
+  await expect(page.getByRole('button', { name: '+ Add visit' })).toBeEnabled();
+  await page.getByRole('button', { name: '+ Add visit' }).click();
+  await expect(page.locator('.visit-row')).toContainText('Unknown place');
+});
