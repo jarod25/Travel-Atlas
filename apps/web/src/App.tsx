@@ -1555,7 +1555,8 @@ export function App() {
                       <details className="visit-place-editor">
                         <summary>Change place</summary>
                         <p>
-                          Current place: <strong>{selectedVisit.placeName ?? 'Unknown place'}</strong>
+                          Current place:{' '}
+                          <strong>{selectedVisit.placeName ?? 'Unknown place'}</strong>
                         </p>
                         <label htmlFor="visit-place-search">Search an existing Place</label>
                         <input
