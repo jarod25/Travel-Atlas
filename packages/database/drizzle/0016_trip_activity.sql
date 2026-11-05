@@ -1,10 +1,10 @@
-ALTER TABLE trips ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp();
+ALTER TABLE trips ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 --> statement-breakpoint
-ALTER TABLE trip_days ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp();
+ALTER TABLE trip_days ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 --> statement-breakpoint
-ALTER TABLE visits ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp();
+ALTER TABLE visits ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 --> statement-breakpoint
-ALTER TABLE legs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp();
+ALTER TABLE legs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 --> statement-breakpoint
 CREATE FUNCTION atlas_update_activity_timestamp() RETURNS trigger AS $$
 BEGIN
