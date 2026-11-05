@@ -432,9 +432,11 @@ export function App() {
         title: 'Trip saved',
         message: changes.title
           ? 'Trip renamed successfully.'
-          : changes.isArchived
-            ? 'Trip archived.'
-            : 'Trip restored.',
+          : changes.startDateOverride !== undefined || changes.endDateOverride !== undefined
+            ? 'Trip date preferences saved.'
+            : changes.isArchived
+              ? 'Trip archived.'
+              : 'Trip restored.',
         color: 'teal',
       });
     });
