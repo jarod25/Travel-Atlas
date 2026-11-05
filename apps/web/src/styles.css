@@ -368,6 +368,13 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   margin: 0 0 0 23px;
   padding: 7px 12px;
 }
+.leg-schedule {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  margin-top: 3px;
+  white-space: normal;
+}
 .composer {
   background: #f4f8fa;
   border-radius: 12px;
