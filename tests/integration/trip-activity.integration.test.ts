@@ -17,7 +17,10 @@ beforeAll(async () => {
   await migrate(db, { migrationsFolder: 'packages/database/drizzle' });
 });
 afterAll(async () => {
-  for (const id of tripIds) await db.delete(trips).where(eq(trips.id, id));
+  for (const id of tripIds) {
+    await db.delete(legs).where(eq(legs.tripId, id));
+    await db.delete(trips).where(eq(trips.id, id));
+  }
   await store.close();
   await client.end();
 });
@@ -46,11 +49,11 @@ describe('Trip activity ordering', () => {
     const rows = (await store.listTrips(true)) as Array<{
       id: string;
       revision: number;
-      lastActivityAt: Date;
+      lastActivityAt: string;
     }>;
     const own = rows.filter((row) => tripIds.includes(row.id));
     expect(own[0].id).toBe(first.id);
-    expect(own[0].lastActivityAt).toBeInstanceOf(Date);
+    expect(typeof own[0].lastActivityAt).toBe('string');
     expect(own[0].revision).toBe(1);
     expect(own[1].id).toBe(second.id);
   });
