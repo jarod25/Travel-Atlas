@@ -120,3 +120,22 @@ Decisions deliberately deferred until a separate design review:
 
 Lot 4 routing proposals remain separate from evidence of journeys actually
 taken. Do not mark Lot 3 accepted before the manual acceptance above.
+
+## Leg clock precision
+
+Departure and arrival timestamps have independent source confidence and clock
+precision. The optional precision choices are:
+
+- Unspecified: the date or clock may be missing, and legacy recorded clock
+  values are **not** assumed exact after migration 0019.
+- Precise clock: an explicitly recorded date and HH:mm clock value, without
+  independently asserting source certainty.
+- Approximate clock: an explicitly recorded date and clock value preceded by
+  "around"; no tolerance interval is manufactured.
+- Range: two recorded date-and-clock endpoints, inclusive, including ranges
+  that cross midnight. The end cannot precede the beginning.
+
+The existing `confirmed / estimated / unknown` source confidence is retained
+independently. All clock values are local and do not imply a timezone or UTC
+instant. Missing times are not filled from Trip or Day dates. The UI may offer
+the selected Day date as an **editable suggestion** for intra-day Legs only.
