@@ -1139,19 +1139,25 @@ export function App() {
                 followingDay &&
                 !followingDay.isArchived && (
                   <div className="connect-day">
-                    <span>
-                      {outgoingCrossDay
-                        ? 'The selected day is connected to the next day.'
-                        : 'Days are not linked automatically.'}
-                    </span>
                     {outgoingCrossDay ? (
-                      <button disabled={pending} onClick={() => void disconnectFromFollowingDay()}>
-                        Disconnect from next day
-                      </button>
+                      <>
+                        <span>The selected day is connected to the next day.</span>
+                        <button disabled={pending} onClick={() => void disconnectFromFollowingDay()}>
+                          Disconnect from next day
+                        </button>
+                      </>
+                    ) : timeline?.visits.length && (followingDay.activeVisitCount ?? 0) > 0 ? (
+                      <>
+                        <span role="status">
+                          Suggested connection: this day's last Visit to the next day's first Visit.
+                          No movement is assumed until you confirm.
+                        </span>
+                        <button disabled={pending} onClick={() => void connectToFollowingDay()}>
+                          Review suggested connection
+                        </button>
+                      </>
                     ) : (
-                      <button disabled={pending} onClick={() => void connectToFollowingDay()}>
-                        Connect to next day
-                      </button>
+                      <span>No connection suggestion: both days need an active Visit.</span>
                     )}
                   </div>
                 )}
