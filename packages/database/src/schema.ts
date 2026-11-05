@@ -42,12 +42,17 @@ export const trips = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     title: text('title').notNull(),
+    parentTripId: uuid('parent_trip_id'),
+    manualStartDate: date('manual_start_date', { mode: 'string' }),
+    manualEndDate: date('manual_end_date', { mode: 'string' }),
     isArchived: boolean('is_archived').notNull().default(false),
     revision: integer('revision').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check('trips_title_nonempty', sql`length(btrim(${table.title})) > 0`),
+    check('trips_not_own_parent', sql`${table.parentTripId} IS NULL OR ${table.parentTripId} <> ${table.id}`),
+    check('trips_manual_date_range', sql`${table.manualStartDate} IS NULL OR ${table.manualEndDate} IS NULL OR ${table.manualStartDate} <= ${table.manualEndDate}`),
     check('trips_revision_positive', sql`${table.revision} > 0`),
   ],
 );
@@ -162,12 +167,14 @@ export const legs = pgTable(
     departureLocalDate: date('departure_local_date', { mode: 'string' }),
     departureLocalTime: time('departure_local_time'),
     departureTimeZone: text('departure_time_zone'),
+    departureTimePrecision: text('departure_time_precision', { enum: ['exact', 'approximate', 'range', 'unknown'] }).notNull().default('unknown'),
     departureTimeConfidence: text('departure_time_confidence', { enum: confidenceValues })
       .notNull()
       .default('unknown'),
     arrivalLocalDate: date('arrival_local_date', { mode: 'string' }),
     arrivalLocalTime: time('arrival_local_time'),
     arrivalTimeZone: text('arrival_time_zone'),
+    arrivalTimePrecision: text('arrival_time_precision', { enum: ['exact', 'approximate', 'range', 'unknown'] }).notNull().default('unknown'),
     arrivalTimeConfidence: text('arrival_time_confidence', { enum: confidenceValues })
       .notNull()
       .default('unknown'),
@@ -217,6 +224,8 @@ export const legs = pgTable(
       'legs_arrival_time_needs_date',
       sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
     ),
+    check('legs_departure_precision_valid', sql`${table.departureTimePrecision} IN ('exact','approximate','range','unknown')`),
+    check('legs_arrival_precision_valid', sql`${table.arrivalTimePrecision} IN ('exact','approximate','range','unknown')`),
     // The circular selected-version FK is enforced by migration 0004.
     unique('legs_trip_id_id_unique').on(table.tripId, table.id),
     index('legs_trip_idx').on(table.tripId),

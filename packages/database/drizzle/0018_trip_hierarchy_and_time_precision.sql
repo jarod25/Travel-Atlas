@@ -1,0 +1,10 @@
+ALTER TABLE trips ADD COLUMN parent_trip_id uuid REFERENCES trips(id) ON DELETE RESTRICT;
+ALTER TABLE trips ADD COLUMN manual_start_date date;
+ALTER TABLE trips ADD COLUMN manual_end_date date;
+ALTER TABLE trips ADD CONSTRAINT trips_not_own_parent CHECK (parent_trip_id IS NULL OR parent_trip_id <> id);
+ALTER TABLE trips ADD CONSTRAINT trips_manual_date_range CHECK (manual_start_date IS NULL OR manual_end_date IS NULL OR manual_start_date <= manual_end_date);
+CREATE INDEX trips_parent_idx ON trips(parent_trip_id);
+ALTER TABLE legs ADD COLUMN departure_time_precision text NOT NULL DEFAULT 'unknown';
+ALTER TABLE legs ADD COLUMN arrival_time_precision text NOT NULL DEFAULT 'unknown';
+ALTER TABLE legs ADD CONSTRAINT legs_departure_precision_valid CHECK (departure_time_precision IN ('exact','approximate','range','unknown'));
+ALTER TABLE legs ADD CONSTRAINT legs_arrival_precision_valid CHECK (arrival_time_precision IN ('exact','approximate','range','unknown'));
