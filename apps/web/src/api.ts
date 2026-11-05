@@ -15,6 +15,7 @@ export interface TripDay {
   position: number;
   revision: number;
   isArchived: boolean;
+  activeVisitCount?: number;
 }
 export interface Place {
   id: string;
