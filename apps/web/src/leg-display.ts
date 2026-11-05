@@ -19,11 +19,11 @@ export function describeLeg(leg: LegRow | undefined): string {
   const transport = leg.transportMode
     ? leg.transportMode.charAt(0).toUpperCase() + leg.transportMode.slice(1)
     : 'Transport unknown';
-  const movement =
-    leg.movementConfidence === 'unknown' ? 'Travel unknown' : `${leg.movementConfidence} travel`;
-  const geometry =
-    leg.geometryConfidence === 'unknown' ? 'Route unknown' : `${leg.geometryConfidence} route`;
-  return `${transport} · ${movement} · ${geometry}`;
+  const movement = leg.movementConfidence;
+  const geometry = leg.geometryConfidence;
+  const travelLabel = movement.charAt(0).toUpperCase() + movement.slice(1);
+  const routeLabel = geometry.charAt(0).toUpperCase() + geometry.slice(1);
+  return `${transport} · Travel: ${travelLabel} · Route: ${routeLabel}`;
 }
 
 export function describeLegTimes(leg: LegRow): string {

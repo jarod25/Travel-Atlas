@@ -36,7 +36,7 @@ describe('Leg timeline presentation', () => {
   });
 
   it('uses readable labels without changing the stored transport or certainty', () => {
-    expect(describeLeg(leg)).toBe('Train · confirmed travel · Route unknown');
+    expect(describeLeg(leg)).toBe('Train · Travel: Confirmed · Route: Unknown');
     expect(leg.transportMode).toBe('train');
   });
 });

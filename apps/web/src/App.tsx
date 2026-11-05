@@ -1222,7 +1222,12 @@ export function App() {
                                   setSelectedVisitId(null);
                                 }}
                               >
-                                <span>From previous day · {describeLeg(leg)} · Edit</span>
+                                <span className="leg-main">
+                                  <strong className="leg-summary">
+                                    From previous day · {describeLeg(leg)}
+                                  </strong>
+                                  <span className="leg-edit">Edit</span>
+                                </span>
                                 <small className="leg-schedule">{describeLegTimes(leg)}</small>
                               </button>
                             ))}
@@ -1242,7 +1247,12 @@ export function App() {
                                       setSelectedVisitId(null);
                                     }}
                                   >
-                                    <span>{describeLeg(incoming)} · Edit</span>
+                                    <span className="leg-main">
+                                      <strong className="leg-summary">
+                                        {describeLeg(incoming)}
+                                      </strong>
+                                      <span className="leg-edit">Edit</span>
+                                    </span>
                                     {incoming && (
                                       <small className="leg-schedule">
                                         {describeLegTimes(incoming)}
@@ -1307,7 +1317,12 @@ export function App() {
                                   setSelectedVisitId(null);
                                 }}
                               >
-                                <span>To next day · {describeLeg(leg)} · Edit</span>
+                                <span className="leg-main">
+                                  <strong className="leg-summary">
+                                    To next day · {describeLeg(leg)}
+                                  </strong>
+                                  <span className="leg-edit">Edit</span>
+                                </span>
                                 <small className="leg-schedule">{describeLegTimes(leg)}</small>
                               </button>
                             ))}

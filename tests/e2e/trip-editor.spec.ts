@@ -59,7 +59,10 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
       item.fromVisitId === second.id && item.toVisitId === first.id,
   );
   expect(targetLeg?.id).toBeTruthy();
-  await page.locator(`.leg-pill[data-leg-id="${targetLeg.id}"]`).click();
+  const editableLeg = page.locator(`.leg-pill[data-leg-id="${targetLeg.id}"]`);
+  await expect(editableLeg.locator('.leg-edit')).toHaveText('Edit');
+  await expect(editableLeg.locator('.leg-summary')).toContainText('Travel: Unknown');
+  await editableLeg.click();
   await expect(page.locator('#leg-transport')).toBeVisible();
   await page.locator('#leg-transport').selectOption('train');
   await page.locator('#leg-confidence').selectOption('confirmed');
