@@ -271,7 +271,9 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
   await modal.getByRole('button', { name: 'Save' }).click();
   await expect(
     page.locator('.trip-card').filter({
-      has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title} renamed$`) }),
+      has: page
+        .locator('.trip-card > strong')
+        .filter({ hasText: new RegExp(`^${title} renamed$`) }),
     }),
   ).toBeVisible();
 
