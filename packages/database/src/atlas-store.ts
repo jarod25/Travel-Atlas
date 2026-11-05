@@ -154,6 +154,16 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           .from(trips)
           .where(eq(trips.id, parentTripId));
         if (!parent || parent.isArchived) return null;
+        const archivedAncestors = await db.execute(sql`
+          WITH RECURSIVE lineage AS (
+            SELECT parent_trip_id, is_archived FROM trips WHERE id = ${parentTripId}
+            UNION ALL
+            SELECT t.parent_trip_id, t.is_archived FROM trips t
+            JOIN lineage l ON t.id = l.parent_trip_id
+          )
+          SELECT 1 FROM lineage WHERE is_archived = true LIMIT 1
+        `);
+        if (archivedAncestors.length) return null;
       }
       const [trip] = await db.insert(trips).values({ title, parentTripId }).returning();
       return trip;
@@ -162,7 +172,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const [trip] = await db.select().from(trips).where(eq(trips.id, id));
       if (!trip) return null;
       const dates = await db.execute(
-        sql`WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${id} UNION ALL SELECT child.id FROM trips child JOIN descendants d ON child.parent_trip_id = d.id) SELECT MIN(local_date)::text AS start_date, MAX(local_date)::text AS end_date FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants)`,
+        sql`WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${id} UNION ALL SELECT child.id FROM trips child JOIN descendants d ON child.parent_trip_id = d.id WHERE child.is_archived = false) SELECT MIN(local_date)::text AS start_date, MAX(local_date)::text AS end_date FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants)`,
       );
       return {
         ...trip,
