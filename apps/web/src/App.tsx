@@ -17,6 +17,7 @@ import type {
 import { MapCanvas } from './MapCanvas';
 import type { ColorMode } from './MapCanvas';
 import { emptyFeatures, visibleFeatures } from './map-data';
+import { describeLeg, describeLegTimes } from './leg-display';
 
 type View = 'explore' | 'trips' | 'editor';
 type MobilePanel = 'timeline' | 'map';
@@ -40,10 +41,6 @@ function urlFor(view: View, tripId: string | null, dayId: string | null): string
   if (view !== 'editor') return '/explore';
   if (!tripId) return '/editor';
   return '/trips/' + tripId + (dayId ? '?day=' + encodeURIComponent(dayId) : '');
-}
-function describeLeg(leg: LegRow | undefined): string {
-  if (!leg) return 'No connected travel leg';
-  return `${leg.transportMode ?? 'Transport unknown'} · ${leg.movementConfidence} travel · ${leg.geometryConfidence} route`;
 }
 
 export function App() {
@@ -1102,7 +1099,8 @@ export function App() {
                                   setSelectedVisitId(null);
                                 }}
                               >
-                                From previous day · {describeLeg(leg)} · Edit
+                                From previous day · <span>{describeLeg(leg)} · Edit</span>
+                                  <small className="leg-schedule">{describeLegTimes(leg)}</small>
                               </button>
                             ))}
                           {timeline?.visits.map((visit, index) => {
@@ -1121,7 +1119,10 @@ export function App() {
                                       setSelectedVisitId(null);
                                     }}
                                   >
-                                    {describeLeg(incoming)} · Edit
+                                    <span>{describeLeg(incoming)} · Edit</span>
+                                      {incoming && (
+                                        <small className="leg-schedule">{describeLegTimes(incoming)}</small>
+                                      )}
                                   </button>
                                 )}
                                 <div
@@ -1181,7 +1182,8 @@ export function App() {
                                   setSelectedVisitId(null);
                                 }}
                               >
-                                To next day · {describeLeg(leg)} · Edit
+                                To next day · <span>{describeLeg(leg)} · Edit</span>
+                                  <small className="leg-schedule">{describeLegTimes(leg)}</small>
                               </button>
                             ))}
                         </div>
