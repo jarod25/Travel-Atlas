@@ -427,7 +427,7 @@ export async function restoreVisitToDay(
     // Temporarily move active Visits beyond the occupied positions to avoid
     // transient conflicts with the partial unique index.
     const temporaryBase = active.length
-      ? Math.max(...active.map((visit) => visit.position)) + 1
+      ? Math.max(...active.map((visit) => visit.position)) + active.length + 2
       : 0;
     if (temporaryBase + active.length > 2147483647) {
       throw new Error('Visit positions exceed the database integer range');
