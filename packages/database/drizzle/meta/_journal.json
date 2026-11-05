@@ -134,6 +134,13 @@
       "when": 1793802600000,
       "tag": "0018_trip_date_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793803200000,
+      "tag": "0019_leg_time_precision",
+      "breakpoints": true
     }
   ]
 }
