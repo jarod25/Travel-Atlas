@@ -4,6 +4,7 @@ export interface Trip {
   id: string;
   title: string;
   parentTripId: string | null;
+  archivedByParent: boolean;
   manualStartDate: string | null;
   manualEndDate: string | null;
   computedStartDate: string | null;

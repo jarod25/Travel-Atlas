@@ -99,7 +99,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
   const db = drizzle(client);
 
   return {
-    listTrips: (includeArchived = false) => {
+    listTrips: async (includeArchived = false) => {
       // Aggregate activity without mutating the parent Trip from child-table
       // triggers, which could otherwise upgrade shared locks and deadlock.
       const activity = sql<string>`GREATEST(
@@ -108,7 +108,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         COALESCE((SELECT MAX(updated_at) FROM visits WHERE trip_id = ${trips.id}), ${trips.updatedAt}),
         COALESCE((SELECT MAX(updated_at) FROM legs WHERE trip_id = ${trips.id}), ${trips.updatedAt})
       )`;
-      return db
+      const rows = await db
         .select({
           id: trips.id,
           title: trips.title,
@@ -129,6 +129,20 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .from(trips)
         .where(includeArchived ? undefined : eq(trips.isArchived, false))
         .orderBy(sql`${activity} DESC`, asc(trips.title));
+      const hierarchy = await db.select({ id: trips.id, parentTripId: trips.parentTripId, archived: trips.isArchived }).from(trips);
+      const byId = new Map(hierarchy.map((item) => [item.id, item]));
+      const archivedByParent = (id: string): boolean => {
+        const seen = new Set<string>([id]);
+        let parent = byId.get(id)?.parentTripId;
+        while (parent && !seen.has(parent)) {
+          seen.add(parent);
+          const node = byId.get(parent);
+          if (node?.archived) return true;
+          parent = node?.parentTripId;
+        }
+        return false;
+      };
+      return rows.map((row) => ({ ...row, archivedByParent: archivedByParent(row.id) }));
     },
     createTrip: async (title, parentTripId = null) => {
       if (parentTripId) {
@@ -454,6 +468,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           and(
             eq(visits.isArchived, false),
             eq(trips.isArchived, false),
+            sql`NOT EXISTS (WITH RECURSIVE ancestors AS (SELECT parent_trip_id, is_archived FROM trips WHERE id = ${visits.tripId} UNION ALL SELECT t.parent_trip_id, t.is_archived FROM trips t JOIN ancestors a ON t.id = a.parent_trip_id) SELECT 1 FROM ancestors WHERE is_archived = true)`,
             eq(tripDays.isArchived, false),
             sql`${places.location} IS NOT NULL`,
           ),
@@ -470,6 +485,8 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           JOIN trip_days td2 ON td2.id = v2.trip_day_id
           JOIN trips t ON t.id = l.trip_id
         WHERE l.is_current = true AND t.is_archived = false
+          AND NOT EXISTS (WITH RECURSIVE ancestors AS (SELECT parent_trip_id, is_archived FROM trips WHERE id = v.trip_id UNION ALL SELECT p.parent_trip_id, p.is_archived FROM trips p JOIN ancestors a ON p.id = a.parent_trip_id) SELECT 1 FROM ancestors WHERE is_archived)
+          AND NOT EXISTS (WITH RECURSIVE ancestors AS (SELECT parent_trip_id, is_archived FROM trips WHERE id = v2.trip_id UNION ALL SELECT p.parent_trip_id, p.is_archived FROM trips p JOIN ancestors a ON p.id = a.parent_trip_id) SELECT 1 FROM ancestors WHERE is_archived)
           AND td.is_archived = false AND td2.is_archived = false
           AND v.is_archived = false AND v2.is_archived = false
           AND rv.geometry IS NOT NULL

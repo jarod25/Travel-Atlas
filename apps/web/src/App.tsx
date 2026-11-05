@@ -371,7 +371,7 @@ export function App() {
     };
   }, [connectionTargetTripId, connectionTargetDayId]);
   const selectedDay = days.find((day) => day.id === dayId);
-  const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
+  const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived || selectedTrip?.archivedByParent);
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
   useEffect(() => {
     let active = true;
@@ -390,7 +390,7 @@ export function App() {
       active = false;
     };
   }, [tripId, followingDay?.id, followingDay?.revision, followingDay?.isArchived]);
-  const activeTrips = trips.filter((trip) => !trip.isArchived);
+  const activeTrips = trips.filter((trip) => !trip.isArchived && !trip.archivedByParent);
   const recentTrips = activeTrips.slice(0, 3);
   const displayedTrips = showArchived ? trips : activeTrips;
   const orderedTrips = useMemo(() => {
@@ -1268,7 +1268,7 @@ export function App() {
                   {trip.parentTripId ? ' · Subtrip' : ''}
                 </small>
                 <div className="trip-actions">
-                  {!trip.isArchived && (
+                  {!trip.isArchived && !trip.archivedByParent && (
                     <button
                       onClick={() => {
                         navigate('editor', trip.id);
@@ -1310,7 +1310,7 @@ export function App() {
                     <select
                       aria-label={`Parent trip for ${trip.title}`}
                       value={trip.parentTripId ?? ''}
-                      disabled={pending || trip.isArchived}
+                      disabled={pending || trip.isArchived || trip.archivedByParent}
                       onChange={(event) => {
                         const next = event.target.value || null;
                         confirmAction(
@@ -1334,8 +1334,8 @@ export function App() {
                   <button onClick={() => void renameTrip(trip)} disabled={pending}>
                     Rename
                   </button>
-                  <button onClick={() => void toggleTripArchive(trip)} disabled={pending}>
-                    {trip.isArchived ? 'Restore' : 'Archive'}
+                  <button onClick={() => void toggleTripArchive(trip)} disabled={pending || trip.archivedByParent}>
+                    {trip.archivedByParent ? 'Restore parent first' : trip.isArchived ? 'Restore' : 'Archive'}
                   </button>
                 </div>
               </div>
