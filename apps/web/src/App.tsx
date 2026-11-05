@@ -572,10 +572,7 @@ export function App() {
       const place = await atlasApi.addPlace(name);
       setPlaceQuery(name);
       setPlaceId(place.id);
-      setPlaces((previous) => [
-        ...previous.filter((candidate) => candidate.id !== place.id),
-        place,
-      ]);
+      setPlaces((previous) => [...previous.filter((candidate) => candidate.id !== place.id), place]);
       notifications.show({ title: 'Place created', message: name, color: 'teal' });
     });
   }
@@ -1410,7 +1407,6 @@ export function App() {
                             Save coordinates
                           </button>
                         </details>
-
                         <p className="muted">
                           Adding visits creates unknown draft legs within this day only.
                         </p>
