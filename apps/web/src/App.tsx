@@ -21,8 +21,15 @@ import { describeLeg, describeLegTimes } from './leg-display';
 type View = 'explore' | 'trips' | 'editor';
 type MobilePanel = 'timeline' | 'map';
 
+function exploreParams() {
+  return new URLSearchParams(window.location.search);
+}
+
 function readLocation(): { view: View; tripId: string | null; dayId: string | null } {
   const path = window.location.pathname;
+  if (path === '/explore' || path === '/') {
+    return { view: 'explore', tripId: exploreParams().get('trip'), dayId: null };
+  }
   if (path === '/trips') return { view: 'trips', tripId: null, dayId: null };
   if (path === '/editor') return { view: 'editor', tripId: null, dayId: null };
   const match = /^\/trips\/([0-9a-f-]{36})$/i.exec(path);
@@ -44,12 +51,17 @@ function urlFor(view: View, tripId: string | null, dayId: string | null): string
 
 export function App() {
   const [view, setView] = useState<View>(() => readLocation().view);
-  const [filterFrom, setFilterFrom] = useState('');
-  const [filterTo, setFilterTo] = useState('');
-  const [filterMode, setFilterMode] = useState('');
+  const [filterFrom, setFilterFrom] = useState(() => exploreParams().get('from') ?? '');
+  const [filterTo, setFilterTo] = useState(() => exploreParams().get('to') ?? '');
+  const [filterMode, setFilterMode] = useState(() => exploreParams().get('transport') ?? '');
   const [filterConfidence, setFilterConfidence] = useState<
     'all' | 'confirmed' | 'estimated' | 'unknown'
-  >('all');
+  >(() => {
+    const value = exploreParams().get('certainty');
+    return value === 'confirmed' || value === 'estimated' || value === 'unknown'
+      ? value
+      : 'all';
+  });
   const [colorBy, setColorBy] = useState<ColorMode>('trip');
   const [selectedMapItem, setSelectedMapItem] = useState<Feature['properties'] | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -120,6 +132,18 @@ export function App() {
       setView(next.view);
       setTripId(next.tripId);
       setDayId(next.dayId);
+      if (next.view === 'explore') {
+        const params = exploreParams();
+        setFilterFrom(params.get('from') ?? '');
+        setFilterTo(params.get('to') ?? '');
+        setFilterMode(params.get('transport') ?? '');
+        const certainty = params.get('certainty');
+        setFilterConfidence(
+          certainty === 'confirmed' || certainty === 'estimated' || certainty === 'unknown'
+            ? certainty
+            : 'all',
+        );
+      }
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -133,6 +157,21 @@ export function App() {
       window.history.replaceState(null, '', url);
     }
   }, [view, tripId, dayId]);
+
+  useEffect(() => {
+    if (view !== 'explore') return;
+    const params = new URLSearchParams();
+    if (tripId) params.set('trip', tripId);
+    if (filterFrom) params.set('from', filterFrom);
+    if (filterTo) params.set('to', filterTo);
+    if (filterMode) params.set('transport', filterMode);
+    if (filterConfidence !== 'all') params.set('certainty', filterConfidence);
+    const query = params.toString();
+    const url = '/explore' + (query ? '?' + query : '');
+    if (window.location.pathname + window.location.search !== url) {
+      window.history.replaceState(null, '', url);
+    }
+  }, [view, tripId, filterFrom, filterTo, filterMode, filterConfidence]);
 
   function confirmAction(
     title: string,
