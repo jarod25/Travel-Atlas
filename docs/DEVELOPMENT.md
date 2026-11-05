@@ -16,16 +16,13 @@ cd Travel-Atlas
 git switch develop
 pnpm install --frozen-lockfile
 docker compose -f infrastructure/docker/compose.yml up -d
-export DATABASE_URL=postgresql://atlas_local:atlas_local_only@127.0.0.1:55432/atlas_local
+cp apps/api/.env.example apps/api/.env
+# Update DATABASE_URL in apps/api/.env for your local PostgreSQL instance.
 pnpm db:migrate
 pnpm dev
 ```
 
-On PowerShell replace `export` with:
-
-```powershell
-$env:DATABASE_URL = 'postgresql://atlas_local:atlas_local_only@127.0.0.1:55432/atlas_local'
-```
+On PowerShell, copy the example with `Copy-Item apps/api/.env.example apps/api/.env`, then edit `DATABASE_URL` in `apps/api/.env`. The API loads the file automatically. An explicit environment variable overrides the file. Keep the real file untracked. For integration tests and smoke tests, set `DATABASE_URL` explicitly to a disposable test database.
 
 These credentials are for the **loopback-bound local database only**, not deployment.
 The API defaults to `http://127.0.0.1:3001` and the Vite web app to
