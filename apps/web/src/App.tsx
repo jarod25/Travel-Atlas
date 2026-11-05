@@ -572,7 +572,10 @@ export function App() {
       const place = await atlasApi.addPlace(name);
       setPlaceQuery(name);
       setPlaceId(place.id);
-      setPlaces((previous) => [...previous.filter((candidate) => candidate.id !== place.id), place]);
+      setPlaces((previous) => [
+        ...previous.filter((candidate) => candidate.id !== place.id),
+        place,
+      ]);
       notifications.show({ title: 'Place created', message: name, color: 'teal' });
     });
   }
