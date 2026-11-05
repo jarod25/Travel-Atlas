@@ -383,7 +383,12 @@ test('Leg editor saves independent clock precision and an explicit date range', 
   await page.locator('#arrival-range-end-date').fill('2026-09-14');
   await page.locator('#arrival-range-end-time').fill('00:20');
   await page.locator('#arrival-confidence').selectOption('estimated');
+  const saved = page.waitForResponse(
+    (response) => response.url().includes('/api/v1/legs/') && response.request().method() === 'PATCH',
+  );
   await page.getByRole('button', { name: 'Save Leg' }).click();
+  const savedResponse = await saved;
+  expect(savedResponse.status(), await savedResponse.text()).toBe(200);
 
   const trip = (await (await request.get('/api/v1/trips')).json()).find(
     (entry: { title: string }) => entry.title === title,
