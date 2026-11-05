@@ -231,6 +231,8 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const edges = await db
         .select({
           id: legs.id,
+          tripId: legs.tripId,
+          toTripId: sql<string>`(SELECT v.trip_id FROM visits v WHERE v.id = ${legs.toVisitId})`,
           fromVisitId: legs.fromVisitId,
           toVisitId: legs.toVisitId,
           transportMode: legs.transportMode,
@@ -254,7 +256,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           geometryConfidence: legs.geometryConfidence,
         })
         .from(legs)
-        .where(and(eq(legs.tripId, tripId), eq(legs.isCurrent, true)));
+        .where(and(eq(legs.isCurrent, true), sql`(${legs.tripId} = ${tripId} OR EXISTS (SELECT 1 FROM visits v WHERE v.id = ${legs.toVisitId} AND v.trip_id = ${tripId}))`));
       const memberIds = new Set(ordered.map((visit) => visit.id));
       return {
         day,

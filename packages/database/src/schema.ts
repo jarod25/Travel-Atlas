@@ -153,9 +153,9 @@ export const legs = pgTable(
   'legs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    tripId: uuid('trip_id').notNull(),
-    fromVisitId: uuid('from_visit_id').notNull(),
-    toVisitId: uuid('to_visit_id').notNull(),
+    tripId: uuid('trip_id').notNull().references(() => trips.id),
+    fromVisitId: uuid('from_visit_id').notNull().references(() => visits.id),
+    toVisitId: uuid('to_visit_id').notNull().references(() => visits.id),
     isCurrent: boolean('is_current').notNull().default(true),
     revision: integer('revision').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -198,16 +198,6 @@ export const legs = pgTable(
       .default('unknown'),
   },
   (table) => [
-    foreignKey({
-      name: 'legs_from_visit_same_trip_fk',
-      columns: [table.tripId, table.fromVisitId],
-      foreignColumns: [visits.tripId, visits.id],
-    }),
-    foreignKey({
-      name: 'legs_to_visit_same_trip_fk',
-      columns: [table.tripId, table.toVisitId],
-      foreignColumns: [visits.tripId, visits.id],
-    }),
     check('legs_revision_positive', sql`${table.revision} > 0`),
     check('legs_distinct_endpoints', sql`${table.fromVisitId} <> ${table.toVisitId}`),
     check(

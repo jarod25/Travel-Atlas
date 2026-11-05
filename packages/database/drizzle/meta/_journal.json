@@ -141,6 +141,13 @@
       "when": 1793911000000,
       "tag": "0019_time_ranges",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793912000000,
+      "tag": "0020_cross_trip_legs",
+      "breakpoints": true
     }
   ]
 }
