@@ -248,37 +248,27 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
     .getByRole('button', { name: 'Trips' })
     .click();
 
-  await page
-    .locator('.trip-card')
-    .filter({
-      has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title}$`) }),
-    })
-    .getByRole('button', { name: 'Rename' })
-    .click();
+  const trips = (await (await request.get('/api/v1/trips')).json()) as Array<{
+    id: string;
+    title: string;
+  }>;
+  const created = trips.find((trip) => trip.title === title);
+  expect(created?.id).toBeTruthy();
+  const card = page.locator(`.trip-card[data-trip-id="${created!.id}"]`);
+
+  await card.getByRole('button', { name: 'Rename' }).click();
   const modal = page.getByRole('dialog', { name: 'Rename trip' });
   await expect(modal).toBeVisible();
   await modal.getByRole('button', { name: 'Cancel' }).click();
   await expect(modal).not.toBeVisible();
 
-  await page
-    .locator('.trip-card')
-    .filter({
-      has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title}$`) }),
-    })
-    .getByRole('button', { name: 'Rename' })
-    .click();
+  await card.getByRole('button', { name: 'Rename' }).click();
   await modal.getByRole('textbox', { name: 'Trip name' }).fill(title + ' renamed');
   await modal.getByRole('button', { name: 'Save' }).click();
-  await expect(
-    page.locator('.trip-card').filter({
-      has: page
-        .locator('.trip-card > strong')
-        .filter({ hasText: new RegExp(`^${title} renamed$`) }),
-    }),
-  ).toBeVisible();
+  await expect(card.getByText(title + ' renamed', { exact: true })).toBeVisible();
 
-  const trips = await (await request.get('/api/v1/trips')).json();
-  expect(trips.some((trip: { title: string }) => trip.title === title + ' renamed')).toBe(true);
+  const updated = await (await request.get('/api/v1/trips')).json();
+  expect(updated.some((trip: { title: string }) => trip.title === title + ' renamed')).toBe(true);
 });
 
 test('Add Visit reuses one field for Place lookup and explicit creation', async ({ page }) => {
