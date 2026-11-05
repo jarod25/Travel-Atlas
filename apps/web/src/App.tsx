@@ -78,7 +78,9 @@ export function App() {
   const [connectionTargetTripId, setConnectionTargetTripId] = useState('');
   const [connectionTargetDayId, setConnectionTargetDayId] = useState('');
   const [connectionTargetDays, setConnectionTargetDays] = useState<TripDay[]>([]);
-  const [connectionTargetFirstVisit, setConnectionTargetFirstVisit] = useState<VisitRow | null>(null);
+  const [connectionTargetFirstVisit, setConnectionTargetFirstVisit] = useState<VisitRow | null>(
+    null,
+  );
   const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
   const [editedDayDate, setEditedDayDate] = useState('');
@@ -326,7 +328,11 @@ export function App() {
       }
       return current;
     };
-    return tripId ? trips.filter((trip) => trip.id !== tripId && !trip.isArchived && root(trip.id) === root(tripId)) : [];
+    return tripId
+      ? trips.filter(
+          (trip) => trip.id !== tripId && !trip.isArchived && root(trip.id) === root(tripId),
+        )
+      : [];
   }, [tripId, trips]);
   useEffect(() => {
     let active = true;
@@ -334,21 +340,35 @@ export function App() {
     setConnectionTargetDayId('');
     setConnectionTargetFirstVisit(null);
     if (connectionTargetTripId) {
-      atlasApi.days(connectionTargetTripId).then((result) => {
-        if (active) setConnectionTargetDays(result.filter((day) => !day.isArchived));
-      }).catch(() => { if (active) setConnectionTargetDays([]); });
+      atlasApi
+        .days(connectionTargetTripId)
+        .then((result) => {
+          if (active) setConnectionTargetDays(result.filter((day) => !day.isArchived));
+        })
+        .catch(() => {
+          if (active) setConnectionTargetDays([]);
+        });
     }
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [connectionTargetTripId]);
   useEffect(() => {
     let active = true;
     setConnectionTargetFirstVisit(null);
     if (connectionTargetTripId && connectionTargetDayId) {
-      atlasApi.timeline(connectionTargetTripId, connectionTargetDayId).then((result) => {
-        if (active) setConnectionTargetFirstVisit(result.visits[0] ?? null);
-      }).catch(() => { if (active) setConnectionTargetFirstVisit(null); });
+      atlasApi
+        .timeline(connectionTargetTripId, connectionTargetDayId)
+        .then((result) => {
+          if (active) setConnectionTargetFirstVisit(result.visits[0] ?? null);
+        })
+        .catch(() => {
+          if (active) setConnectionTargetFirstVisit(null);
+        });
     }
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [connectionTargetTripId, connectionTargetDayId]);
   const selectedDay = days.find((day) => day.id === dayId);
   const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
@@ -684,16 +704,33 @@ export function App() {
   }
 
   function proposeCrossTripConnection() {
-    if (!tripId || !selectedDay || !connectionTargetTripId || !connectionTargetDayId || !connectionTargetFirstVisit || !timeline?.visits.length) return;
+    if (
+      !tripId ||
+      !selectedDay ||
+      !connectionTargetTripId ||
+      !connectionTargetDayId ||
+      !connectionTargetFirstVisit ||
+      !timeline?.visits.length
+    )
+      return;
     confirmAction(
       'Connect trips',
       `Connect the last Visit of this day to ${connectionTargetFirstVisit.placeName ?? 'the first Visit of the selected day'}? No travel route or transport will be assumed.`,
       'Connect',
       async () => {
         await execute(async () => {
-          await atlasApi.connectTrips(tripId, selectedDay.id, connectionTargetTripId, connectionTargetDayId);
+          await atlasApi.connectTrips(
+            tripId,
+            selectedDay.id,
+            connectionTargetTripId,
+            connectionTargetDayId,
+          );
           await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
-          notifications.show({ title: 'Trips connected', message: 'Unknown draft Leg created or restored.', color: 'teal' });
+          notifications.show({
+            title: 'Trips connected',
+            message: 'Unknown draft Leg created or restored.',
+            color: 'teal',
+          });
         });
       },
     );
@@ -1380,17 +1417,42 @@ export function App() {
                   <summary>Connect to another trip (review required)</summary>
                   <p>Connect recorded Visits only. No movement is created until you approve.</p>
                   <label htmlFor="connection-target-trip">Destination trip</label>
-                  <select id="connection-target-trip" value={connectionTargetTripId} onChange={(event) => setConnectionTargetTripId(event.target.value)}>
+                  <select
+                    id="connection-target-trip"
+                    value={connectionTargetTripId}
+                    onChange={(event) => setConnectionTargetTripId(event.target.value)}
+                  >
                     <option value="">Choose a related trip</option>
-                    {relatedTrips.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.title}</option>)}
+                    {relatedTrips.map((candidate) => (
+                      <option value={candidate.id} key={candidate.id}>
+                        {candidate.title}
+                      </option>
+                    ))}
                   </select>
                   <label htmlFor="connection-target-day">Destination day</label>
-                  <select id="connection-target-day" value={connectionTargetDayId} onChange={(event) => setConnectionTargetDayId(event.target.value)}>
+                  <select
+                    id="connection-target-day"
+                    value={connectionTargetDayId}
+                    onChange={(event) => setConnectionTargetDayId(event.target.value)}
+                  >
                     <option value="">Choose a day</option>
-                    {connectionTargetDays.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.localDate ?? 'Undated day'} (day {candidate.position + 1})</option>)}
+                    {connectionTargetDays.map((candidate) => (
+                      <option value={candidate.id} key={candidate.id}>
+                        {candidate.localDate ?? 'Undated day'} (day {candidate.position + 1})
+                      </option>
+                    ))}
                   </select>
-                  <p>{connectionTargetFirstVisit ? `First destination Visit: ${connectionTargetFirstVisit.placeName ?? 'Unknown Place'}` : 'Select a day with at least one recorded Visit.'}</p>
-                  <button disabled={pending || !connectionTargetFirstVisit || !timeline?.visits.length} onClick={proposeCrossTripConnection}>Review trip connection</button>
+                  <p>
+                    {connectionTargetFirstVisit
+                      ? `First destination Visit: ${connectionTargetFirstVisit.placeName ?? 'Unknown Place'}`
+                      : 'Select a day with at least one recorded Visit.'}
+                  </p>
+                  <button
+                    disabled={pending || !connectionTargetFirstVisit || !timeline?.visits.length}
+                    onClick={proposeCrossTripConnection}
+                  >
+                    Review trip connection
+                  </button>
                 </details>
               )}
               <div className="day-bar">
@@ -2015,7 +2077,12 @@ export function App() {
                         </select>
                       </details>
                       {selectedLeg.tripId !== selectedLeg.toTripId && (
-                        <button disabled={pending || dayReadOnly} onClick={() => proposeCrossTripDisconnect(selectedLeg)}>Disconnect cross-trip Leg</button>
+                        <button
+                          disabled={pending || dayReadOnly}
+                          onClick={() => proposeCrossTripDisconnect(selectedLeg)}
+                        >
+                          Disconnect cross-trip Leg
+                        </button>
                       )}
                       <button disabled={pending || dayReadOnly} onClick={() => void saveLeg()}>
                         Save Leg
