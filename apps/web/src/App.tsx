@@ -76,6 +76,8 @@ export function App() {
   const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
   const [editedDayDate, setEditedDayDate] = useState('');
+  const [tripStartOverride, setTripStartOverride] = useState('');
+  const [tripEndOverride, setTripEndOverride] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
   const [placeLon, setPlaceLon] = useState('');
   const [placeLat, setPlaceLat] = useState('');
@@ -293,6 +295,10 @@ export function App() {
   }, [placeQuery]);
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
+  useEffect(() => {
+    setTripStartOverride(selectedTrip?.startDateOverride ?? '');
+    setTripEndOverride(selectedTrip?.endDateOverride ?? '');
+  }, [selectedTrip?.id, selectedTrip?.revision]);
   const selectedDay = days.find((day) => day.id === dayId);
   const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
@@ -405,7 +411,15 @@ export function App() {
       });
     });
   }
-  async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean }) {
+  async function changeTrip(
+    trip: Trip,
+    changes: {
+      title?: string;
+      isArchived?: boolean;
+      startDateOverride?: string | null;
+      endDateOverride?: string | null;
+    },
+  ) {
     await execute(async () => {
       await atlasApi.updateTrip(trip.id, trip.revision, changes);
       await Promise.all([loadTrips(), loadExplore()]);
@@ -1057,6 +1071,63 @@ export function App() {
               Include archived trips
             </label>
           </div>
+          {selectedTrip && (
+            <section className="trip-date-editor" aria-label="Trip date corrections">
+              <h2>Trip dates</h2>
+              <p>
+                From dated, active days: {selectedTrip.derivedStartDate ?? 'Unknown'} to{' '}
+                {selectedTrip.derivedEndDate ?? 'Unknown'}. Undated days are not inferred.
+              </p>
+              <p>
+                Displayed period: {selectedTrip.effectiveStartDate ?? 'Unknown'} to{' '}
+                {selectedTrip.effectiveEndDate ?? 'Unknown'}
+              </p>
+              <div className="trip-date-controls">
+                <label htmlFor="trip-start-override">
+                  Correct start (optional)
+                  <input
+                    id="trip-start-override"
+                    type="date"
+                    disabled={pending || selectedTrip.isArchived}
+                    value={tripStartOverride}
+                    onChange={(event) => setTripStartOverride(event.target.value)}
+                  />
+                </label>
+                <label htmlFor="trip-end-override">
+                  Correct end (optional)
+                  <input
+                    id="trip-end-override"
+                    type="date"
+                    disabled={pending || selectedTrip.isArchived}
+                    value={tripEndOverride}
+                    onChange={(event) => setTripEndOverride(event.target.value)}
+                  />
+                </label>
+                <button
+                  disabled={pending || selectedTrip.isArchived}
+                  onClick={() =>
+                    void changeTrip(selectedTrip, {
+                      startDateOverride: tripStartOverride || null,
+                      endDateOverride: tripEndOverride || null,
+                    })
+                  }
+                >
+                  Save trip dates
+                </button>
+                <button
+                  disabled={pending || selectedTrip.isArchived}
+                  onClick={() =>
+                    void changeTrip(selectedTrip, {
+                      startDateOverride: null,
+                      endDateOverride: null,
+                    })
+                  }
+                >
+                  Use automatic dates
+                </button>
+              </div>
+            </section>
+          )}
           {!tripId ? (
             <section className="recent-trips" aria-label="Recently modified trips">
               <h2>Recently modified trips</h2>
