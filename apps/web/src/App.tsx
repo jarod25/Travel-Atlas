@@ -304,6 +304,11 @@ export function App() {
   }, [placeQuery]);
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
+  const tripPeriodConflict = Boolean(
+    selectedTrip?.effectiveStartDate &&
+      selectedTrip?.effectiveEndDate &&
+      selectedTrip.effectiveStartDate > selectedTrip.effectiveEndDate,
+  );
   useEffect(() => {
     setTripStartOverride(selectedTrip?.startDateOverride ?? '');
     setTripEndOverride(selectedTrip?.endDateOverride ?? '');
@@ -1159,9 +1164,7 @@ export function App() {
                 From dated, active days: {selectedTrip.derivedStartDate ?? 'Unknown'} to{' '}
                 {selectedTrip.derivedEndDate ?? 'Unknown'}. Undated days are not inferred.
               </p>
-              {selectedTrip.effectiveStartDate &&
-              selectedTrip.effectiveEndDate &&
-              selectedTrip.effectiveStartDate > selectedTrip.effectiveEndDate ? (
+              {tripPeriodConflict ? (
                 <p role="alert">
                   Trip period conflict: corrected start is after the calculated end, or vice
                   versa. Adjust the corrections before using these dates.
