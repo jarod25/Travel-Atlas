@@ -166,9 +166,13 @@ export const atlasApi = {
       departureLocalDate?: string | null;
       departureLocalTime?: string | null;
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      departureTimeZone?: string | null;
+      departureTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      arrivalTimeZone?: string | null;
+      arrivalTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
     },
   ) =>
     request<LegRow>(`/legs/${id}`, {
