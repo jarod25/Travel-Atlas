@@ -239,6 +239,7 @@ export function App() {
   const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
   const activeTrips = trips.filter((trip) => !trip.isArchived);
+  const recentTrips = activeTrips.slice(0, 3);
   const displayedTrips = showArchived ? trips : activeTrips;
   useEffect(() => {
     setEditedDayDate(selectedDay?.localDate ?? '');
@@ -756,8 +757,7 @@ export function App() {
                   {!trip.isArchived && (
                     <button
                       onClick={() => {
-                        setTripId(trip.id);
-                        setView('editor');
+                        navigate('editor', trip.id);
                       }}
                     >
                       Open timeline
@@ -792,15 +792,39 @@ export function App() {
               onChange={(e) => navigate('editor', e.target.value || null)}
             >
               <option value="">Select trip</option>
-              {trips.map((trip) => (
-                <option value={trip.id} key={trip.id}>
-                  {trip.title}
-                </option>
-              ))}
+              {trips
+                .filter((trip) => showArchived || !trip.isArchived || trip.id === tripId)
+                .map((trip) => (
+                  <option value={trip.id} key={trip.id}>
+                    {trip.title}
+                  </option>
+                ))}
             </select>
+            <label className="archived-toggle">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(event) => setShowArchived(event.target.checked)}
+              />
+              Include archived trips
+            </label>
           </div>
           {!tripId ? (
-            <div className="empty-state">Choose an existing trip, or create one in Trips.</div>
+            <section className="recent-trips" aria-label="Recently modified trips">
+              <h2>Recently modified trips</h2>
+              {recentTrips.length > 0 ? (
+                <div className="recent-trip-grid">
+                  {recentTrips.map((trip) => (
+                    <button key={trip.id} onClick={() => navigate('editor', trip.id)}>
+                      <strong>{trip.title}</strong>
+                      <span>Open timeline</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-state">No active trips yet. Create one in Trips.</p>
+              )}
+            </section>
           ) : (
             <>
               <div className="day-bar">

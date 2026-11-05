@@ -5,6 +5,8 @@ export interface Trip {
   title: string;
   revision: number;
   isArchived: boolean;
+  updatedAt?: string;
+  lastActivityAt?: string;
 }
 export interface TripDay {
   id: string;
