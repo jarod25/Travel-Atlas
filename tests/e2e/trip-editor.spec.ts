@@ -359,6 +359,14 @@ test('Trip dates derive from active days and allow explicit reversible correctio
   await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
     'Displayed period: 2026-09-12 to 2026-09-12',
   );
+  await page.locator('#trip-start-override').fill('2026-09-10');
+  await page.getByRole('button', { name: 'Save trip dates' }).click();
+  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
+    'Displayed period: 2026-09-10 to 2026-09-12',
+  );
+  await page.locator('#edit-day-date').fill('2026-09-01');
+  await page.getByRole('button', { name: 'Save date' }).click();
+  await expect(page.getByRole('alert')).toContainText('Trip period conflict');
 });
 
 test('Leg editor saves independent clock precision and an explicit date range', async ({
