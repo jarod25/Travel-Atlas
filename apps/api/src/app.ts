@@ -133,6 +133,11 @@ export function buildApp(store?: AtlasStore) {
       return days ?? reply.code(404).send({ error: 'Trip not found' });
     },
   );
+  app.get<{ Params: { tripId: string } }>(
+    '/api/v1/trips/:tripId/combined-days',
+    { schema: { params: idParams } },
+    async (request) => store.listCombinedDays(request.params.tripId),
+  );
   app.post<{ Params: { tripId: string }; Body: { localDate: string | null } }>(
     '/api/v1/trips/:tripId/days',
     {

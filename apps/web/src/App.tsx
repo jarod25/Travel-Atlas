@@ -67,6 +67,7 @@ export function App() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripId, setTripId] = useState<string | null>(() => readLocation().tripId);
   const [days, setDays] = useState<TripDay[]>([]);
+  const [combinedDays, setCombinedDays] = useState<(TripDay & { tripTitle: string; depth: number })[]>([]);
   const [dayId, setDayId] = useState<string | null>(() => readLocation().dayId);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
   const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
@@ -317,6 +318,13 @@ export function App() {
     };
   }, [placeQuery]);
 
+  useEffect(() => {
+    let active = true;
+    setCombinedDays([]);
+    if (tripId) atlasApi.combinedDays(tripId).then((result) => { if (active) setCombinedDays(result); })
+      .catch(() => { if (active) setCombinedDays([]); });
+    return () => { active = false; };
+  }, [tripId, trips, days]);
   const selectedTrip = trips.find((trip) => trip.id === tripId);
   const relatedTrips = useMemo(() => {
     const byId = new Map(trips.map((trip) => [trip.id, trip]));
@@ -1451,6 +1459,18 @@ export function App() {
                   </button>
                 </details>
               )}
+              <details className="recent-trips" aria-label="Complete trip family timeline">
+                <summary>All days in this trip and its subtrips ({combinedDays.length})</summary>
+                <p>Only recorded days are included. Select one to open its editable timeline.</p>
+                <div className="recent-trip-grid">
+                  {combinedDays.map((entry) => (
+                    <button key={entry.id} onClick={() => navigate('editor', entry.tripId, entry.id)}>
+                      <strong>{'↳ '.repeat(entry.depth)}{entry.tripTitle}</strong>
+                      <span>{entry.localDate ?? 'Date unknown'} · Day {entry.position + 1}</span>
+                    </button>
+                  ))}
+                </div>
+              </details>
               <div className="day-bar">
                 <div className="day-tabs">
                   {days.map((day) => (

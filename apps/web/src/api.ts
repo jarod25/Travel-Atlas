@@ -125,6 +125,7 @@ export const atlasApi = {
   addTrip: (title: string, parentTripId: string | null = null) =>
     post<Trip>('/trips', { title, parentTripId }),
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),
+  combinedDays: (id: string) => request<(TripDay & { tripTitle: string; depth: number })[]>(`/trips/${encodeURIComponent(id)}/combined-days`),
   addDay: (id: string, localDate: string | null) =>
     post<TripDay>(`/trips/${id}/days`, { localDate }),
   archiveDay: (id: string, day: string, revision: number, isArchived: boolean) =>
