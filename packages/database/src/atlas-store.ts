@@ -126,7 +126,19 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const [trip] = await db.select({ id: trips.id }).from(trips).where(eq(trips.id, id));
       if (!trip) return null;
       return db
-        .select()
+        .select({
+          id: tripDays.id,
+          tripId: tripDays.tripId,
+          localDate: tripDays.localDate,
+          position: tripDays.position,
+          revision: tripDays.revision,
+          updatedAt: tripDays.updatedAt,
+          isArchived: tripDays.isArchived,
+          activeVisitCount: sql<number>`(
+            SELECT COUNT(*)::int FROM visits
+            WHERE trip_day_id = ${tripDays.id} AND is_archived = false
+          )`,
+        })
         .from(tripDays)
         .where(eq(tripDays.tripId, id))
         .orderBy(asc(tripDays.position));
