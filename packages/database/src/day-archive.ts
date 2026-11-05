@@ -63,7 +63,6 @@ export async function setDayArchivedWithRevision(
           .from(legs)
           .where(
             and(
-              eq(legs.tripId, input.tripId),
               eq(legs.isCurrent, true),
               or(inArray(legs.fromVisitId, ids), inArray(legs.toVisitId, ids)),
             ),
