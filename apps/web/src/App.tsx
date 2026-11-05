@@ -796,10 +796,18 @@ export function App() {
                 .filter((trip) => showArchived || !trip.isArchived || trip.id === tripId)
                 .map((trip) => (
                   <option value={trip.id} key={trip.id}>
-                  {trip.title}
+                    {trip.title}
                   </option>
                 ))}
             </select>
+            <label className="archived-toggle">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(event) => setShowArchived(event.target.checked)}
+              />
+              Include archived trips
+            </label>
           </div>
           {!tripId ? (
             <section className="recent-trips" aria-label="Recently modified trips">
