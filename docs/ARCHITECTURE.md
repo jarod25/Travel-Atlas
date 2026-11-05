@@ -40,3 +40,11 @@ Local feasibility tests performed on November 3, 2026 subsequently succeeded on 
 ## Local verification
 
 For exact install, migration, start, check and shutdown commands, see [Development](DEVELOPMENT.md). For table semantics and additive migrations see [Database](DATABASE.md); for HTTP routes see [API](API.md). The design and scope references are the project's functional specification and technical architecture dated November 3, 2026.
+
+## Hierarchy and time stabilization (Lot 3)
+
+Nested Trips use a nullable parent FK, an acyclic revision-protected reparent operation, and a recursive parent map and day listing. A cross-trip Leg keeps ownership with its departure Trip; SQL constraints and an integrity trigger require a shared family root. A current Leg cannot consume an endpoint already in another current Leg. Archive/disconnect operations retire current links without deleting RouteVersions or Evidence.
+
+The API uses offline `geo-tz` lookup for time-zone suggestions from existing Place coordinates (longitude/latitude order checked). The browser uses `Intl` with ambiguity detection rather than silently choosing a DST overlap offset. Uncertain and range times remain local calendar information until sufficiently determined. No external geocoding or location inference occurs in this increment.
+
+The mandatory acceptance steps for an existing personal database are recorded in [LOT3_RECETTE.md](LOT3_RECETTE.md).

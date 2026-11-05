@@ -99,3 +99,7 @@ publish a release during Lot 3 stabilization.
 ## Lot 0 and external providers
 
 Local feasibility tests performed on November 3, 2026 subsequently succeeded on the user's PC: PostgreSQL 18 / PostGIS 3.6.2 and Drizzle geometry round-trips (LineString, MultiLineString, SRID 4326, GeoJSON, null geometry, distances and type constraints) passed. OpenRailRouting returned HTTP 200 for **both** `tgv_all` routes: Belfort-Montbéliard TGV → Strasbourg (754 points, 151,001.72 m) and Strasbourg → CDG 2 TGV (1,890 points, 418,097.822 m). The geometries were inspected and judged plausible by the user; they remain **estimated** network routes, not confirmed historical GPS tracks. Earlier DNS `EAI_AGAIN` failures occurred in a different analysis environment and were superseded by these successful local tests. These feasibility results do **not** mean the Lot 4 routing adapters are integrated with the Lot 3 application.
+
+## Lot 3 stabilization acceptance
+
+Before running migrations on an existing personal database, follow the backup, isolated restore, cross-trip, time-zone, and responsive checks in [LOT3_RECETTE.md](LOT3_RECETTE.md). CI uses disposable synthetic data and cannot replace the local manual recipe.

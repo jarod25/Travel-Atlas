@@ -82,3 +82,15 @@ new Unknown draft rather than guessing which journey was intended.
 ### Optimistic Place coordinate edits (Lot 3 stabilization)
 
 `PATCH /api/v1/places/:placeId` now requires `If-Match: "<place revision>"`, alongside `coordinates` and `confidence`. A stale revision returns HTTP 412 and a current ETag; missing `If-Match` returns 428. The response includes the latest Place revision. Coordinate edits and dependent pending RouteProposal invalidations run in one transaction. A certainty-only edit does not invalidate geometry proposals.
+
+## Trip hierarchy and time endpoints (Lot 3 stabilization)
+
+`POST /api/v1/trips` accepts optional `parentTripId`. `PATCH /api/v1/trips/:tripId` accepts `parentTripId`, `manualStartDate`, and `manualEndDate` with an If-Match revision. A hierarchy cycle, archived ancestor or incompatible move is rejected; manual overrides remain separate from computed dates. List responses include computed boundaries and parent-archive state.
+
+`GET /api/v1/trips/:tripId/combined-days` lists active days across the selected Trip and all descendants once, including each Day's actual owning Trip and hierarchy depth.
+
+`POST /api/v1/trips/:tripId/connect-trip` requires `fromDayId`, `toTripId`, and `toDayId`; it connects only recorded last/first Visit endpoints in a common active family, after explicit confirmation. `POST /api/v1/legs/:legId/disconnect-trip` requires `If-Match` and preserves historical Leg details. Neither endpoint estimates movement or geometry.
+
+`GET /api/v1/legs/:legId/time-zone-suggestions` returns arrays of IANA candidates for both saved Place coordinates with provenance `recorded-place-coordinates` and `confirmed:false`. Coordinates are not sent to an external API; lookup uses the bundled `geo-tz` dataset.
+
+`PATCH /api/v1/legs/:legId` supports independent `departureTimePrecision`/`arrivalTimePrecision`, optional IANA zones, and local `departureRangeStart`/`departureRangeEnd` plus arrival equivalents. Server-side validation rejects malformed ranges and invalid zones. It does not turn local time into an automatically confirmed UTC instant.

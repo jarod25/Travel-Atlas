@@ -108,25 +108,36 @@ Before declaring Lot 3 complete, check the following in that local database
    silent loss. Re-run the critical cases against a separate backup/restored
    test database where possible.
 
-Decisions deliberately deferred until a separate design review:
+## Stabilization — hierarchy, local time and cross-trip travel
 
-- Trip start/end dates: avoid storing a second contradictory date range before
-  defining whether dates are manually entered or derived from known TripDays.
-- Time precision: an approximate clock time and the confidence of its source
-  are distinct concepts. Do not treat minute-level input as exact just because
-  a date/time is present; the data model may need a separate precision field.
-- Automatic cross-day suggestions: dates alone do not establish destinations.
-  No new Visit or Leg may be inferred from an arrival date alone.
+Trips can contain descendant Trips to arbitrary depth. Trips may be reparented through a
+revision-protected request; cycles are rejected and existing records retain their IDs.
+The parent map and the combined-day timeline include non-archived descendants exactly once.
+A parent editor navigates to each descendant's own editable Day instead of duplicating Visits.
 
-Lot 4 routing proposals remain separate from evidence of journeys actually
-taken. Do not mark Lot 3 accepted before the manual acceptance above.
+Date bounds are derived from dated active Days; optional manual corrections are kept
+separately and can be reset. Unknown dates remain unknown. A parent archive hides its
+descendants from Explore and retires current Legs involving its subtree without erasing
+historical evidence or route versions.
 
-## Stabilization extension — nested trips and temporal metadata
+Cross-trip connections require explicit review of recorded last/first active Visits
+within a common Trip family. The underlying Leg is owned by its departure Trip and
+points to a destination Visit in another related Trip. It is never generated
+automatically and begins with Unknown transport/geometry. The editor can disconnect and
+reconnect historical directed pairs unambiguously. A family move that would orphan a
+cross-trip link is refused.
 
-A new Trip can have an existing, active parent Trip. Parent selection is immutable in this increment; users cannot reparent existing Trips, avoiding cycles at creation. Selecting a parent trip on the map includes all descendant Trips recursively; each saved Visit/Leg remains stored once and belongs to its original Trip. The editor still edits a single Trip's own days; cross-trip transitions are not connected automatically.
+Departure and arrival have independent IANA time zones, temporal precision and
+source certainty. The timezone provider offers suggestions from already-stored
+endpoint coordinates; it never silently accepts them. Manual overrides are supported.
+Exact, approximate and range precisions are editable. Range endpoints are stored as
+local datetimes without a fabricated UTC instant. A calculated duration is displayed
+only when both local clocks and zones map uniquely to instants; DST gaps and overlaps
+remain explicitly unresolved.
 
-Trip date bounds are computed from dated non-archived days throughout the descendant hierarchy; explicitly corrected dates are stored separately and can be cleared. Unknown dates are not fabricated.
+Validation includes migrations 0018–0020, unit/API/PostGIS integration tests and
+Playwright responsive workflows, followed by the separate manual checklist in
+[Lot 3 acceptance](LOT3_RECETTE.md).
 
-Leg departure and arrival time precision are stored separately from evidence confidence. Existing manual time zone fields are retained. Automated geographic time-zone determination and ambiguous DST handling remain open and must be separately tested; a stored local time without a known valid zone is not automatically an exact UTC instant.
-
-The Leg editor exposes independent manually specified IANA time zones and exact/approximate/unknown precision for departure and arrival. The time zone is checked using Intl; automatic coordinate lookup and time ranges are deferred pending a full range model. Existing 'range' data is not rendered as an editable range yet.
+Lot 4 routing proposals remain separate from evidence of journeys actually taken.
+Do not declare the personal database accepted before completing that checklist.
