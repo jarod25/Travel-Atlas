@@ -458,7 +458,11 @@ export function App() {
     await execute(async () => {
       await atlasApi.connectDays(tripId, selectedDay.id, followingDay.id);
       await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
-      notifications.show({ title: 'Days connected', message: 'Travel Leg created.', color: 'teal' });
+      notifications.show({
+        title: 'Days connected',
+        message: 'Travel Leg created.',
+        color: 'teal',
+      });
     });
   }
 
@@ -626,7 +630,11 @@ export function App() {
       await atlasApi.archiveVisit(tripId, dayId, visit.id);
       setSelectedVisitId(null);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
-      notifications.show({ title: 'Visit archived', message: 'Visit history saved.', color: 'teal' });
+      notifications.show({
+        title: 'Visit archived',
+        message: 'Visit history saved.',
+        color: 'teal',
+      });
     });
   }
 
