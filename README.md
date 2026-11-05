@@ -79,4 +79,4 @@ This repository contains application source code and **synthetic test data only*
 
 ### Lot 3 manual recipe
 
-Read [Lot 3 acceptance and safe migrations](docs/LOT3_RECETTE.md) before using a pre-existing personal PostgreSQL database. Migrations 0018–0020 include nested Trips, explicit cross-trip connections, and local time ranges; never skip a tested backup.
+Read [Lot 3 acceptance and safe migrations](docs/LOT3_RECETTE.md) before using a pre-existing personal PostgreSQL database. Migrations 0018–0021 include nested Trips, explicit cross-trip connections, and local time ranges; never skip a tested backup.
