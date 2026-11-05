@@ -13,7 +13,9 @@ const client = postgres(url, { max: 2 });
 const db = drizzle(client);
 const store = createAtlasStore(url);
 const tripIds: string[] = [];
-beforeAll(async () => { await migrate(db, { migrationsFolder: 'packages/database/drizzle' }); });
+beforeAll(async () => {
+  await migrate(db, { migrationsFolder: 'packages/database/drizzle' });
+});
 afterAll(async () => {
   if (tripIds.length) {
     await db.delete(legs).where(inArray(legs.tripId, tripIds));
@@ -25,32 +27,55 @@ afterAll(async () => {
 describe('Cross-trip boundary connections', () => {
   it('records, reconnects and archives an explicit Leg within one trip family', async () => {
     const [parent] = await db.insert(trips).values({ title: 'Synthetic Japan trip' }).returning();
-    const [child] = await db.insert(trips).values({ title: 'Synthetic weekend', parentTripId: parent.id }).returning();
-    const [unrelated] = await db.insert(trips).values({ title: 'Synthetic unrelated trip' }).returning();
+    const [child] = await db
+      .insert(trips)
+      .values({ title: 'Synthetic weekend', parentTripId: parent.id })
+      .returning();
+    const [unrelated] = await db
+      .insert(trips)
+      .values({ title: 'Synthetic unrelated trip' })
+      .returning();
     tripIds.push(parent.id, child.id, unrelated.id);
-    const sourceDay = await store.createDay(parent.id, '2026-11-01') as { id: string };
-    const destinationDay = await store.createDay(child.id, '2026-11-02') as { id: string };
-    const unrelatedDay = await store.createDay(unrelated.id, '2026-11-03') as { id: string };
+    const sourceDay = (await store.createDay(parent.id, '2026-11-01')) as { id: string };
+    const destinationDay = (await store.createDay(child.id, '2026-11-02')) as { id: string };
+    const unrelatedDay = (await store.createDay(unrelated.id, '2026-11-03')) as { id: string };
     const start = await store.addVisit(parent.id, sourceDay.id, null);
     const end = await store.addVisit(child.id, destinationDay.id, null);
     await store.addVisit(unrelated.id, unrelatedDay.id, null);
     expect(start).toBeDefined();
     expect(end).toBeDefined();
-    const forbidden = await connectTrips(db, { fromTripId: parent.id, fromDayId: sourceDay.id, toTripId: unrelated.id, toDayId: unrelatedDay.id });
+    const forbidden = await connectTrips(db, {
+      fromTripId: parent.id,
+      fromDayId: sourceDay.id,
+      toTripId: unrelated.id,
+      toDayId: unrelatedDay.id,
+    });
     expect(forbidden.status).toBe('invalid');
-    const result = await connectTrips(db, { fromTripId: parent.id, fromDayId: sourceDay.id, toTripId: child.id, toDayId: destinationDay.id });
+    const result = await connectTrips(db, {
+      fromTripId: parent.id,
+      fromDayId: sourceDay.id,
+      toTripId: child.id,
+      toDayId: destinationDay.id,
+    });
     expect(result.status).toBe('connected');
     if (result.status !== 'connected') throw new Error('Cross-trip Leg was not created');
     expect(result.created).toBe(true);
     expect(result.leg.tripId).toBe(parent.id);
     expect(result.leg.transportMode).toBeNull();
-    const inbound = await store.getTimeline(child.id, destinationDay.id) as { crossDayLegs: Array<{ id: string }> };
+    const inbound = (await store.getTimeline(child.id, destinationDay.id)) as {
+      crossDayLegs: Array<{ id: string }>;
+    };
     expect(inbound.crossDayLegs.some((leg) => leg.id === result.leg.id)).toBe(true);
     const conflict = await disconnectTrips(db, result.leg.id, 999);
     expect(conflict.status).toBe('conflict');
     const removed = await disconnectTrips(db, result.leg.id, result.leg.revision);
     expect(removed.status).toBe('disconnected');
-    const again = await connectTrips(db, { fromTripId: parent.id, fromDayId: sourceDay.id, toTripId: child.id, toDayId: destinationDay.id });
+    const again = await connectTrips(db, {
+      fromTripId: parent.id,
+      fromDayId: sourceDay.id,
+      toTripId: child.id,
+      toDayId: destinationDay.id,
+    });
     expect(again.status).toBe('connected');
     if (again.status !== 'connected') throw new Error('Cross-trip Leg was not restored');
     expect(again.created).toBe(false);
