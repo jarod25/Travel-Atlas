@@ -63,8 +63,11 @@ an intra-day snapshot and restores with Unknown draft Legs instead.
 The editor offers **Connect to next day** only when no outgoing cross-day Leg
 exists. Once connected, it offers **Disconnect from next day**, with an explicit
 confirmation. The API validates the day boundary and Leg revision before
-retiring the link. The original journey stays in history; reconnecting
-creates a fresh Unknown draft rather than pretending it is the old journey.
+retiring the link. The original journey stays in history. On explicit
+reconnection of the same directed Visit pair, an unambiguous historical
+Leg is reactivated with its recorded transport, dates, confidence and
+selected RouteVersion. If multiple historical Legs match, the API creates
+an Unknown draft instead of guessing which journey was meant.
 
 ### Correcting an existing Visit's Place
 
@@ -72,4 +75,48 @@ Select a Visit, then use **Correct this visit's Place** in Details to search and
 
 ## Known limitations
 
-The current interface still requires external network access for its MapLibre CDN module and map tiles. A synthetic API/Vite HTTP journey smoke test runs in CI, but a Playwright Chromium synthetic browser flow runs in CI, but no physical Android responsive acceptance result is recorded here. Places can be corrected without replacing Visits, but the app does not yet calculate new routes or automatically import real travel histories. A missing geometry remains Unknown.
+The current interface still requires external network access for its MapLibre CDN module and map tiles. Synthetic API/Vite HTTP smoke tests and Playwright Chromium browser tests run in CI, but no physical Android acceptance result is recorded here. Places can be corrected without replacing Visits, but the app does not yet calculate new routes or automatically import real travel histories. A missing geometry remains Unknown.
+
+## Lot 3 stabilization and manual acceptance
+
+The CI checks formatting, linting, typechecking, unit and PostGIS integration
+tests, builds, API/web smoke journeys and Chromium Playwright E2E. Green CI
+validates synthetic scenarios only; it cannot inspect the user's local
+`atlas_lot3_recette` PostgreSQL database on Windows.
+
+Before declaring Lot 3 complete, check the following in that local database
+**after taking a tested backup**:
+
+1. Reorder two Visits away and back; the same directed Leg should recover its
+   recorded transport, clock times, certainty and selected RouteVersion.
+2. Archive and restore a Visit. Confirm its place and historical Legs return
+   where the restored adjacency is unambiguous, with no duplicate current edges.
+3. Archive a day; its editing controls must be disabled until restored, but
+   consultation and Restore day remain available.
+4. Connect two consecutive days, edit the cross-day Leg, disconnect and reconnect.
+   Verify the same recorded Leg returns if it is the unique historical match;
+   multiple matches must not be silently selected.
+5. Create a Visit from an existing Place, from a new named Place and with an
+   explicitly Unknown Place. No location or route is inferred.
+6. Navigate Explore, Trips and a specific day in Trip Editor; reload with F5
+   and use Back/Forward. Check saved URL filters and recently modified Trips.
+7. Review maps with known and unknown coordinates. Fit to content should
+   use stored coordinates only, and manual pan/zoom must remain usable.
+8. Check layouts and controls on desktop, tablet, narrow mobile and around
+   breakpoints, especially long Timelines and editing dialogs.
+9. Restart the API, browser and computer and verify data persisted without
+   silent loss. Re-run the critical cases against a separate backup/restored
+   test database where possible.
+
+Decisions deliberately deferred until a separate design review:
+
+- Trip start/end dates: avoid storing a second contradictory date range before
+  defining whether dates are manually entered or derived from known TripDays.
+- Time precision: an approximate clock time and the confidence of its source
+  are distinct concepts. Do not treat minute-level input as exact just because
+  a date/time is present; the data model may need a separate precision field.
+- Automatic cross-day suggestions: dates alone do not establish destinations.
+  No new Visit or Leg may be inferred from an arrival date alone.
+
+Lot 4 routing proposals remain separate from evidence of journeys actually
+taken. Do not mark Lot 3 accepted before the manual acceptance above.
