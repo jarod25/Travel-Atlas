@@ -357,3 +357,44 @@ test('Trip dates derive from active days and allow explicit reversible correctio
     'Displayed period: 2026-09-12 to 2026-09-12',
   );
 });
+
+test('Leg editor saves independent clock precision and an explicit date range', async ({
+  page,
+  request,
+}) => {
+  const title = `Synthetic precision trip ${Date.now()}`;
+  await page.goto('/trips');
+  await page.getByLabel('New trip').fill(title);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await page.getByRole('button', { name: '+ Add visit' }).click();
+  await page.getByRole('button', { name: '+ Add visit' }).click();
+  await expect(page.locator('.leg-pill')).toHaveCount(1);
+  await page.locator('.leg-pill').click();
+
+  await page.locator('.time-details summary').click();
+  await page.locator('#departure-date').fill('2026-09-12');
+  await page.locator('#departure-time').fill('14:00');
+  await page.locator('#departure-precision').selectOption('approximate');
+  await page.locator('#departure-confidence').selectOption('confirmed');
+  await page.locator('#arrival-date').fill('2026-09-13');
+  await page.locator('#arrival-time').fill('23:55');
+  await page.locator('#arrival-precision').selectOption('range');
+  await page.locator('#arrival-range-end-date').fill('2026-09-14');
+  await page.locator('#arrival-range-end-time').fill('00:20');
+  await page.locator('#arrival-confidence').selectOption('estimated');
+  await page.getByRole('button', { name: 'Save Leg' }).click();
+
+  const trip = (await (await request.get('/api/v1/trips')).json()).find(
+    (entry: { title: string }) => entry.title === title,
+  );
+  const days = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
+  const timeline = await (
+    await request.get(`/api/v1/trips/${trip.id}/days/${days[0].id}/timeline`)
+  ).json();
+  expect(timeline.legs[0].departureTimePrecision).toBe('approximate');
+  expect(timeline.legs[0].departureTimeConfidence).toBe('confirmed');
+  expect(timeline.legs[0].arrivalTimePrecision).toBe('range');
+  expect(timeline.legs[0].arrivalRangeEndLocalDate).toBe('2026-09-14');
+  expect(timeline.legs[0].arrivalRangeEndLocalTime).toBe('00:20:00');
+});
