@@ -67,6 +67,25 @@ export async function updateTripWithRevision(
       })
       .where(eq(trips.id, id))
       .returning();
+    // Archiving a parent retires current edges touching any descendant.
+    // Historic Leg records, route versions and evidence are preserved.
+    if (changes.isArchived === true && !current.isArchived) {
+      await tx.execute(sql`
+        WITH RECURSIVE descendants AS (
+          SELECT id FROM trips WHERE id = ${id}
+          UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id
+        ), retired AS (
+          UPDATE legs l SET is_current = false, revision = revision + 1
+          WHERE l.is_current = true AND EXISTS (
+            SELECT 1 FROM visits v WHERE v.id IN (l.from_visit_id, l.to_visit_id)
+            AND v.trip_id IN (SELECT id FROM descendants)
+          )
+          RETURNING l.id
+        )
+        UPDATE route_proposals p SET status = 'invalidated', reviewed_at = NOW()
+        WHERE p.status = 'pending' AND p.leg_id IN (SELECT id FROM retired)
+      `);
+    }
     return { status: 'updated', trip: updated };
   });
 }
