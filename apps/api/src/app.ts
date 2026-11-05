@@ -568,10 +568,16 @@ export function buildApp(store?: AtlasStore) {
       transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
       departureLocalDate?: string | null;
       departureLocalTime?: string | null;
+      departureTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
+      departureRangeEndLocalDate?: string | null;
+      departureRangeEndLocalTime?: string | null;
       departureTimeZone?: string | null;
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
+      arrivalTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
+      arrivalRangeEndLocalDate?: string | null;
+      arrivalRangeEndLocalTime?: string | null;
       arrivalTimeZone?: string | null;
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
     };
@@ -617,6 +623,14 @@ export function buildApp(store?: AtlasStore) {
             transportConfidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
             departureLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
             departureLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            departureTimePrecision: {
+              type: 'string',
+              enum: ['unspecified', 'precise', 'approximate', 'range'],
+            },
+            departureRangeEndLocalDate: {
+              anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }],
+            },
+            departureRangeEndLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             departureTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
             departureTimeConfidence: {
               type: 'string',
@@ -624,6 +638,14 @@ export function buildApp(store?: AtlasStore) {
             },
             arrivalLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
             arrivalLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            arrivalTimePrecision: {
+              type: 'string',
+              enum: ['unspecified', 'precise', 'approximate', 'range'],
+            },
+            arrivalRangeEndLocalDate: {
+              anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }],
+            },
+            arrivalRangeEndLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             arrivalTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
             arrivalTimeConfidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
           },
@@ -642,13 +664,20 @@ export function buildApp(store?: AtlasStore) {
       for (const field of [
         'departureLocalDate',
         'departureLocalTime',
+        'departureRangeEndLocalDate',
+        'departureRangeEndLocalTime',
         'arrivalLocalDate',
         'arrivalLocalTime',
+        'arrivalRangeEndLocalDate',
+        'arrivalRangeEndLocalTime',
       ] as const) {
         if (changes[field] === '') changes[field] = null;
       }
       const result = await store.updateLeg(request.params.legId, Number(match[1]), changes);
       if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
+      if (result.status === 'invalid_times') {
+        return reply.code(409).send({ error: 'Invalid Leg clock precision or time range' });
+      }
       if (result.status === 'conflict') {
         return reply
           .code(412)

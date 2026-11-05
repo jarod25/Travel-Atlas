@@ -167,12 +167,26 @@ export const legs = pgTable(
       .default('unknown'),
     departureLocalDate: date('departure_local_date', { mode: 'string' }),
     departureLocalTime: time('departure_local_time'),
+    departureTimePrecision: text('departure_time_precision', {
+      enum: ['unspecified', 'precise', 'approximate', 'range'],
+    })
+      .notNull()
+      .default('unspecified'),
+    departureRangeEndLocalDate: date('departure_range_end_local_date', { mode: 'string' }),
+    departureRangeEndLocalTime: time('departure_range_end_local_time'),
     departureTimeZone: text('departure_time_zone'),
     departureTimeConfidence: text('departure_time_confidence', { enum: confidenceValues })
       .notNull()
       .default('unknown'),
     arrivalLocalDate: date('arrival_local_date', { mode: 'string' }),
     arrivalLocalTime: time('arrival_local_time'),
+    arrivalTimePrecision: text('arrival_time_precision', {
+      enum: ['unspecified', 'precise', 'approximate', 'range'],
+    })
+      .notNull()
+      .default('unspecified'),
+    arrivalRangeEndLocalDate: date('arrival_range_end_local_date', { mode: 'string' }),
+    arrivalRangeEndLocalTime: time('arrival_range_end_local_time'),
     arrivalTimeZone: text('arrival_time_zone'),
     arrivalTimeConfidence: text('arrival_time_confidence', { enum: confidenceValues })
       .notNull()
@@ -220,8 +234,50 @@ export const legs = pgTable(
       sql`${table.departureLocalTime} IS NULL OR ${table.departureLocalDate} IS NOT NULL`,
     ),
     check(
+      'legs_departure_precision_valid',
+      sql`${table.departureTimePrecision} IN ('unspecified','precise','approximate','range')`,
+    ),
+    check(
+      'legs_departure_range_valid',
+      sql`(
+        (${table.departureTimePrecision} = 'range'
+         AND ${table.departureLocalDate} IS NOT NULL
+         AND ${table.departureLocalTime} IS NOT NULL
+         AND ${table.departureRangeEndLocalDate} IS NOT NULL
+         AND ${table.departureRangeEndLocalTime} IS NOT NULL
+         AND (${table.departureRangeEndLocalDate}, ${table.departureRangeEndLocalTime})
+             >= (${table.departureLocalDate}, ${table.departureLocalTime}))
+        OR (${table.departureTimePrecision} <> 'range'
+         AND ${table.departureRangeEndLocalDate} IS NULL
+         AND ${table.departureRangeEndLocalTime} IS NULL
+         AND (${table.departureTimePrecision} = 'unspecified'
+           OR (${table.departureLocalDate} IS NOT NULL AND ${table.departureLocalTime} IS NOT NULL)))
+      )`,
+    ),
+    check(
       'legs_arrival_time_needs_date',
       sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
+    ),
+    check(
+      'legs_arrival_precision_valid',
+      sql`${table.arrivalTimePrecision} IN ('unspecified','precise','approximate','range')`,
+    ),
+    check(
+      'legs_arrival_range_valid',
+      sql`(
+        (${table.arrivalTimePrecision} = 'range'
+         AND ${table.arrivalLocalDate} IS NOT NULL
+         AND ${table.arrivalLocalTime} IS NOT NULL
+         AND ${table.arrivalRangeEndLocalDate} IS NOT NULL
+         AND ${table.arrivalRangeEndLocalTime} IS NOT NULL
+         AND (${table.arrivalRangeEndLocalDate}, ${table.arrivalRangeEndLocalTime})
+             >= (${table.arrivalLocalDate}, ${table.arrivalLocalTime}))
+        OR (${table.arrivalTimePrecision} <> 'range'
+         AND ${table.arrivalRangeEndLocalDate} IS NULL
+         AND ${table.arrivalRangeEndLocalTime} IS NULL
+         AND (${table.arrivalTimePrecision} = 'unspecified'
+           OR (${table.arrivalLocalDate} IS NOT NULL AND ${table.arrivalLocalTime} IS NOT NULL)))
+      )`,
     ),
     // The circular selected-version FK is enforced by migration 0004.
     unique('legs_trip_id_id_unique').on(table.tripId, table.id),
