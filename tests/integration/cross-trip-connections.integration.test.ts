@@ -85,4 +85,25 @@ describe('Cross-trip boundary connections', () => {
     const [edge] = await db.select().from(legs).where(eq(legs.id, result.leg.id));
     expect(edge.isCurrent).toBe(false);
   });
+  it('preserves intra-trip draft Legs when a parent Trip is archived and restored', async () => {
+    const [parent] = await db.insert(trips).values({ title: 'Synthetic archive parent' }).returning();
+    const [child] = await db.insert(trips).values({ title: 'Synthetic archive child', parentTripId: parent.id }).returning();
+    tripIds.push(parent.id, child.id);
+    const day = (await store.createDay(child.id, '2026-11-03')) as { id: string };
+    await store.addVisit(child.id, day.id, null);
+    await store.addVisit(child.id, day.id, null);
+    const before = await db.select().from(legs).where(eq(legs.tripId, child.id));
+    expect(before).toHaveLength(1);
+    expect(before[0].isCurrent).toBe(true);
+    const archived = await store.editTrip(parent.id, 1, { isArchived: true });
+    expect(archived.status).toBe('updated');
+    const hidden = await db.select().from(legs).where(eq(legs.id, before[0].id));
+    expect(hidden[0].isCurrent).toBe(true);
+    const restored = await store.editTrip(parent.id, 2, { isArchived: false });
+    expect(restored.status).toBe('updated');
+    const after = await db.select().from(legs).where(eq(legs.id, before[0].id));
+    expect(after[0].isCurrent).toBe(true);
+    expect(after[0].id).toBe(before[0].id);
+  });
+
 });
