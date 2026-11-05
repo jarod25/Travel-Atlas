@@ -32,7 +32,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
 
   for (let index = 1; index <= 3; index += 1) {
     await page.getByRole('button', { name: '+ Add visit' }).click();
-    await expect(page.getByText('Visit added')).toBeVisible();
+    await expect(page.getByText('Visit added').last()).toBeVisible();
     await expect(page.locator('.visit-row')).toHaveCount(index);
   }
 
