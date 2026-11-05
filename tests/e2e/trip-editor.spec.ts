@@ -250,7 +250,9 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
 
   await page
     .locator('.trip-card')
-    .filter({ has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title}$`) }) })
+    .filter({
+      has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title}$`) }),
+    })
     .getByRole('button', { name: 'Rename' })
     .click();
   const modal = page.getByRole('dialog', { name: 'Rename trip' });
@@ -260,13 +262,17 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
 
   await page
     .locator('.trip-card')
-    .filter({ has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title}$`) }) })
+    .filter({
+      has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title}$`) }),
+    })
     .getByRole('button', { name: 'Rename' })
     .click();
   await modal.getByRole('textbox', { name: 'Trip name' }).fill(title + ' renamed');
   await modal.getByRole('button', { name: 'Save' }).click();
   await expect(
-    page.locator('.trip-card').filter({ has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title} renamed$`) }) }),
+    page.locator('.trip-card').filter({
+      has: page.locator('.trip-card > strong').filter({ hasText: new RegExp(`^${title} renamed$`) }),
+    }),
   ).toBeVisible();
 
   const trips = await (await request.get('/api/v1/trips')).json();
