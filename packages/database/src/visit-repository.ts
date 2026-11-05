@@ -87,7 +87,7 @@ export async function appendVisitToDay(
 
 /**
  * Reorder exactly the existing Visits of one day.
- * Historical Legs are retained (isCurrent=false); new adjacency is unknown.
+ * Historical Legs are retained (isCurrent=false). A unique previously recorded\n * directed adjacency is restored; genuinely new or ambiguous adjacency stays unknown.
  * Current cross-day connections are protected rather than silently rewritten.
  */
 export async function reorderVisitsInDay(
@@ -193,14 +193,40 @@ export async function reorderVisitsInDay(
       await tx.update(visits).set({ position: index }).where(eq(visits.id, requested[index]));
     }
 
+    // Reuse a historical Leg only when its directed Visit pair is unambiguous.
+    // Selecting one of several historical records would silently assign possibly
+    // unrelated travel data to the current journey.
+    const historical = await tx
+      .select({ id: legs.id, fromVisitId: legs.fromVisitId, toVisitId: legs.toVisitId })
+      .from(legs)
+      .where(
+        and(
+          eq(legs.tripId, input.tripId),
+          eq(legs.isCurrent, false),
+          inArray(legs.fromVisitId, ids),
+          inArray(legs.toVisitId, ids),
+        ),
+      );
+    const historicalByPair = new Map<string, string[]>();
+    for (const leg of historical) {
+      const key = pairKey(leg.fromVisitId, leg.toVisitId);
+      historicalByPair.set(key, [...(historicalByPair.get(key) ?? []), leg.id]);
+    }
+
     let newLegCount = 0;
     for (let index = 1; index < requested.length; index += 1) {
-      if (retainedPairs.has(pairKey(requested[index - 1], requested[index]))) continue;
-      await tx.insert(legs).values({
-        tripId: input.tripId,
-        fromVisitId: requested[index - 1],
-        toVisitId: requested[index],
-      });
+      const fromVisitId = requested[index - 1];
+      const toVisitId = requested[index];
+      const key = pairKey(fromVisitId, toVisitId);
+      if (retainedPairs.has(key)) continue;
+      const candidates = historicalByPair.get(key) ?? [];
+      if (candidates.length === 1) {
+        // Keep the original Leg ID, recorded facts and selected RouteVersion.
+        // Pending route proposals were invalidated when the Leg was retired.
+        await tx.update(legs).set({ isCurrent: true }).where(eq(legs.id, candidates[0]));
+        continue;
+      }
+      await tx.insert(legs).values({ tripId: input.tripId, fromVisitId, toVisitId });
       newLegCount += 1;
     }
 
