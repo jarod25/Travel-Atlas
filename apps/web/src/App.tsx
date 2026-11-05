@@ -306,7 +306,7 @@ export function App() {
     timeline.visits.some((visit) => visit.id === leg.fromVisitId),
   );
   const canSuggestDayConnection =
-    (timeline?.visits.length ?? 0) > 0 && (followingDay?.activeVisitCount ?? 0) > 0;
+    (selectedDay?.activeVisitCount ?? 0) > 0 && (followingDay?.activeVisitCount ?? 0) > 0;
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = [...(timeline?.legs ?? []), ...(timeline?.crossDayLegs ?? [])].find(
     (leg) => leg.id === selectedLegId,
@@ -1144,7 +1144,10 @@ export function App() {
                     {outgoingCrossDay ? (
                       <>
                         <span>The selected day is connected to the next day.</span>
-                        <button disabled={pending} onClick={() => void disconnectFromFollowingDay()}>
+                        <button
+                          disabled={pending}
+                          onClick={() => void disconnectFromFollowingDay()}
+                        >
                           Disconnect from next day
                         </button>
                       </>
