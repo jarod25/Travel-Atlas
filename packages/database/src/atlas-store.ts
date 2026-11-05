@@ -26,7 +26,12 @@ export interface AtlasStore {
   editTrip(
     id: string,
     revision: number,
-    changes: { title?: string; isArchived?: boolean },
+    changes: {
+      title?: string;
+      isArchived?: boolean;
+      startDateOverride?: string | null;
+      endDateOverride?: string | null;
+    },
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
@@ -100,12 +105,26 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         COALESCE((SELECT MAX(updated_at) FROM visits WHERE trip_id = ${trips.id}), ${trips.updatedAt}),
         COALESCE((SELECT MAX(updated_at) FROM legs WHERE trip_id = ${trips.id}), ${trips.updatedAt})
       )`;
+      const derivedStart = sql<string | null>`(
+        SELECT MIN(local_date)::text FROM trip_days
+        WHERE trip_id = ${trips.id} AND is_archived = false
+      )`;
+      const derivedEnd = sql<string | null>`(
+        SELECT MAX(local_date)::text FROM trip_days
+        WHERE trip_id = ${trips.id} AND is_archived = false
+      )`;
       return db
         .select({
           id: trips.id,
           title: trips.title,
           isArchived: trips.isArchived,
           revision: trips.revision,
+          startDateOverride: trips.startDateOverride,
+          endDateOverride: trips.endDateOverride,
+          derivedStartDate: derivedStart,
+          derivedEndDate: derivedEnd,
+          effectiveStartDate: sql<string | null>`COALESCE(${trips.startDateOverride}, ${derivedStart})`,
+          effectiveEndDate: sql<string | null>`COALESCE(${trips.endDateOverride}, ${derivedEnd})`,
           updatedAt: trips.updatedAt,
           lastActivityAt: activity,
         })
@@ -118,7 +137,19 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       return trip;
     },
     getTrip: async (id) => {
-      const [trip] = await db.select().from(trips).where(eq(trips.id, id));
+      const [trip] = await db
+        .select({
+          id: trips.id,
+          title: trips.title,
+          isArchived: trips.isArchived,
+          revision: trips.revision,
+          startDateOverride: trips.startDateOverride,
+          endDateOverride: trips.endDateOverride,
+          derivedStartDate: sql<string | null>`(SELECT MIN(local_date)::text FROM trip_days WHERE trip_id = ${trips.id} AND is_archived = false)`,
+          derivedEndDate: sql<string | null>`(SELECT MAX(local_date)::text FROM trip_days WHERE trip_id = ${trips.id} AND is_archived = false)`,
+        })
+        .from(trips)
+        .where(eq(trips.id, id));
       return trip ?? null;
     },
     editTrip: (id, revision, changes) => updateTripWithRevision(db, id, revision, changes),
