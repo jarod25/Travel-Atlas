@@ -27,6 +27,7 @@ export interface AtlasStore {
   getTrip(tripId: string): Promise<unknown | null>;
   editTrip(id: string, revision: number, changes: TripChanges): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
+  listCombinedDays(tripId: string): Promise<unknown[]>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
   archiveDay(
     tripId: string,
@@ -176,6 +177,25 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .from(tripDays)
         .where(eq(tripDays.tripId, id))
         .orderBy(asc(tripDays.position));
+    },
+    listCombinedDays: async (tripId) => {
+      const result = await db.execute(sql`
+        WITH RECURSIVE tree AS (
+          SELECT id, title, parent_trip_id, 0 AS depth
+          FROM trips WHERE id = ${tripId} AND is_archived = false
+          UNION ALL
+          SELECT t.id, t.title, t.parent_trip_id, tree.depth + 1
+          FROM trips t JOIN tree ON t.parent_trip_id = tree.id
+          WHERE t.is_archived = false
+        )
+        SELECT d.id, d.trip_id AS "tripId", d.local_date::text AS "localDate",
+          d.position, d.revision, d.is_archived AS "isArchived",
+          tree.title AS "tripTitle", tree.depth
+        FROM trip_days d JOIN tree ON tree.id = d.trip_id
+        WHERE d.is_archived = false
+        ORDER BY d.local_date ASC NULLS LAST, tree.depth, d.position, d.id
+      `);
+      return [...result];
     },
     createDay: async (id, localDate) =>
       db.transaction(async (tx) => {
