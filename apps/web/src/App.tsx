@@ -457,14 +457,8 @@ export function App() {
     setArrivalRangeEnd(datetimeInput(selectedLeg.arrivalRangeEnd));
     setDepartureZone(selectedLeg.departureTimeZone ?? '');
     setArrivalZone(selectedLeg.arrivalTimeZone ?? '');
-    setDeparturePrecision(
-      selectedLeg.departureTimePrecision === 'range'
-        ? 'unknown'
-        : selectedLeg.departureTimePrecision,
-    );
-    setArrivalPrecision(
-      selectedLeg.arrivalTimePrecision === 'range' ? 'unknown' : selectedLeg.arrivalTimePrecision,
-    );
+    setDeparturePrecision(selectedLeg.departureTimePrecision);
+    setArrivalPrecision(selectedLeg.arrivalTimePrecision);
     setDepartureCertainty(selectedLeg.departureTimeConfidence);
     setArrivalCertainty(selectedLeg.arrivalTimeConfidence);
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
