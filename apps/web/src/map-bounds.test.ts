@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { FeatureCollection } from './api';
 import { geographicBounds } from './map-bounds';
 
-function collection(...geometries: Array<{ type: string; coordinates: unknown }>): FeatureCollection {
+function collection(
+  ...geometries: Array<{ type: string; coordinates: unknown }>
+): FeatureCollection {
   return {
     type: 'FeatureCollection',
     features: geometries.map((geometry) => ({ type: 'Feature', geometry, properties: {} })),
@@ -31,7 +33,10 @@ describe('Geographic framing', () => {
           { type: 'MultiLineString', coordinates: [[[8, 49], [10, 46]]] },
         ),
       ),
-    ).toEqual([[6, 46], [10, 50]]);
+    ).toEqual([
+      [6, 46],
+      [10, 50],
+    ]);
   });
 
   it('rejects invalid or unsupported positions instead of shifting the map', () => {
@@ -43,6 +48,9 @@ describe('Geographic framing', () => {
           { type: 'Point', coordinates: [135, 35] },
         ),
       ),
-    ).toEqual([[135, 35], [135, 35]]);
+    ).toEqual([
+      [135, 35],
+      [135, 35],
+    ]);
   });
 });
