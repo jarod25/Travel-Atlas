@@ -1552,8 +1552,12 @@ export function App() {
                             : 'No recorded coordinates'}
                         </p>
                       </div>
-                      <div>
-                        <label htmlFor="visit-place-search">Correct this visit's Place</label>
+                      <details className="visit-place-editor">
+                        <summary>Change place</summary>
+                        <p>
+                          Current place: <strong>{selectedVisit.placeName ?? 'Unknown place'}</strong>
+                        </p>
+                        <label htmlFor="visit-place-search">Search an existing Place</label>
                         <input
                           id="visit-place-search"
                           value={visitPlaceQuery}
@@ -1592,8 +1596,11 @@ export function App() {
                           Save Place correction
                         </button>
                         <p>This updates the Visit, not the reusable Place or its saved history.</p>
-                      </div>
-                      <button onClick={() => void archiveVisit(selectedVisit)} disabled={pending}>
+                      </details>
+                      <button
+                        onClick={() => void archiveVisit(selectedVisit)}
+                        disabled={pending || dayReadOnly}
+                      >
                         Archive visit
                       </button>
                     </div>
