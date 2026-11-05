@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { atlasApi } from './api';
 import type {
   FeatureCollection,
+  ArchivedVisitRow,
   Feature,
   LegRow,
   Place,
@@ -36,6 +37,8 @@ export function App() {
   const [days, setDays] = useState<TripDay[]>([]);
   const [dayId, setDayId] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
+  const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
+  const [visitVisibility, setVisitVisibility] = useState<'active' | 'archived' | 'all'>('active');
   const [places, setPlaces] = useState<Place[]>([]);
   const [features, setFeatures] = useState<FeatureCollection>(emptyFeatures);
   const [tripName, setTripName] = useState('');
@@ -95,7 +98,12 @@ export function App() {
     return data;
   }, []);
   const loadTimeline = useCallback(async (id: string, day: string) => {
-    setTimeline(await atlasApi.timeline(id, day));
+    const [current, archived] = await Promise.all([
+      atlasApi.timeline(id, day),
+      atlasApi.archivedVisits(id, day),
+    ]);
+    setTimeline(current);
+    setArchivedVisits(archived);
   }, []);
   const loadExplore = useCallback(async () => {
     setFeatures(await atlasApi.explore());
@@ -135,13 +143,16 @@ export function App() {
   useEffect(() => {
     if (!tripId || !dayId) {
       setTimeline(null);
+      setArchivedVisits([]);
       return;
     }
     let active = true;
-    atlasApi
-      .timeline(tripId, dayId)
-      .then((result) => {
-        if (active) setTimeline(result);
+    Promise.all([atlasApi.timeline(tripId, dayId), atlasApi.archivedVisits(tripId, dayId)])
+      .then(([result, archived]) => {
+        if (active) {
+          setTimeline(result);
+          setArchivedVisits(archived);
+        }
       })
       .catch((cause: unknown) => {
         if (active) setError(String(cause));
@@ -436,6 +447,14 @@ export function App() {
         selectedVisit.revision,
         visitPlaceId || null,
       );
+      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+    });
+  }
+
+  async function restoreArchivedVisit(visit: ArchivedVisitRow) {
+    if (!tripId || !dayId || selectedDay?.isArchived) return;
+    await execute(async () => {
+      await atlasApi.restoreVisit(tripId, dayId, visit.id);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
     });
   }
@@ -823,11 +842,24 @@ export function App() {
                 <aside className={`timeline-panel mobile-${mobilePanel}`}>
                   <div className="panel-heading">
                     <h2>Timeline</h2>
-                    <span>{timeline?.visits.length ?? 0} visits</span>
+                    <span>{timeline?.visits.length ?? 0} active visits</span>
                   </div>
+                  <label htmlFor="visit-visibility">Show visits</label>
+                  <select
+                    id="visit-visibility"
+                    value={visitVisibility}
+                    onChange={(event) =>
+                      setVisitVisibility(event.target.value as 'active' | 'archived' | 'all')
+                    }
+                  >
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                    <option value="all">All</option>
+                  </select>
                   {!dayId && <p className="empty-state">Add a day to begin.</p>}
                   {dayId && (
                     <>
+                      {visitVisibility !== 'archived' && (
                       <div className="visit-list">
                         {timeline?.visits.map((visit, index) => {
                           const incoming = timeline.legs.find((leg) => leg.toVisitId === visit.id);
@@ -886,6 +918,24 @@ export function App() {
                           );
                         })}
                       </div>
+                      )}
+                      {visitVisibility !== 'active' && (
+                        <div className="archived-visits" aria-label="Archived visits">
+                          <h3>Archived visits</h3>
+                          {archivedVisits.length === 0 && <p>No archived visits in this day.</p>}
+                          {archivedVisits.map((visit) => (
+                            <div className="visit-row" key={visit.id}>
+                              <span>{visit.placeName ?? 'Unknown place'}</span>
+                              <button
+                                disabled={pending || selectedDay?.isArchived || selectedTrip?.isArchived}
+                                onClick={() => void restoreArchivedVisit(visit)}
+                              >
+                                Restore visit
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div className="composer">
                         <h3>Add a visit</h3>
                         <label htmlFor="place-search">Search existing places</label>
