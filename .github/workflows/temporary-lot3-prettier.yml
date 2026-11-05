@@ -1,0 +1,30 @@
+name: Temporary lot 3 prettier
+on:
+  push:
+    branches: [feature/lot3-acceptance-ready]
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write packages/database/src/leg-repository.ts docs/DATABASE.md
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          if ! git diff --cached --quiet; then
+            git commit -m "style(lot3): normalize integration changes"
+            git push origin HEAD:feature/lot3-acceptance-ready
+          fi
