@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Group, Modal, TextInput } from '@mantine/core';
+import { modals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications';
 import { atlasApi } from './api';
 import type {
   FeatureCollection,
@@ -96,6 +99,8 @@ export function App() {
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<Trip | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   function navigate(
     nextView: View,
@@ -133,13 +138,33 @@ export function App() {
     }
   }, [view, tripId, dayId]);
 
+  function confirmAction(
+    title: string,
+    message: string,
+    confirmLabel: string,
+    action: () => Promise<void>,
+    destructive = false,
+  ) {
+    modals.openConfirmModal({
+      title,
+      children: message,
+      labels: { confirm: confirmLabel, cancel: 'Cancel' },
+      confirmProps: destructive ? { color: 'red' } : undefined,
+      onConfirm: () => {
+        void action();
+      },
+    });
+  }
+
   const execute = useCallback(async (action: () => Promise<void>) => {
     setPending(true);
     setError(null);
     try {
       await action();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unexpected error');
+      const message = cause instanceof Error ? cause.message : 'Unexpected error';
+      setError(message);
+      notifications.show({ title: 'Operation failed', message, color: 'red' });
     } finally {
       setPending(false);
     }
@@ -328,18 +353,46 @@ export function App() {
         setTripId(null);
         navigate('trips');
       }
+      if (changes.title) setRenameTarget(null);
+      notifications.show({
+        title: 'Trip saved',
+        message: changes.title
+          ? 'Trip renamed successfully.'
+          : changes.isArchived
+            ? 'Trip archived.'
+            : 'Trip restored.',
+        color: 'teal',
+      });
     });
   }
 
-  async function renameTrip(trip: Trip) {
-    const title = window.prompt('Rename trip', trip.title)?.trim();
-    if (title && title !== trip.title) await changeTrip(trip, { title });
+  function renameTrip(trip: Trip) {
+    setRenameTarget(trip);
+    setRenameValue(trip.title);
+  }
+
+  async function submitRename() {
+    if (!renameTarget) return;
+    const title = renameValue.trim();
+    if (!title || title === renameTarget.title) {
+      setRenameTarget(null);
+      return;
+    }
+    await changeTrip(renameTarget, { title });
   }
 
   async function toggleTripArchive(trip: Trip) {
-    if (!trip.isArchived && !window.confirm('Archive this trip? Its history will remain saved.'))
+    if (!trip.isArchived) {
+      confirmAction(
+        'Archive trip',
+        'Archive this trip? Its history will remain saved.',
+        'Archive',
+        () => changeTrip(trip, { isArchived: true }),
+        true,
+      );
       return;
-    await changeTrip(trip, { isArchived: !trip.isArchived });
+    }
+    await changeTrip(trip, { isArchived: false });
   }
 
   async function addDay() {
