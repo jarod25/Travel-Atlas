@@ -98,12 +98,12 @@ export function App() {
   const [arrivalTime, setArrivalTime] = useState('');
   const [departureZone, setDepartureZone] = useState('');
   const [arrivalZone, setArrivalZone] = useState('');
-  const [departurePrecision, setDeparturePrecision] = useState<'exact' | 'approximate' | 'range' | 'unknown'>(
-    'unknown',
-  );
-  const [arrivalPrecision, setArrivalPrecision] = useState<'exact' | 'approximate' | 'range' | 'unknown'>(
-    'unknown',
-  );
+  const [departurePrecision, setDeparturePrecision] = useState<
+    'exact' | 'approximate' | 'range' | 'unknown'
+  >('unknown');
+  const [arrivalPrecision, setArrivalPrecision] = useState<
+    'exact' | 'approximate' | 'range' | 'unknown'
+  >('unknown');
   const [departureCertainty, setDepartureCertainty] = useState<
     'confirmed' | 'estimated' | 'unknown'
   >('unknown');
@@ -310,11 +310,18 @@ export function App() {
     let active = true;
     setNextDayFirstVisit(null);
     if (tripId && followingDay && !followingDay.isArchived) {
-      atlasApi.timeline(tripId, followingDay.id).then((next) => {
-        if (active) setNextDayFirstVisit(next.visits[0] ?? null);
-      }).catch(() => { if (active) setNextDayFirstVisit(null); });
+      atlasApi
+        .timeline(tripId, followingDay.id)
+        .then((next) => {
+          if (active) setNextDayFirstVisit(next.visits[0] ?? null);
+        })
+        .catch(() => {
+          if (active) setNextDayFirstVisit(null);
+        });
     }
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [tripId, followingDay?.id, followingDay?.revision, followingDay?.isArchived]);
   const activeTrips = trips.filter((trip) => !trip.isArchived);
   const recentTrips = activeTrips.slice(0, 3);
@@ -1268,7 +1275,10 @@ export function App() {
                         Disconnect from next day
                       </button>
                     ) : (
-                      <button disabled={pending || !timeline?.visits.length || !nextDayFirstVisit} onClick={() => void connectToFollowingDay()}>
+                      <button
+                        disabled={pending || !timeline?.visits.length || !nextDayFirstVisit}
+                        onClick={() => void connectToFollowingDay()}
+                      >
                         Connect to next day
                       </button>
                     )}
@@ -1673,7 +1683,10 @@ export function App() {
                           }
                         >
                           <option value="unknown">Unknown</option>
-                          <option value="approximate">Approximate</option><option value="range" disabled>Range (not editable yet)</option>
+                          <option value="approximate">Approximate</option>
+                          <option value="range" disabled>
+                            Range (not editable yet)
+                          </option>
                           <option value="exact">Exact</option>
                         </select>
                         <label htmlFor="departure-confidence">Departure certainty</label>
@@ -1727,7 +1740,10 @@ export function App() {
                           }
                         >
                           <option value="unknown">Unknown</option>
-                          <option value="approximate">Approximate</option><option value="range" disabled>Range (not editable yet)</option>
+                          <option value="approximate">Approximate</option>
+                          <option value="range" disabled>
+                            Range (not editable yet)
+                          </option>
                           <option value="exact">Exact</option>
                         </select>
                         <label htmlFor="arrival-confidence">Arrival certainty</label>

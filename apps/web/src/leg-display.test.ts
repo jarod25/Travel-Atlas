@@ -34,7 +34,9 @@ describe('Leg timeline presentation', () => {
         arrivalTimeZone: 'Asia/Tokyo',
         arrivalTimeConfidence: 'unknown',
       }),
-    ).toBe('Departure: Unknown · Arrival: 2026-09-13 00:15 (Asia/Tokyo) · precision exact · certainty unknown');
+    ).toBe(
+      'Departure: Unknown · Arrival: 2026-09-13 00:15 (Asia/Tokyo) · precision exact · certainty unknown',
+    );
   });
 
   it('uses readable labels without changing the stored transport or certainty', () => {
