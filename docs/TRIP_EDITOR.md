@@ -135,7 +135,7 @@ local datetimes without a fabricated UTC instant. A calculated duration is displ
 only when both local clocks and zones map uniquely to instants; DST gaps and overlaps
 remain explicitly unresolved.
 
-Validation includes migrations 0018–0020, unit/API/PostGIS integration tests and
+Validation includes migrations 0018–0021, unit/API/PostGIS integration tests and
 Playwright responsive workflows, followed by the separate manual checklist in
 [Lot 3 acceptance](LOT3_RECETTE.md).
 
