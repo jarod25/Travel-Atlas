@@ -94,7 +94,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
     listTrips: (includeArchived = false) => {
       // Aggregate activity without mutating the parent Trip from child-table
       // triggers, which could otherwise upgrade shared locks and deadlock.
-      const activity = sql<Date>`GREATEST(
+      const activity = sql<string>`GREATEST(
         ${trips.updatedAt},
         COALESCE((SELECT MAX(updated_at) FROM trip_days WHERE trip_id = ${trips.id}), ${trips.updatedAt}),
         COALESCE((SELECT MAX(updated_at) FROM visits WHERE trip_id = ${trips.id}), ${trips.updatedAt}),
