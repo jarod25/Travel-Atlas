@@ -302,7 +302,7 @@ test('Unknown Place stays an explicit recoverable choice after typing a name', a
   await expect(page.locator('.visit-row')).toContainText('Unknown place');
 });
 
-test('Timeline keeps Add Visit reachable on a narrow screen after many visits', async ({ page }) => {
+test('Timeline Add Visit shortcut works on narrow screens', async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 873 });
   await page.goto('/trips');
   await page.getByLabel('New trip').fill(`Synthetic long Timeline ${Date.now()}`);
