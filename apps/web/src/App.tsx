@@ -95,7 +95,8 @@ export function App() {
   const [legMode, setLegMode] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [departureTime, setDepartureTime] = useState('');
-  const [departureTimePrecision, setDepartureTimePrecision] = useState<TimePrecision>('unspecified');
+  const [departureTimePrecision, setDepartureTimePrecision] =
+    useState<TimePrecision>('unspecified');
   const [departureRangeEndDate, setDepartureRangeEndDate] = useState('');
   const [departureRangeEndTime, setDepartureRangeEndTime] = useState('');
   const [arrivalDate, setArrivalDate] = useState('');
@@ -729,7 +730,8 @@ export function App() {
         departureLocalDate: departureDate || null,
         departureLocalTime: departureDate && departureTime ? departureTime + ':00' : null,
         departureTimePrecision: departureTimePrecision,
-        departureRangeEndLocalDate: departureTimePrecision === 'range' ? departureRangeEndDate : null,
+        departureRangeEndLocalDate:
+          departureTimePrecision === 'range' ? departureRangeEndDate : null,
         departureRangeEndLocalTime:
           departureTimePrecision === 'range' ? departureRangeEndTime + ':00' : null,
         departureTimeConfidence: departureCertainty,
@@ -1668,7 +1670,9 @@ export function App() {
                           id="departure-precision"
                           disabled={dayReadOnly}
                           value={departureTimePrecision}
-                          onChange={(event) => setDepartureTimePrecision(event.target.value as TimePrecision)}
+                          onChange={(event) =>
+                            setDepartureTimePrecision(event.target.value as TimePrecision)
+                          }
                         >
                           <option value="unspecified">Unspecified or date only</option>
                           <option value="precise">Precise clock time</option>
@@ -1677,7 +1681,9 @@ export function App() {
                         </select>
                         {departureTimePrecision === 'range' && (
                           <>
-                            <label htmlFor="departure-range-end-date">Departure range end date</label>
+                            <label htmlFor="departure-range-end-date">
+                              Departure range end date
+                            </label>
                             <input
                               id="departure-range-end-date"
                               disabled={dayReadOnly}
@@ -1685,7 +1691,9 @@ export function App() {
                               value={departureRangeEndDate}
                               onChange={(event) => setDepartureRangeEndDate(event.target.value)}
                             />
-                            <label htmlFor="departure-range-end-time">Departure range end clock time</label>
+                            <label htmlFor="departure-range-end-time">
+                              Departure range end clock time
+                            </label>
                             <input
                               id="departure-range-end-time"
                               disabled={dayReadOnly}
@@ -1731,7 +1739,9 @@ export function App() {
                           id="arrival-precision"
                           disabled={dayReadOnly}
                           value={arrivalTimePrecision}
-                          onChange={(event) => setArrivalTimePrecision(event.target.value as TimePrecision)}
+                          onChange={(event) =>
+                            setArrivalTimePrecision(event.target.value as TimePrecision)
+                          }
                         >
                           <option value="unspecified">Unspecified or date only</option>
                           <option value="precise">Precise clock time</option>
@@ -1748,7 +1758,9 @@ export function App() {
                               value={arrivalRangeEndDate}
                               onChange={(event) => setArrivalRangeEndDate(event.target.value)}
                             />
-                            <label htmlFor="arrival-range-end-time">Arrival range end clock time</label>
+                            <label htmlFor="arrival-range-end-time">
+                              Arrival range end clock time
+                            </label>
                             <input
                               id="arrival-range-end-time"
                               disabled={dayReadOnly}
