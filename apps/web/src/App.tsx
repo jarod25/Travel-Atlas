@@ -21,6 +21,7 @@ type MobilePanel = 'timeline' | 'map';
 function readLocation(): { view: View; tripId: string | null; dayId: string | null } {
   const path = window.location.pathname;
   if (path === '/trips') return { view: 'trips', tripId: null, dayId: null };
+  if (path === '/editor') return { view: 'editor', tripId: null, dayId: null };
   const match = /^\/trips\/([0-9a-f-]{36})$/i.exec(path);
   if (match) {
     return {
@@ -34,7 +35,7 @@ function readLocation(): { view: View; tripId: string | null; dayId: string | nu
 function urlFor(view: View, tripId: string | null, dayId: string | null): string {
   if (view === 'trips') return '/trips';
   if (view !== 'editor') return '/explore';
-  if (!tripId) return '/trips';
+  if (!tripId) return '/editor';
   return '/trips/' + tripId + (dayId ? '?day=' + encodeURIComponent(dayId) : '');
 }
 function describeLeg(leg: LegRow | undefined): string {
@@ -101,7 +102,7 @@ export function App() {
     nextTripId: string | null = tripId,
     nextDayId: string | null = null,
   ) {
-    const targetView = nextView === 'editor' && !nextTripId ? 'trips' : nextView;
+    const targetView = nextView;
     const url = urlFor(targetView, nextTripId, nextDayId);
     if (window.location.pathname + window.location.search !== url) {
       window.history.pushState(null, '', url);
