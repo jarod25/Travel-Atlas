@@ -95,6 +95,10 @@ export function App() {
   const [departureTime, setDepartureTime] = useState('');
   const [arrivalDate, setArrivalDate] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
+  const [departureZone, setDepartureZone] = useState('');
+  const [arrivalZone, setArrivalZone] = useState('');
+  const [departurePrecision, setDeparturePrecision] = useState<'exact' | 'approximate' | 'unknown'>('unknown');
+  const [arrivalPrecision, setArrivalPrecision] = useState<'exact' | 'approximate' | 'unknown'>('unknown');
   const [departureCertainty, setDepartureCertainty] = useState<
     'confirmed' | 'estimated' | 'unknown'
   >('unknown');
@@ -340,6 +344,10 @@ export function App() {
     setDepartureTime(selectedLeg.departureLocalTime?.slice(0, 5) ?? '');
     setArrivalDate(selectedLeg.arrivalLocalDate ?? suggestedDate);
     setArrivalTime(selectedLeg.arrivalLocalTime?.slice(0, 5) ?? '');
+    setDepartureZone(selectedLeg.departureTimeZone ?? '');
+    setArrivalZone(selectedLeg.arrivalTimeZone ?? '');
+    setDeparturePrecision(selectedLeg.departureTimePrecision === 'range' ? 'unknown' : selectedLeg.departureTimePrecision);
+    setArrivalPrecision(selectedLeg.arrivalTimePrecision === 'range' ? 'unknown' : selectedLeg.arrivalTimePrecision);
     setDepartureCertainty(selectedLeg.departureTimeConfidence);
     setArrivalCertainty(selectedLeg.arrivalTimeConfidence);
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
@@ -658,6 +666,10 @@ export function App() {
       setError('A clock time needs a date; leave both empty if unknown.');
       return;
     }
+    for (const zone of [departureZone, arrivalZone]) {
+      if (!zone) continue;
+      try { new Intl.DateTimeFormat('en', { timeZone: zone }); } catch { setError('Invalid IANA time zone: ' + zone); return; }
+    }
     await execute(async () => {
       await atlasApi.updateLeg(selectedLeg.id, selectedLeg.revision, {
         transportMode: legMode || null,
@@ -665,9 +677,13 @@ export function App() {
         departureLocalDate: departureDate || null,
         departureLocalTime: departureDate && departureTime ? departureTime + ':00' : null,
         departureTimeConfidence: departureCertainty,
+        departureTimeZone: departureZone || null,
+        departureTimePrecision: departureTime ? departurePrecision : 'unknown',
         arrivalLocalDate: arrivalDate || null,
         arrivalLocalTime: arrivalDate && arrivalTime ? arrivalTime + ':00' : null,
         arrivalTimeConfidence: arrivalCertainty,
+        arrivalTimeZone: arrivalZone || null,
+        arrivalTimePrecision: arrivalTime ? arrivalPrecision : 'unknown',
       });
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
@@ -1524,7 +1540,7 @@ export function App() {
                       </select>
                       <details className="time-details">
                         <summary>Departure and arrival times (optional)</summary>
-                        <p className="muted">Local calendar values; no timezone is inferred.</p>
+                        <p className="muted">Local time at each endpoint. Enter an IANA zone if known (e.g. Europe/Paris, Asia/Tokyo). No zone is guessed.</p>
                         <label htmlFor="departure-date">Departure date</label>
                         <input
                           id="departure-date"
@@ -1541,6 +1557,12 @@ export function App() {
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                         />
+                        <label htmlFor="departure-zone">Departure time zone (IANA, optional)</label>
+                        <input id="departure-zone" disabled={dayReadOnly} value={departureZone} placeholder="Europe/Paris" onChange={(e) => setDepartureZone(e.target.value)} />
+                        <label htmlFor="departure-precision">Departure precision</label>
+                        <select id="departure-precision" disabled={dayReadOnly} value={departurePrecision} onChange={(e) => setDeparturePrecision(e.target.value as 'exact' | 'approximate' | 'unknown')}>
+                          <option value="unknown">Unknown</option><option value="approximate">Approximate</option><option value="exact">Exact</option>
+                        </select>
                         <label htmlFor="departure-confidence">Departure certainty</label>
                         <select
                           id="departure-confidence"
@@ -1572,6 +1594,12 @@ export function App() {
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
                         />
+                        <label htmlFor="arrival-zone">Arrival time zone (IANA, optional)</label>
+                        <input id="arrival-zone" disabled={dayReadOnly} value={arrivalZone} placeholder="Asia/Tokyo" onChange={(e) => setArrivalZone(e.target.value)} />
+                        <label htmlFor="arrival-precision">Arrival precision</label>
+                        <select id="arrival-precision" disabled={dayReadOnly} value={arrivalPrecision} onChange={(e) => setArrivalPrecision(e.target.value as 'exact' | 'approximate' | 'unknown')}>
+                          <option value="unknown">Unknown</option><option value="approximate">Approximate</option><option value="exact">Exact</option>
+                        </select>
                         <label htmlFor="arrival-confidence">Arrival certainty</label>
                         <select
                           id="arrival-confidence"

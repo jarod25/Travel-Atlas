@@ -6,12 +6,13 @@ function displayLocalTime(
   time: string | null,
   timeZone: string | null,
   confidence: 'confirmed' | 'estimated' | 'unknown',
+  precision: 'exact' | 'approximate' | 'range' | 'unknown',
 ): string {
   if (!date && !time) return `${label}: Unknown`;
   const clock = time ? ` ${time.slice(0, 5)}` : '';
   const zone = timeZone ? ` (${timeZone})` : '';
   const certainty = confidence === 'unknown' ? ' · certainty unknown' : ` · ${confidence}`;
-  return `${label}: ${date ?? 'Date unknown'}${clock}${zone}${certainty}`;
+  return `${label}: ${date ?? 'Date unknown'}${clock}${zone} · precision ${precision}${certainty}`;
 }
 
 export function describeLeg(leg: LegRow | undefined): string {
@@ -34,6 +35,7 @@ export function describeLegTimes(leg: LegRow): string {
       leg.departureLocalTime,
       leg.departureTimeZone,
       leg.departureTimeConfidence,
+      leg.departureTimePrecision,
     ),
     displayLocalTime(
       'Arrival',
@@ -41,6 +43,7 @@ export function describeLegTimes(leg: LegRow): string {
       leg.arrivalLocalTime,
       leg.arrivalTimeZone,
       leg.arrivalTimeConfidence,
+      leg.arrivalTimePrecision,
     ),
   ].join(' · ');
 }

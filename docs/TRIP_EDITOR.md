@@ -129,3 +129,5 @@ A new Trip can have an existing, active parent Trip. Parent selection is immutab
 Trip date bounds are computed from dated non-archived days throughout the descendant hierarchy; explicitly corrected dates are stored separately and can be cleared. Unknown dates are not fabricated.
 
 Leg departure and arrival time precision are stored separately from evidence confidence. Existing manual time zone fields are retained. Automated geographic time-zone determination and ambiguous DST handling remain open and must be separately tested; a stored local time without a known valid zone is not automatically an exact UTC instant.
+
+The Leg editor exposes independent manually specified IANA time zones and exact/approximate/unknown precision for departure and arrival. The time zone is checked using Intl; automatic coordinate lookup and time ranges are deferred pending a full range model. Existing 'range' data is not rendered as an editable range yet.
