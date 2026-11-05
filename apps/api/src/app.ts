@@ -741,6 +741,9 @@ export function buildApp(store?: AtlasStore) {
         }
       }
       const result = await store.updateLeg(request.params.legId, Number(match[1]), changes);
+      if (result.status === 'invalid_times') {
+        return reply.code(400).send({ error: 'Invalid time precision or local range' });
+      }
       if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
       if (result.status === 'conflict') {
         return reply
