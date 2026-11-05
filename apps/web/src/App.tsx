@@ -58,9 +58,7 @@ export function App() {
     'all' | 'confirmed' | 'estimated' | 'unknown'
   >(() => {
     const value = exploreParams().get('certainty');
-    return value === 'confirmed' || value === 'estimated' || value === 'unknown'
-      ? value
-      : 'all';
+    return value === 'confirmed' || value === 'estimated' || value === 'unknown' ? value : 'all';
   });
   const [colorBy, setColorBy] = useState<ColorMode>('trip');
   const [selectedMapItem, setSelectedMapItem] = useState<Feature['properties'] | null>(null);
