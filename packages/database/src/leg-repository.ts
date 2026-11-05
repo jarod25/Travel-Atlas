@@ -28,6 +28,7 @@ export type LegChanges = Partial<
 export type LegUpdateResult =
   | { status: 'not_found' }
   | { status: 'conflict'; currentRevision: number }
+  | { status: 'invalid_times' }
   | { status: 'updated'; leg: typeof legs.$inferSelect };
 
 /** Optimistic revisions protect a user from overwriting another edit. */
@@ -51,6 +52,35 @@ export async function updateLegWithRevision(
     if (!current || !current.isCurrent) return { status: 'not_found' };
     if (current.revision !== expectedRevision) {
       return { status: 'conflict', currentRevision: current.revision };
+    }
+    const schedule = [
+      {
+        precision: changes.departureTimePrecision ?? current.departureTimePrecision,
+        date: changes.departureLocalDate === undefined ? current.departureLocalDate : changes.departureLocalDate,
+        time: changes.departureLocalTime === undefined ? current.departureLocalTime : changes.departureLocalTime,
+        rangeStart: changes.departureRangeStart === undefined ? current.departureRangeStart : changes.departureRangeStart,
+        rangeEnd: changes.departureRangeEnd === undefined ? current.departureRangeEnd : changes.departureRangeEnd,
+      },
+      {
+        precision: changes.arrivalTimePrecision ?? current.arrivalTimePrecision,
+        date: changes.arrivalLocalDate === undefined ? current.arrivalLocalDate : changes.arrivalLocalDate,
+        time: changes.arrivalLocalTime === undefined ? current.arrivalLocalTime : changes.arrivalLocalTime,
+        rangeStart: changes.arrivalRangeStart === undefined ? current.arrivalRangeStart : changes.arrivalRangeStart,
+        rangeEnd: changes.arrivalRangeEnd === undefined ? current.arrivalRangeEnd : changes.arrivalRangeEnd,
+      },
+    ];
+    for (const clock of schedule) {
+      if (clock.precision === 'range') {
+        if (!clock.rangeStart || !clock.rangeEnd || clock.rangeStart > clock.rangeEnd) {
+          return { status: 'invalid_times' };
+        }
+      } else if (clock.rangeStart != null || clock.rangeEnd != null) {
+        return { status: 'invalid_times' };
+      }
+      if ((clock.precision === 'exact' || clock.precision === 'approximate') && (!clock.date || !clock.time)) {
+        return { status: 'invalid_times' };
+      }
+      if (clock.time && !clock.date) return { status: 'invalid_times' };
     }
     const modeChanged =
       changes.transportMode !== undefined && changes.transportMode !== current.transportMode;
