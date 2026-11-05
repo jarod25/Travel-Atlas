@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FeatureCollection } from './api';
+import { geographicBounds } from './map-bounds';
 
 const moduleUrl = 'https://unpkg.com/maplibre-gl@6.16.0/dist/maplibre-gl.mjs';
 const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
@@ -19,6 +20,8 @@ interface MapInstance {
   remove: () => void;
   resize: () => void;
   setPaintProperty: (layer: string, property: string, value: unknown) => void;
+  fitBounds: (bounds: [[number, number], [number, number]], options: unknown) => void;
+  easeTo: (options: unknown) => void;
 }
 type MapLibrary = { Map: new (options: unknown) => MapInstance };
 
@@ -78,19 +81,44 @@ export function MapCanvas({
   label,
   colorBy = 'trip',
   onSelect,
+  focusKey = 'initial',
+  fitData,
 }: {
   data: FeatureCollection;
   label: string;
   colorBy?: ColorMode;
   onSelect?: (properties: Record<string, string | null>) => void;
+  focusKey?: string;
+  fitData?: FeatureCollection;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const map = useRef<MapInstance | null>(null);
   const latest = useRef<FeatureCollection>(data);
   const latestColor = useRef<ColorMode>(colorBy);
   const latestSelect = useRef(onSelect);
+  const focusTarget = useRef(fitData ?? data);
+  const lastFitted = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  function fitToContent(target: FeatureCollection) {
+    if (!map.current || !loaded) return false;
+    const bounds = geographicBounds(target);
+    if (!bounds) return false;
+    if (bounds[0][0] === bounds[1][0] && bounds[0][1] === bounds[1][1]) {
+      map.current.easeTo({ center: bounds[0], zoom: 11, duration: 450 });
+    } else {
+      map.current.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 450 });
+    }
+    return true;
+  }
+
+  useEffect(() => {
+    focusTarget.current = fitData ?? data;
+    if (loaded && lastFitted.current !== focusKey && fitToContent(focusTarget.current)) {
+      lastFitted.current = focusKey;
+    }
+  }, [data, fitData, focusKey, loaded]);
 
   useEffect(() => {
     latest.current = data;
@@ -187,6 +215,17 @@ export function MapCanvas({
   return (
     <section className="map-shell" aria-label={label}>
       <div ref={ref} className="map-surface" role="img" aria-label={label} />
+      {geographicBounds(fitData ?? data) && (
+        <button
+          type="button"
+          className="map-fit-button"
+          onClick={() => {
+            if (fitToContent(fitData ?? data)) lastFitted.current = focusKey;
+          }}
+        >
+          Fit to content
+        </button>
+      )}
       {!loaded && !error && <p className="map-hint">Loading interactive map…</p>}
       {error && (
         <p className="map-hint" role="status">
