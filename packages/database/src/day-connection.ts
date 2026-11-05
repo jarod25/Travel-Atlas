@@ -83,6 +83,31 @@ export async function connectAdjacentDays(
     if (existing.some((leg) => leg.fromVisitId === from.id || leg.toVisitId === to.id)) {
       return { status: 'invalid', reason: 'An endpoint already has a current Leg' };
     }
+    // An explicit reconnect may undo a previous disconnection. Recover the
+    // recorded facts only if this exact directed pair has one historical Leg.
+    // If several records match, their identity is ambiguous: create an
+    // Unknown draft rather than selecting an unrelated journey.
+    const historical = await tx
+      .select()
+      .from(legs)
+      .where(
+        and(
+          eq(legs.tripId, input.tripId),
+          eq(legs.fromVisitId, from.id),
+          eq(legs.toVisitId, to.id),
+          eq(legs.isCurrent, false),
+        ),
+      )
+      .for('update');
+    if (historical.length === 1) {
+      const [restored] = await tx
+        .update(legs)
+        .set({ isCurrent: true, revision: historical[0].revision + 1 })
+        .where(eq(legs.id, historical[0].id))
+        .returning();
+      return { status: 'connected', created: false, leg: restored };
+    }
+
     const [leg] = await tx
       .insert(legs)
       .values({
@@ -98,7 +123,8 @@ export async function connectAdjacentDays(
 /**
  * Explicitly detach the exact current connection between consecutive days.
  * The Leg and all its historic evidence/RouteVersions remain in the database.
- * A newly connected Leg starts Unknown, never inherits a previously known path.
+ * A later explicit reconnect may reactivate a unique matching historical Leg;
+ * ambiguous history always produces an Unknown draft.
  */
 export async function disconnectAdjacentDays(
   db: PostgresJsDatabase,
