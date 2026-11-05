@@ -22,13 +22,13 @@ afterAll(async () => {
 
 describe('Nested trip boundaries', () => {
   it('derives parent dates recursively without duplicating days and preserves manual correction', async () => {
-    const parent = await store.createTrip('Synthetic parent excursion');
+    const parent = await store.createTrip('Synthetic parent excursion') as { id: string } | null;
     if (!parent || !('id' in parent)) throw new Error('Parent creation failed');
     ids.push(parent.id);
-    const child = await store.createTrip('Synthetic weekend', parent.id);
+    const child = await store.createTrip('Synthetic weekend', parent.id) as { id: string } | null;
     if (!child || !('id' in child)) throw new Error('Child creation failed');
     ids.push(child.id);
-    const grandchild = await store.createTrip('Synthetic small excursion', child.id);
+    const grandchild = await store.createTrip('Synthetic small excursion', child.id) as { id: string } | null;
     if (!grandchild || !('id' in grandchild)) throw new Error('Grandchild creation failed');
     ids.push(grandchild.id);
     await store.createDay(parent.id, '2026-09-10');
