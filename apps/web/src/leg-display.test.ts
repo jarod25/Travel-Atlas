@@ -10,16 +10,18 @@ const leg = {
   departureLocalTime: '14:30:00',
   departureTimeZone: null,
   departureTimeConfidence: 'estimated',
+  departureTimePrecision: 'approximate',
   arrivalLocalDate: '2026-09-13',
   arrivalLocalTime: '00:15:00',
   arrivalTimeZone: null,
   arrivalTimeConfidence: 'confirmed',
+  arrivalTimePrecision: 'exact',
 } as LegRow;
 
 describe('Leg timeline presentation', () => {
   it('displays known times, their certainty, and a midnight crossing without inferring a timezone', () => {
     expect(describeLegTimes(leg)).toBe(
-      'Departure: 2026-09-12 14:30 · estimated · Arrival: 2026-09-13 00:15 · confirmed',
+      'Departure: 2026-09-12 14:30 · precision approximate · estimated · Arrival: 2026-09-13 00:15 · precision exact · confirmed',
     );
   });
 
@@ -32,7 +34,7 @@ describe('Leg timeline presentation', () => {
         arrivalTimeZone: 'Asia/Tokyo',
         arrivalTimeConfidence: 'unknown',
       }),
-    ).toBe('Departure: Unknown · Arrival: 2026-09-13 00:15 (Asia/Tokyo) · certainty unknown');
+    ).toBe('Departure: Unknown · Arrival: 2026-09-13 00:15 (Asia/Tokyo) · precision exact · certainty unknown');
   });
 
   it('uses readable labels without changing the stored transport or certainty', () => {
