@@ -113,6 +113,8 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         SELECT MAX(local_date)::text FROM trip_days
         WHERE trip_id = ${trips.id} AND is_archived = false
       )`;
+      const effectiveStart = sql<string | null>`COALESCE(${trips.startDateOverride}::text, ${derivedStart})`;
+      const effectiveEnd = sql<string | null>`COALESCE(${trips.endDateOverride}::text, ${derivedEnd})`;
       return db
         .select({
           id: trips.id,
@@ -123,8 +125,8 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           endDateOverride: trips.endDateOverride,
           derivedStartDate: derivedStart,
           derivedEndDate: derivedEnd,
-          effectiveStartDate: sql<string | null>`COALESCE(${trips.startDateOverride}::text, ${derivedStart})`,
-          effectiveEndDate: sql<string | null>`COALESCE(${trips.endDateOverride}::text, ${derivedEnd})`,
+          effectiveStartDate: effectiveStart,
+          effectiveEndDate: effectiveEnd,
           updatedAt: trips.updatedAt,
           lastActivityAt: activity,
         })
@@ -137,6 +139,16 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       return trip;
     },
     getTrip: async (id) => {
+      const derivedStart = sql<string | null>`(
+        SELECT MIN(local_date)::text FROM trip_days
+        WHERE trip_id = ${trips.id} AND is_archived = false
+      )`;
+      const derivedEnd = sql<string | null>`(
+        SELECT MAX(local_date)::text FROM trip_days
+        WHERE trip_id = ${trips.id} AND is_archived = false
+      )`;
+      const effectiveStart = sql<string | null>`COALESCE(${trips.startDateOverride}::text, ${derivedStart})`;
+      const effectiveEnd = sql<string | null>`COALESCE(${trips.endDateOverride}::text, ${derivedEnd})`;
       const [trip] = await db
         .select({
           id: trips.id,
@@ -145,10 +157,10 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           revision: trips.revision,
           startDateOverride: trips.startDateOverride,
           endDateOverride: trips.endDateOverride,
-          derivedStartDate: sql<string | null>`(SELECT MIN(local_date)::text FROM trip_days WHERE trip_id = ${trips.id} AND is_archived = false)`,
-          derivedEndDate: sql<string | null>`(SELECT MAX(local_date)::text FROM trip_days WHERE trip_id = ${trips.id} AND is_archived = false)`,
-          effectiveStartDate: sql<string | null>`COALESCE(${trips.startDateOverride}::text, (SELECT MIN(local_date)::text FROM trip_days WHERE trip_id = ${trips.id} AND is_archived = false))`,
-          effectiveEndDate: sql<string | null>`COALESCE(${trips.endDateOverride}::text, (SELECT MAX(local_date)::text FROM trip_days WHERE trip_id = ${trips.id} AND is_archived = false))`,
+          derivedStartDate: derivedStart,
+          derivedEndDate: derivedEnd,
+          effectiveStartDate: effectiveStart,
+          effectiveEndDate: effectiveEnd,
         })
         .from(trips)
         .where(eq(trips.id, id));
