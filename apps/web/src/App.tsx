@@ -179,6 +179,7 @@ export function App() {
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
   const selectedDay = days.find((day) => day.id === dayId);
+  const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
   const activeTrips = trips.filter((trip) => !trip.isArchived);
   const displayedTrips = showArchived ? trips : activeTrips;
@@ -785,11 +786,12 @@ export function App() {
                   <label htmlFor="edit-day-date">Selected day's date (optional)</label>
                   <input
                     id="edit-day-date"
+                    disabled={dayReadOnly}
                     type="date"
                     value={editedDayDate}
                     onChange={(e) => setEditedDayDate(e.target.value)}
                   />
-                  <button disabled={pending} onClick={() => void updateDayDate()}>
+                  <button disabled={pending || dayReadOnly} onClick={() => void updateDayDate()}>
                     Save date
                   </button>
                   <button disabled={pending} onClick={() => void toggleDayArchive()}>
@@ -979,6 +981,7 @@ export function App() {
                         <label htmlFor="place-search">Search existing places</label>
                         <input
                           id="place-search"
+                          disabled={dayReadOnly}
                           value={placeQuery}
                           onChange={(e) => {
                             setPlaceQuery(e.target.value);
@@ -988,6 +991,7 @@ export function App() {
                         />
                         <select
                           aria-label="Existing place"
+                          disabled={dayReadOnly}
                           value={placeId}
                           onChange={(e) => setPlaceId(e.target.value)}
                         >
@@ -998,7 +1002,7 @@ export function App() {
                             </option>
                           ))}
                         </select>
-                        <button disabled={pending} onClick={() => void addVisit()}>
+                        <button disabled={pending || dayReadOnly} onClick={() => void addVisit()}>
                           + Add visit
                         </button>
                         <details className="coordinate-editor">
@@ -1009,6 +1013,7 @@ export function App() {
                           <label htmlFor="place-lon">Longitude</label>
                           <input
                             id="place-lon"
+                            disabled={dayReadOnly}
                             type="number"
                             min="-180"
                             max="180"
@@ -1019,6 +1024,7 @@ export function App() {
                           <label htmlFor="place-lat">Latitude</label>
                           <input
                             id="place-lat"
+                            disabled={dayReadOnly}
                             type="number"
                             min="-90"
                             max="90"
@@ -1029,6 +1035,7 @@ export function App() {
                           <label htmlFor="place-coord-confidence">Location confidence</label>
                           <select
                             id="place-coord-confidence"
+                            disabled={dayReadOnly}
                             value={placeConfidence}
                             onChange={(e) =>
                               setPlaceConfidence(
@@ -1041,7 +1048,7 @@ export function App() {
                             <option value="unknown">Unknown</option>
                           </select>
                           <button
-                            disabled={pending || !placeId}
+                            disabled={pending || dayReadOnly || !placeId}
                             onClick={() => void saveCoordinates()}
                           >
                             Save coordinates
@@ -1051,13 +1058,14 @@ export function App() {
                           <label htmlFor="new-place">Place not listed?</label>
                           <input
                             id="new-place"
+                            disabled={dayReadOnly}
                             value={newPlace}
                             onChange={(e) => setNewPlace(e.target.value)}
                             placeholder="Create a named place"
                             maxLength={200}
                           />
                           <button
-                            disabled={pending || !newPlace.trim()}
+                            disabled={pending || dayReadOnly || !newPlace.trim()}
                             onClick={() => void addPlace()}
                           >
                             Create place
@@ -1181,7 +1189,7 @@ export function App() {
                           <option value="confirmed">Confirmed</option>
                         </select>
                       </details>
-                      <button disabled={pending} onClick={() => void saveLeg()}>
+                      <button disabled={pending || dayReadOnly} onClick={() => void saveLeg()}>
                         Save Leg
                       </button>
                     </div>
