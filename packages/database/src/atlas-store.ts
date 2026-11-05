@@ -23,11 +23,7 @@ export interface AtlasStore {
   listTrips(includeArchived?: boolean): Promise<unknown>;
   createTrip(title: string, parentTripId?: string | null): Promise<unknown | null>;
   getTrip(tripId: string): Promise<unknown | null>;
-  editTrip(
-    id: string,
-    revision: number,
-    changes: TripChanges,
-  ): Promise<TripUpdateResult>;
+  editTrip(id: string, revision: number, changes: TripChanges): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
   archiveDay(
@@ -73,7 +69,9 @@ export interface AtlasStore {
     placeId: string | null,
   ): Promise<VisitPlaceEditResult>;
   getExplore(): Promise<unknown>;
-  getLegEndpointCoordinates(legId: string): Promise<{ from: [number, number] | null; to: [number, number] | null } | null>;
+  getLegEndpointCoordinates(
+    legId: string,
+  ): Promise<{ from: [number, number] | null; to: [number, number] | null } | null>;
   connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
   disconnectDays(
     tripId: string,
@@ -352,8 +350,14 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       `);
       if (!row) return null;
       return {
-        from: row.from_lon === null || row.from_lat === null ? null : [Number(row.from_lon), Number(row.from_lat)],
-        to: row.to_lon === null || row.to_lat === null ? null : [Number(row.to_lon), Number(row.to_lat)],
+        from:
+          row.from_lon === null || row.from_lat === null
+            ? null
+            : [Number(row.from_lon), Number(row.from_lat)],
+        to:
+          row.to_lon === null || row.to_lat === null
+            ? null
+            : [Number(row.to_lon), Number(row.to_lat)],
       };
     },
     addVisit: async (tripId, dayId, placeId) => {

@@ -52,16 +52,21 @@ export async function updateTripWithRevision(
         return { status: 'invalid', reason: 'Restore parent ancestors before moving a trip' };
       }
     }
-    const start = changes.manualStartDate === undefined ? current.manualStartDate : changes.manualStartDate;
+    const start =
+      changes.manualStartDate === undefined ? current.manualStartDate : changes.manualStartDate;
     const end = changes.manualEndDate === undefined ? current.manualEndDate : changes.manualEndDate;
     if (start && end && start > end) {
       return { status: 'invalid', reason: 'Start date must not be after end date' };
     }
-    const [updated] = await tx.update(trips).set({
-      ...changes,
-      revision: current.revision + 1,
-      updatedAt: new Date(),
-    }).where(eq(trips.id, id)).returning();
+    const [updated] = await tx
+      .update(trips)
+      .set({
+        ...changes,
+        revision: current.revision + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(trips.id, id))
+      .returning();
     return { status: 'updated', trip: updated };
   });
 }

@@ -98,7 +98,10 @@ export function App() {
   const [arrivalTime, setArrivalTime] = useState('');
   const [departureZone, setDepartureZone] = useState('');
   const [arrivalZone, setArrivalZone] = useState('');
-  const [suggestedZones, setSuggestedZones] = useState<{ departure: string[]; arrival: string[] } | null>(null);
+  const [suggestedZones, setSuggestedZones] = useState<{
+    departure: string[];
+    arrival: string[];
+  } | null>(null);
   const [departurePrecision, setDeparturePrecision] = useState<
     'exact' | 'approximate' | 'range' | 'unknown'
   >('unknown');
@@ -401,11 +404,18 @@ export function App() {
     let active = true;
     setSuggestedZones(null);
     if (selectedLeg?.id) {
-      atlasApi.suggestLegTimeZones(selectedLeg.id).then((suggestions) => {
-        if (active) setSuggestedZones(suggestions);
-      }).catch(() => { if (active) setSuggestedZones(null); });
+      atlasApi
+        .suggestLegTimeZones(selectedLeg.id)
+        .then((suggestions) => {
+          if (active) setSuggestedZones(suggestions);
+        })
+        .catch(() => {
+          if (active) setSuggestedZones(null);
+        });
     }
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [selectedLeg?.id]);
   const displayed = useMemo(
     () =>
@@ -1112,7 +1122,11 @@ export function App() {
           </label>
           <div className="trip-grid">
             {orderedTrips.map(({ trip, depth }) => (
-              <div className="trip-card" key={trip.id} style={{ marginLeft: Math.min(depth, 6) * 12 }}>
+              <div
+                className="trip-card"
+                key={trip.id}
+                style={{ marginLeft: Math.min(depth, 6) * 12 }}
+              >
                 <span>{trip.isArchived ? 'ARCHIVED TRIP' : 'TRIP'}</span>
                 <strong>
                   {depth ? '↳ '.repeat(depth) : ''}
@@ -1178,9 +1192,13 @@ export function App() {
                       }}
                     >
                       <option value="">Top-level trip</option>
-                      {activeTrips.filter((candidate) => candidate.id !== trip.id).map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>{candidate.title}</option>
-                      ))}
+                      {activeTrips
+                        .filter((candidate) => candidate.id !== trip.id)
+                        .map((candidate) => (
+                          <option key={candidate.id} value={candidate.id}>
+                            {candidate.title}
+                          </option>
+                        ))}
                     </select>
                   </label>
                   <button onClick={() => void renameTrip(trip)} disabled={pending}>
@@ -1251,11 +1269,16 @@ export function App() {
                 <section className="recent-trips" aria-label="Subtrips of selected trip">
                   <h2>Subtrips</h2>
                   <div className="recent-trip-grid">
-                    {trips.filter((candidate) => candidate.parentTripId === tripId && !candidate.isArchived).map((candidate) => (
-                      <button key={candidate.id} onClick={() => navigate('editor', candidate.id)}>
-                        <strong>{candidate.title}</strong><span>Open subtrip timeline</span>
-                      </button>
-                    ))}
+                    {trips
+                      .filter(
+                        (candidate) => candidate.parentTripId === tripId && !candidate.isArchived,
+                      )
+                      .map((candidate) => (
+                        <button key={candidate.id} onClick={() => navigate('editor', candidate.id)}>
+                          <strong>{candidate.title}</strong>
+                          <span>Open subtrip timeline</span>
+                        </button>
+                      ))}
                   </div>
                 </section>
               )}
@@ -1732,7 +1755,12 @@ export function App() {
                           onChange={(e) => setDepartureZone(e.target.value)}
                         />
                         {suggestedZones?.departure.map((zone) => (
-                          <button key={zone} type="button" disabled={dayReadOnly} onClick={() => setDepartureZone(zone)}>
+                          <button
+                            key={zone}
+                            type="button"
+                            disabled={dayReadOnly}
+                            onClick={() => setDepartureZone(zone)}
+                          >
                             Use suggested departure zone: {zone}
                           </button>
                         ))}
@@ -1794,7 +1822,12 @@ export function App() {
                           onChange={(e) => setArrivalZone(e.target.value)}
                         />
                         {suggestedZones?.arrival.map((zone) => (
-                          <button key={zone} type="button" disabled={dayReadOnly} onClick={() => setArrivalZone(zone)}>
+                          <button
+                            key={zone}
+                            type="button"
+                            disabled={dayReadOnly}
+                            onClick={() => setArrivalZone(zone)}
+                          >
                             Use suggested arrival zone: {zone}
                           </button>
                         ))}
