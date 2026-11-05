@@ -190,3 +190,38 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
   const nextDayLink = page.locator(`.cross-day-leg[data-leg-id="${legId}"]`);
   await expect(nextDayLink).toContainText('From previous day');
 });
+
+test('Trip Editor URL survives reload and browser navigation', async ({ page, request }) => {
+  const title = `Synthetic routing trip ${Date.now()}`;
+  await page.goto('/explore');
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trips' })
+    .click();
+  await expect(page).toHaveURL(/\/trips$/);
+  await page.getByLabel('New trip').fill(title);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+
+  const trips = await (await request.get('/api/v1/trips')).json();
+  const trip = trips.find((item: { title: string }) => item.title === title);
+  expect(trip?.id).toBeTruthy();
+  await expect(page).toHaveURL(new RegExp(`/trips/${trip.id}$`));
+
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.locator('.day-tabs button')).toHaveCount(1);
+  const days = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
+  await expect(page).toHaveURL(new RegExp(`/trips/${trip.id}\\?day=${days[0].id}$`));
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await expect(page.locator('.day-tabs button.selected')).toHaveCount(1);
+
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Explore' })
+    .click();
+  await expect(page).toHaveURL(/\/explore$/);
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await expect(page.locator('.day-tabs button.selected')).toHaveCount(1);
+});
