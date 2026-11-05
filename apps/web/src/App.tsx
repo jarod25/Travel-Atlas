@@ -928,7 +928,11 @@ export function App() {
                                     </button>
                                     <button
                                       aria-label={`Move visit ${index + 1} down`}
-                                      disabled={pending || dayReadOnly || index === timeline.visits.length - 1}
+                                      disabled={
+                                        pending ||
+                                        dayReadOnly ||
+                                        index === timeline.visits.length - 1
+                                      }
                                       onClick={() => void moveVisit(index, 1)}
                                     >
                                       ↓
