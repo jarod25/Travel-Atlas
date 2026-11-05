@@ -93,7 +93,9 @@ export async function updateLegWithRevision(
     ];
     for (const clock of schedule) {
       if (clock.precision === 'range') {
-        if (!clock.rangeStart || !clock.rangeEnd || clock.rangeStart > clock.rangeEnd) {
+        const start = clock.rangeStart?.replace(' ', 'T');
+        const end = clock.rangeEnd?.replace(' ', 'T');
+        if (!start || !end || start > end) {
           return { status: 'invalid_times' };
         }
       } else if (clock.rangeStart != null || clock.rangeEnd != null) {
