@@ -7,6 +7,7 @@ import {
   appendVisitToDay,
   archiveVisitFromDay,
   reorderVisitsInDay,
+  restoreVisitToDay,
 } from '../../packages/database/src/visit-repository';
 import { legs, tripDays, trips, visits } from '../../packages/database/src/schema';
 
@@ -69,6 +70,38 @@ describe('Atomic visit archival', () => {
       [ids[0], 0],
       [ids[2], 1],
     ]);
+  });
+
+  it('restores an archived Visit with the original historical Legs and transport', async () => {
+    const { trip, day, ids } = await fixture();
+    const original = (await db.select().from(legs).where(eq(legs.tripId, trip.id))).find(
+      (leg) => leg.fromVisitId === ids[0] && leg.toVisitId === ids[1],
+    );
+    if (!original) throw new Error('Original Leg missing');
+    await db
+      .update(legs)
+      .set({ transportMode: 'train', transportConfidence: 'confirmed' })
+      .where(eq(legs.id, original.id));
+
+    await archiveVisitFromDay(db, {
+      tripId: trip.id,
+      tripDayId: day.id,
+      visitId: ids[1],
+    });
+    const result = await restoreVisitToDay(db, {
+      tripId: trip.id,
+      tripDayId: day.id,
+      visitId: ids[1],
+    });
+    expect(result).toEqual({ restoredVisitId: ids[1], position: 1 });
+    const ordered = (await db.select().from(visits).where(eq(visits.tripDayId, day.id)))
+      .filter((visit) => !visit.isArchived)
+      .sort((a, b) => a.position - b.position);
+    expect(ordered.map((visit) => visit.id)).toEqual(ids);
+    const all = await db.select().from(legs).where(eq(legs.tripId, trip.id));
+    expect(all.find((leg) => leg.id === original.id)?.isCurrent).toBe(true);
+    expect(all.find((leg) => leg.id === original.id)?.transportMode).toBe('train');
+    expect(all.filter((leg) => leg.isCurrent)).toHaveLength(2);
   });
 
   it('keeps unrelated known Legs current when archiving an edge Visit', async () => {
