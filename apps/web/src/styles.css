@@ -158,6 +158,19 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   border-radius: 14px;
   overflow: hidden;
 }
+.map-fit-button {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  padding: 8px 12px;
+  border: 1px solid #b2cbd7;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #234b61;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
 .map-surface {
   position: absolute;
   inset: 0;
