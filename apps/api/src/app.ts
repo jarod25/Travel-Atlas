@@ -38,7 +38,12 @@ export function buildApp(store?: AtlasStore) {
   app.patch<{
     Params: { tripId: string };
     Headers: { 'if-match'?: string };
-    Body: { title?: string; isArchived?: boolean };
+    Body: {
+      title?: string;
+      isArchived?: boolean;
+      startDateOverride?: string | null;
+      endDateOverride?: string | null;
+    };
   }>(
     '/api/v1/trips/:tripId',
     {
@@ -48,7 +53,12 @@ export function buildApp(store?: AtlasStore) {
           type: 'object',
           minProperties: 1,
           additionalProperties: false,
-          properties: { title: nonblank, isArchived: { type: 'boolean' } },
+          properties: {
+            title: nonblank,
+            isArchived: { type: 'boolean' },
+            startDateOverride: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+            endDateOverride: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+          },
         },
       },
     },
@@ -67,6 +77,9 @@ export function buildApp(store?: AtlasStore) {
       });
       if (result.status === 'not_found') {
         return reply.code(404).send({ error: 'Trip not found' });
+      }
+      if (result.status === 'invalid_dates') {
+        return reply.code(409).send({ error: 'Trip start must not be later than Trip end' });
       }
       if (result.status === 'conflict') {
         return reply

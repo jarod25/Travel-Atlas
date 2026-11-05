@@ -76,6 +76,8 @@ export function App() {
   const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
   const [editedDayDate, setEditedDayDate] = useState('');
+  const [tripStartOverride, setTripStartOverride] = useState('');
+  const [tripEndOverride, setTripEndOverride] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
   const [placeLon, setPlaceLon] = useState('');
   const [placeLat, setPlaceLat] = useState('');
@@ -293,6 +295,10 @@ export function App() {
   }, [placeQuery]);
 
   const selectedTrip = trips.find((trip) => trip.id === tripId);
+  useEffect(() => {
+    setTripStartOverride(selectedTrip?.startDateOverride ?? '');
+    setTripEndOverride(selectedTrip?.endDateOverride ?? '');
+  }, [selectedTrip?.id, selectedTrip?.revision]);
   const selectedDay = days.find((day) => day.id === dayId);
   const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
@@ -405,7 +411,15 @@ export function App() {
       });
     });
   }
-  async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean }) {
+  async function changeTrip(
+    trip: Trip,
+    changes: {
+      title?: string;
+      isArchived?: boolean;
+      startDateOverride?: string | null;
+      endDateOverride?: string | null;
+    },
+  ) {
     await execute(async () => {
       await atlasApi.updateTrip(trip.id, trip.revision, changes);
       await Promise.all([loadTrips(), loadExplore()]);
@@ -418,9 +432,11 @@ export function App() {
         title: 'Trip saved',
         message: changes.title
           ? 'Trip renamed successfully.'
-          : changes.isArchived
-            ? 'Trip archived.'
-            : 'Trip restored.',
+          : changes.startDateOverride !== undefined || changes.endDateOverride !== undefined
+            ? 'Trip date preferences saved.'
+            : changes.isArchived
+              ? 'Trip archived.'
+              : 'Trip restored.',
         color: 'teal',
       });
     });
@@ -459,7 +475,7 @@ export function App() {
     if (!tripId) return;
     await execute(async () => {
       const created = await atlasApi.addDay(tripId, dayDate || null);
-      await loadDays(tripId);
+      await Promise.all([loadDays(tripId), loadTrips()]);
       setDayId(created.id);
       setDayDate('');
       notifications.show({
@@ -492,7 +508,12 @@ export function App() {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([
+        loadDays(tripId),
+        loadTrips(),
+        loadTimeline(tripId, dayId),
+        loadExplore(),
+      ]);
       notifications.show({
         title: 'Day saved',
         message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',
@@ -504,7 +525,7 @@ export function App() {
     if (!tripId || !dayId || !selectedDay) return;
     await execute(async () => {
       await atlasApi.editDay(tripId, dayId, selectedDay.revision, editedDayDate || null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId)]);
+      await Promise.all([loadDays(tripId), loadTrips(), loadTimeline(tripId, dayId)]);
       notifications.show({
         title: 'Day date saved',
         message: 'Changes saved.',
@@ -1057,6 +1078,63 @@ export function App() {
               Include archived trips
             </label>
           </div>
+          {selectedTrip && (
+            <section className="trip-date-editor" aria-label="Trip date corrections">
+              <h2>Trip dates</h2>
+              <p>
+                From dated, active days: {selectedTrip.derivedStartDate ?? 'Unknown'} to{' '}
+                {selectedTrip.derivedEndDate ?? 'Unknown'}. Undated days are not inferred.
+              </p>
+              <p>
+                Displayed period: {selectedTrip.effectiveStartDate ?? 'Unknown'} to{' '}
+                {selectedTrip.effectiveEndDate ?? 'Unknown'}
+              </p>
+              <div className="trip-date-controls">
+                <label htmlFor="trip-start-override">
+                  Correct start (optional)
+                  <input
+                    id="trip-start-override"
+                    type="date"
+                    disabled={pending || selectedTrip.isArchived}
+                    value={tripStartOverride}
+                    onChange={(event) => setTripStartOverride(event.target.value)}
+                  />
+                </label>
+                <label htmlFor="trip-end-override">
+                  Correct end (optional)
+                  <input
+                    id="trip-end-override"
+                    type="date"
+                    disabled={pending || selectedTrip.isArchived}
+                    value={tripEndOverride}
+                    onChange={(event) => setTripEndOverride(event.target.value)}
+                  />
+                </label>
+                <button
+                  disabled={pending || selectedTrip.isArchived}
+                  onClick={() =>
+                    void changeTrip(selectedTrip, {
+                      startDateOverride: tripStartOverride || null,
+                      endDateOverride: tripEndOverride || null,
+                    })
+                  }
+                >
+                  Save trip dates
+                </button>
+                <button
+                  disabled={pending || selectedTrip.isArchived}
+                  onClick={() =>
+                    void changeTrip(selectedTrip, {
+                      startDateOverride: null,
+                      endDateOverride: null,
+                    })
+                  }
+                >
+                  Use automatic dates
+                </button>
+              </div>
+            </section>
+          )}
           {!tripId ? (
             <section className="recent-trips" aria-label="Recently modified trips">
               <h2>Recently modified trips</h2>

@@ -127,6 +127,13 @@
       "when": 1793802000000,
       "tag": "0017_place_search",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793802600000,
+      "tag": "0018_trip_date_overrides",
+      "breakpoints": true
     }
   ]
 }
