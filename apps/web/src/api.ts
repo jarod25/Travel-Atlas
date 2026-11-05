@@ -3,6 +3,11 @@ const prefix = '/api/v1';
 export interface Trip {
   id: string;
   title: string;
+  parentTripId: string | null;
+  manualStartDate: string | null;
+  manualEndDate: string | null;
+  computedStartDate: string | null;
+  computedEndDate: string | null;
   revision: number;
   isArchived: boolean;
   updatedAt?: string;
@@ -43,10 +48,12 @@ export interface LegRow {
   departureLocalDate: string | null;
   departureLocalTime: string | null;
   departureTimeZone: string | null;
+  departureTimePrecision: 'exact' | 'approximate' | 'range' | 'unknown';
   departureTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   arrivalLocalDate: string | null;
   arrivalLocalTime: string | null;
   arrivalTimeZone: string | null;
+  arrivalTimePrecision: 'exact' | 'approximate' | 'range' | 'unknown';
   arrivalTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   movementConfidence: string;
   transportConfidence: string;
@@ -91,14 +98,14 @@ function post<T>(path: string, payload: unknown) {
 }
 export const atlasApi = {
   trips: (includeArchived = false) => request<Trip[]>(`/trips?includeArchived=${includeArchived}`),
-  updateTrip: (id: string, revision: number, changes: { title?: string; isArchived?: boolean }) =>
+  updateTrip: (id: string, revision: number, changes: { title?: string; isArchived?: boolean; manualStartDate?: string | null; manualEndDate?: string | null }) =>
     request<Trip>(`/trips/${id}`, {
       method: 'PATCH',
       headers: { 'If-Match': `"${revision}"` },
       body: JSON.stringify(changes),
     }),
   trip: (id: string) => request<Trip>(`/trips/${encodeURIComponent(id)}`),
-  addTrip: (title: string) => post<Trip>('/trips', { title }),
+  addTrip: (title: string, parentTripId: string | null = null) => post<Trip>('/trips', { title, parentTripId }),
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),
   addDay: (id: string, localDate: string | null) =>
     post<TripDay>(`/trips/${id}/days`, { localDate }),

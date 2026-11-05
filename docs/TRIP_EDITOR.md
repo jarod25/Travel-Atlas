@@ -120,3 +120,12 @@ Decisions deliberately deferred until a separate design review:
 
 Lot 4 routing proposals remain separate from evidence of journeys actually
 taken. Do not mark Lot 3 accepted before the manual acceptance above.
+
+
+## Stabilization extension — nested trips and temporal metadata
+
+A new Trip can have an existing, active parent Trip. Parent selection is immutable in this increment; users cannot reparent existing Trips, avoiding cycles at creation. Selecting a parent trip on the map includes all descendant Trips recursively; each saved Visit/Leg remains stored once and belongs to its original Trip. The editor still edits a single Trip's own days; cross-trip transitions are not connected automatically.
+
+Trip date bounds are computed from dated non-archived days throughout the descendant hierarchy; explicitly corrected dates are stored separately and can be cleared. Unknown dates are not fabricated.
+
+Leg departure and arrival time precision are stored separately from evidence confidence. Existing manual time zone fields are retained. Automated geographic time-zone determination and ambiguous DST handling remain open and must be separately tested; a stored local time without a known valid zone is not automatically an exact UTC instant.

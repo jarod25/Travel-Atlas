@@ -73,6 +73,7 @@ export function App() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [features, setFeatures] = useState<FeatureCollection>(emptyFeatures);
   const [tripName, setTripName] = useState('');
+  const [newTripParentId, setNewTripParentId] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
   const [editedDayDate, setEditedDayDate] = useState('');
@@ -348,12 +349,13 @@ export function App() {
     () =>
       visibleFeatures(features, {
         tripId,
+        tripIds: tripId ? (() => { const ids = new Set([tripId]); let changed = true; while (changed) { changed = false; for (const trip of trips) { if (trip.parentTripId && ids.has(trip.parentTripId) && !ids.has(trip.id)) { ids.add(trip.id); changed = true; } } } return [...ids]; })() : undefined,
         fromDate: view === 'explore' ? filterFrom : '',
         toDate: view === 'explore' ? filterTo : '',
         transportMode: view === 'explore' ? filterMode : '',
         confidence: view === 'explore' ? filterConfidence : 'all',
       }),
-    [features, tripId, view, filterFrom, filterTo, filterMode, filterConfidence],
+    [features, tripId, trips, view, filterFrom, filterTo, filterMode, filterConfidence],
   );
 
   const focusFeatures = useMemo(() => {
@@ -394,9 +396,10 @@ export function App() {
     const title = tripName.trim();
     if (!title) return;
     await execute(async () => {
-      const trip = await atlasApi.addTrip(title);
+      const trip = await atlasApi.addTrip(title, newTripParentId || null);
       await loadTrips();
       setTripName('');
+      setNewTripParentId('');
       navigate('editor', trip.id);
       notifications.show({
         title: 'Trip created',
@@ -405,7 +408,7 @@ export function App() {
       });
     });
   }
-  async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean }) {
+  async function changeTrip(trip: Trip, changes: { title?: string; isArchived?: boolean; manualStartDate?: string | null; manualEndDate?: string | null }) {
     await execute(async () => {
       await atlasApi.updateTrip(trip.id, trip.revision, changes);
       await Promise.all([loadTrips(), loadExplore()]);
@@ -984,6 +987,11 @@ export function App() {
               maxLength={200}
               required
             />
+            <label htmlFor="parent-trip">Inside trip (optional)</label>
+            <select id="parent-trip" value={newTripParentId} onChange={(event) => setNewTripParentId(event.target.value)}>
+              <option value="">Top-level trip</option>
+              {activeTrips.map((trip) => <option key={trip.id} value={trip.id}>{trip.title}</option>)}
+            </select>
             <button type="submit" disabled={pending}>
               Create trip
             </button>
@@ -1000,7 +1008,8 @@ export function App() {
             {displayedTrips.map((trip) => (
               <div className="trip-card" key={trip.id}>
                 <span>{trip.isArchived ? 'ARCHIVED TRIP' : 'TRIP'}</span>
-                <strong>{trip.title}</strong>
+                <strong>{trip.parentTripId ? '↳ ' : ''}{trip.title}</strong>
+                <small>{trip.manualStartDate ?? trip.computedStartDate ?? 'Start unknown'} — {trip.manualEndDate ?? trip.computedEndDate ?? 'End unknown'}{trip.parentTripId ? ' · Subtrip' : ''}</small>
                 <div className="trip-actions">
                   {!trip.isArchived && (
                     <button
@@ -1011,6 +1020,7 @@ export function App() {
                       Open timeline
                     </button>
                   )}
+                  <button onClick={() => { const start = window.prompt('Override start date (YYYY-MM-DD, blank = automatic)', trip.manualStartDate ?? ''); if (start === null) return; const end = window.prompt('Override end date (YYYY-MM-DD, blank = automatic)', trip.manualEndDate ?? ''); if (end === null) return; if ((start && !/^\d{4}-\d{2}-\d{2}$/.test(start)) || (end && !/^\d{4}-\d{2}-\d{2}$/.test(end))) { setError('Use YYYY-MM-DD or leave blank.'); return; } void changeTrip(trip, { manualStartDate: start || null, manualEndDate: end || null }); }} disabled={pending}>Edit dates</button>
                   <button onClick={() => void renameTrip(trip)} disabled={pending}>
                     Rename
                   </button>
