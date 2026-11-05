@@ -107,7 +107,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   await expect(page.getByRole('button', { name: '+ Add visit' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Save date' })).toBeDisabled();
   await expect(page.getByLabel("Selected day's date (optional)")).toBeDisabled();
-  await expect(page.getByLabel('Search existing places')).toBeDisabled();
+  await expect(page.getByLabel('Search or name a Place')).toBeDisabled();
   await expect(page.locator('#place-search')).toBeDisabled();
   await page.getByRole('button', { name: 'Restore day' }).click();
   await expect(page.getByRole('button', { name: '+ Add visit' })).toBeEnabled();
