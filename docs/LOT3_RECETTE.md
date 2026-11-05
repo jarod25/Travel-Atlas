@@ -3,6 +3,8 @@
 This is the **human acceptance checklist**, not a replacement for CI.
 Do not use the personal Travel Atlas database for synthetic tests or smoke fixtures.
 
+Migrations 0018/0019 are already part of develop. Migration 0020 transfers existing date overrides and time-range data without resetting user values; migration 0021 enables explicitly reviewed cross-trip Legs. Always verify those previously saved values on the restored test copy before migration of the original.
+
 ## Before opening the editor
 
 1. Check the target branch/PR and its full CI status. Do not treat green CI as proof that the personal database is safe.
