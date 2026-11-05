@@ -14,6 +14,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
     .click();
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByText('Trip created')).toBeVisible();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await expect(page.locator('.timeline-panel')).toHaveCSS('resize', 'horizontal');
 
@@ -22,6 +23,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   expect(trip?.id).toBeTruthy();
 
   await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.getByText('Day created')).toBeVisible();
   // Wait for the real day tab before reading its server-side ID.
   await expect(page.locator('.day-tabs button')).toHaveCount(1);
   const dayRows = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
@@ -30,6 +32,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
 
   for (let index = 1; index <= 3; index += 1) {
     await page.getByRole('button', { name: '+ Add visit' }).click();
+    await expect(page.getByText('Visit added')).toBeVisible();
     await expect(page.locator('.visit-row')).toHaveCount(index);
   }
 
