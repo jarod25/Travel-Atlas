@@ -104,6 +104,7 @@ export const atlasApi = {
     changes: {
       title?: string;
       isArchived?: boolean;
+      parentTripId?: string | null;
       manualStartDate?: string | null;
       manualEndDate?: string | null;
     },

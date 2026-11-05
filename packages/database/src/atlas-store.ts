@@ -4,7 +4,7 @@ import { connectAdjacentDays, disconnectAdjacentDays } from './day-connection.js
 import { setDayArchivedWithRevision } from './day-archive.js';
 import type { DayArchiveResult } from './day-archive.js';
 import type { DayConnectionResult, DayDisconnectionResult } from './day-connection.js';
-import type { TripUpdateResult } from './trip-repository.js';
+import type { TripChanges, TripUpdateResult } from './trip-repository.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import {
@@ -26,12 +26,7 @@ export interface AtlasStore {
   editTrip(
     id: string,
     revision: number,
-    changes: {
-      title?: string;
-      isArchived?: boolean;
-      manualStartDate?: string | null;
-      manualEndDate?: string | null;
-    },
+    changes: TripChanges,
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;

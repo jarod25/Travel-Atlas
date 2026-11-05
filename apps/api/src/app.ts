@@ -41,6 +41,7 @@ export function buildApp(store?: AtlasStore) {
     Body: {
       title?: string;
       isArchived?: boolean;
+      parentTripId?: string | null;
       manualStartDate?: string | null;
       manualEndDate?: string | null;
     };
@@ -56,6 +57,7 @@ export function buildApp(store?: AtlasStore) {
           properties: {
             title: nonblank,
             isArchived: { type: 'boolean' },
+            parentTripId: { anyOf: [uuid, { type: 'null' }] },
             manualStartDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
             manualEndDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
           },
@@ -75,6 +77,7 @@ export function buildApp(store?: AtlasStore) {
         ...request.body,
         ...(title === undefined ? {} : { title }),
       });
+      if (result.status === 'invalid') return reply.code(422).send({ error: result.reason });
       if (result.status === 'not_found') {
         return reply.code(404).send({ error: 'Trip not found' });
       }
