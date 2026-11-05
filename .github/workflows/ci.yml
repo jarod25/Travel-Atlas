@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop, feature/trip-hierarchy-and-time-metadata]
+    branches: [main, develop]
   pull_request:
 
 jobs:
