@@ -155,28 +155,38 @@ describe('Atomic visit reordering', () => {
       (leg) => leg.fromVisitId === ids[0] && leg.toVisitId === ids[1],
     );
     if (!original) throw new Error('Expected original Leg');
-    await db.update(legs).set({
-      transportMode: 'train',
-      movementConfidence: 'confirmed',
-      transportConfidence: 'confirmed',
-      departureLocalDate: '2026-09-12',
-      departureLocalTime: '14:30',
-      departureTimeConfidence: 'estimated',
-    }).where(eq(legs.id, original.id));
-    const [route] = await db.insert(routeVersions).values({
-      tripId: trip.id,
-      legId: original.id,
-      versionNumber: 1,
-      origin: 'calculated',
-      confidence: 'estimated',
-    }).returning();
+    await db
+      .update(legs)
+      .set({
+        transportMode: 'train',
+        movementConfidence: 'confirmed',
+        transportConfidence: 'confirmed',
+        departureLocalDate: '2026-09-12',
+        departureLocalTime: '14:30',
+        departureTimeConfidence: 'estimated',
+      })
+      .where(eq(legs.id, original.id));
+    const [route] = await db
+      .insert(routeVersions)
+      .values({
+        tripId: trip.id,
+        legId: original.id,
+        versionNumber: 1,
+        origin: 'calculated',
+        confidence: 'estimated',
+      })
+      .returning();
     await db.update(legs).set({ selectedRouteVersionId: route.id }).where(eq(legs.id, original.id));
 
     await reorderVisitsInDay(db, {
-      tripId: trip.id, tripDayId: day.id, orderedVisitIds: [ids[1], ids[0], ids[2]],
+      tripId: trip.id,
+      tripDayId: day.id,
+      orderedVisitIds: [ids[1], ids[0], ids[2]],
     });
     const afterUndo = await reorderVisitsInDay(db, {
-      tripId: trip.id, tripDayId: day.id, orderedVisitIds: ids,
+      tripId: trip.id,
+      tripDayId: day.id,
+      orderedVisitIds: ids,
     });
     expect(afterUndo.changed).toBe(true);
     const all = await db.select().from(legs).where(eq(legs.tripId, trip.id));
@@ -189,13 +199,17 @@ describe('Atomic visit reordering', () => {
     expect(restored?.departureLocalTime).toMatch(/^14:30/);
     expect(restored?.departureTimeConfidence).toBe('estimated');
     expect(restored?.selectedRouteVersionId).toBe(route.id);
-    expect(all.filter((leg) => leg.isCurrent && leg.fromVisitId === ids[0] && leg.toVisitId === ids[1])).toHaveLength(1);
+    expect(
+      all.filter((leg) => leg.isCurrent && leg.fromVisitId === ids[0] && leg.toVisitId === ids[1]),
+    ).toHaveLength(1);
   });
 
   it('does not guess which historical Leg to restore when multiple match', async () => {
     const { trip, day, ids } = await fixture();
     await reorderVisitsInDay(db, {
-      tripId: trip.id, tripDayId: day.id, orderedVisitIds: [ids[1], ids[0], ids[2]],
+      tripId: trip.id,
+      tripDayId: day.id,
+      orderedVisitIds: [ids[1], ids[0], ids[2]],
     });
     await db.insert(legs).values({
       tripId: trip.id,
@@ -205,10 +219,13 @@ describe('Atomic visit reordering', () => {
       transportMode: 'bus',
     });
     await reorderVisitsInDay(db, {
-      tripId: trip.id, tripDayId: day.id, orderedVisitIds: ids,
+      tripId: trip.id,
+      tripDayId: day.id,
+      orderedVisitIds: ids,
     });
-    const matching = (await db.select().from(legs).where(eq(legs.tripId, trip.id)))
-      .filter((leg) => leg.fromVisitId === ids[0] && leg.toVisitId === ids[1]);
+    const matching = (await db.select().from(legs).where(eq(legs.tripId, trip.id))).filter(
+      (leg) => leg.fromVisitId === ids[0] && leg.toVisitId === ids[1],
+    );
     expect(matching.filter((leg) => leg.isCurrent)).toHaveLength(1);
     expect(matching.find((leg) => leg.isCurrent)?.transportMode).toBeNull();
     expect(matching.filter((leg) => !leg.isCurrent)).toHaveLength(2);
