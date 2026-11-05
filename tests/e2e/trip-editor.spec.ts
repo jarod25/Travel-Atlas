@@ -121,12 +121,18 @@ test('Empty-state layout keeps page footer at bottom and editor aligned with Exp
   const explore = await page.locator('.explore').boundingBox();
   expect(explore).not.toBeNull();
 
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Trips' }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trips' })
+    .click();
   const footer = await page.locator('.app-footer').boundingBox();
   expect(footer).not.toBeNull();
   expect(Math.abs(footer!.y + footer!.height - 900)).toBeLessThanOrEqual(2);
 
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Trip Editor' }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trip Editor' })
+    .click();
   const editor = await page.locator('.editor').boundingBox();
   expect(editor).not.toBeNull();
   expect(Math.abs(editor!.x - explore!.x)).toBeLessThanOrEqual(2);
