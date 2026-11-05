@@ -2,53 +2,49 @@ import { describe, expect, it } from 'vitest';
 import type { FeatureCollection } from './api';
 import { geographicBounds } from './map-bounds';
 
-function collection(
-  ...geometries: Array<{ type: string; coordinates: unknown }>
-): FeatureCollection {
+type Geometry = { type: string; coordinates: unknown };
+
+function collection(...geometries: Geometry[]): FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: geometries.map((geometry) => ({ type: 'Feature', geometry, properties: {} })),
+    features: geometries.map((geometry) => ({
+      type: 'Feature',
+      geometry,
+      properties: {},
+    })),
   };
 }
 
 describe('Geographic framing', () => {
-  it('keeps unknown places empty instead of inventing coordinates', () => {
+  it('does not invent unknown coordinates', () => {
     expect(geographicBounds(collection())).toBeNull();
-    expect(geographicBounds(collection({ type: 'Point', coordinates: [] }))).toBeNull();
+    const point = { type: 'Point', coordinates: [] };
+    expect(geographicBounds(collection(point))).toBeNull();
   });
 
-  it('centers one recorded Place with an exact point bound', () => {
-    expect(geographicBounds(collection({ type: 'Point', coordinates: [6.9, 47.6] }))).toEqual([
+  it('bounds a single recorded point', () => {
+    const point = { type: 'Point', coordinates: [6.9, 47.6] };
+    expect(geographicBounds(collection(point))).toEqual([
       [6.9, 47.6],
       [6.9, 47.6],
     ]);
   });
 
-  it('uses known route geometry and Places together', () => {
-    expect(
-      geographicBounds(
-        collection(
-          { type: 'Point', coordinates: [7, 48] },
-          { type: 'LineString', coordinates: [[6, 47], [9, 50]] },
-          { type: 'MultiLineString', coordinates: [[[8, 49], [10, 46]]] },
-        ),
-      ),
-    ).toEqual([
+  it('bounds saved points and line geometry together', () => {
+    const point = { type: 'Point', coordinates: [7, 48] };
+    const line = { type: 'LineString', coordinates: [[6, 47], [9, 50]] };
+    const multi = { type: 'MultiLineString', coordinates: [[[8, 49], [10, 46]]] };
+    expect(geographicBounds(collection(point, line, multi))).toEqual([
       [6, 46],
       [10, 50],
     ]);
   });
 
-  it('rejects invalid or unsupported positions instead of shifting the map', () => {
-    expect(
-      geographicBounds(
-        collection(
-          { type: 'Point', coordinates: [190, 95] },
-          { type: 'Unknown', coordinates: [0, 0] },
-          { type: 'Point', coordinates: [135, 35] },
-        ),
-      ),
-    ).toEqual([
+  it('ignores invalid and unsupported positions', () => {
+    const invalid = { type: 'Point', coordinates: [190, 95] };
+    const unsupported = { type: 'Unknown', coordinates: [0, 0] };
+    const valid = { type: 'Point', coordinates: [135, 35] };
+    expect(geographicBounds(collection(invalid, unsupported, valid))).toEqual([
       [135, 35],
       [135, 35],
     ]);
