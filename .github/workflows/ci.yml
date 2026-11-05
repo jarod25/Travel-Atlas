@@ -33,7 +33,6 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --write apps/web/src/map-bounds.ts apps/web/src/map-bounds.test.ts && git diff -- apps/web/src/map-bounds.ts apps/web/src/map-bounds.test.ts
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
