@@ -732,3 +732,21 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
 .recent-trip-grid button span {
   font-size: 0.83rem;
 }
+
+@media (max-width: 360px) {
+  .explore .section-heading > select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .explore-filters label {
+    width: 100%;
+    min-width: 0;
+  }
+  .explore-filters input,
+  .explore-filters select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}

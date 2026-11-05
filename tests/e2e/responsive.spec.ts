@@ -19,6 +19,19 @@ for (const viewport of viewports) {
     await expect(page.getByRole('heading', { name: 'Explore the atlas' })).toBeVisible();
     await expect(page.getByLabel('Filter map by trip')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Clear filters' })).toBeVisible();
+    if (viewport.width === 320) {
+      const overflow = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('*'))
+          .map((element) => ({
+            tag: element.tagName.toLowerCase(),
+            className: typeof element.className === 'string' ? element.className : '',
+            right: Math.round(element.getBoundingClientRect().right),
+          }))
+          .filter((item) => item.right > window.innerWidth + 2)
+          .slice(0, 12),
+      );
+      if (overflow.length) console.log('Explore overflow diagnostic:', overflow);
+    }
 
     await expect
       .poll(async () =>
