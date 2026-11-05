@@ -42,6 +42,8 @@ export const trips = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     title: text('title').notNull(),
+    startDateOverride: date('start_date_override', { mode: 'string' }),
+    endDateOverride: date('end_date_override', { mode: 'string' }),
     isArchived: boolean('is_archived').notNull().default(false),
     revision: integer('revision').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -49,6 +51,10 @@ export const trips = pgTable(
   (table) => [
     check('trips_title_nonempty', sql`length(btrim(${table.title})) > 0`),
     check('trips_revision_positive', sql`${table.revision} > 0`),
+    check(
+      'trips_date_override_order',
+      sql`${table.startDateOverride} IS NULL OR ${table.endDateOverride} IS NULL OR ${table.startDateOverride} <= ${table.endDateOverride}`,
+    ),
   ],
 );
 
