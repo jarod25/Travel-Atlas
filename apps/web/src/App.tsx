@@ -17,6 +17,7 @@ import { MapCanvas } from './MapCanvas';
 import type { ColorMode } from './MapCanvas';
 import { emptyFeatures, visibleFeatures } from './map-data';
 import { describeLeg, describeLegTimes } from './leg-display';
+import { describeLegDuration } from './time-zones';
 
 type View = 'explore' | 'trips' | 'editor';
 type MobilePanel = 'timeline' | 'map';
@@ -1857,6 +1858,7 @@ export function App() {
                         <span className="eyebrow">Leg details</span>
                         <h2>Travel between visits</h2>
                         <p>Transport and geometry have independent certainty.</p>
+                        <p role="status">{describeLegDuration(selectedLeg)}</p>
                       </div>
                       <label htmlFor="leg-transport">Transport mode</label>
                       <select
