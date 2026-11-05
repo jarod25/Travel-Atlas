@@ -22,7 +22,13 @@ function readLocation(): { view: View; tripId: string | null; dayId: string | nu
   const path = window.location.pathname;
   if (path === '/trips') return { view: 'trips', tripId: null, dayId: null };
   const match = /^\/trips\/([0-9a-f-]{36})$/i.exec(path);
-  if (match) return { view: 'editor', tripId: match[1], dayId: new URLSearchParams(window.location.search).get('day') };
+  if (match) {
+    return {
+      view: 'editor',
+      tripId: match[1],
+      dayId: new URLSearchParams(window.location.search).get('day'),
+    };
+  }
   return { view: 'explore', tripId: null, dayId: null };
 }
 function urlFor(view: View, tripId: string | null, dayId: string | null): string {
@@ -90,12 +96,21 @@ export function App() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function navigate(nextView: View, nextTripId: string | null = tripId, nextDayId: string | null = null) {
+  function navigate(
+    nextView: View,
+    nextTripId: string | null = tripId,
+    nextDayId: string | null = null,
+  ) {
     const targetView = nextView === 'editor' && !nextTripId ? 'trips' : nextView;
     const url = urlFor(targetView, nextTripId, nextDayId);
-    if (window.location.pathname + window.location.search !== url) window.history.pushState(null, '', url);
+    if (window.location.pathname + window.location.search !== url) {
+      window.history.pushState(null, '', url);
+    }
     setView(targetView);
-    if (targetView === 'editor') { setTripId(nextTripId); setDayId(nextDayId); }
+    if (targetView === 'editor') {
+      setTripId(nextTripId);
+      setDayId(nextDayId);
+    }
   }
   useEffect(() => {
     const onPopState = () => {
@@ -108,9 +123,13 @@ export function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
   useEffect(() => {
-    if (view !== 'editor' || !tripId || window.location.pathname !== '/trips/' + tripId) return;
+    if (view !== 'editor' || !tripId || window.location.pathname !== '/trips/' + tripId) {
+      return;
+    }
     const url = urlFor('editor', tripId, dayId);
-    if (window.location.pathname + window.location.search !== url) window.history.replaceState(null, '', url);
+    if (window.location.pathname + window.location.search !== url) {
+      window.history.replaceState(null, '', url);
+    }
   }, [view, tripId, dayId]);
 
   const execute = useCallback(async (action: () => Promise<void>) => {
