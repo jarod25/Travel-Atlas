@@ -292,15 +292,20 @@ export function App() {
   }, [visitPlaceQuery]);
   useEffect(() => {
     if (!selectedLeg) return;
+    const sameDay = Boolean(
+      timeline?.visits.some((visit) => visit.id === selectedLeg.fromVisitId) &&
+      timeline?.visits.some((visit) => visit.id === selectedLeg.toVisitId),
+    );
+    const suggestedDate = sameDay ? (selectedDay?.localDate ?? '') : '';
     setLegMode(selectedLeg.transportMode ?? '');
-    setDepartureDate(selectedLeg.departureLocalDate ?? '');
+    setDepartureDate(selectedLeg.departureLocalDate ?? suggestedDate);
     setDepartureTime(selectedLeg.departureLocalTime?.slice(0, 5) ?? '');
-    setArrivalDate(selectedLeg.arrivalLocalDate ?? '');
+    setArrivalDate(selectedLeg.arrivalLocalDate ?? suggestedDate);
     setArrivalTime(selectedLeg.arrivalLocalTime?.slice(0, 5) ?? '');
     setDepartureCertainty(selectedLeg.departureTimeConfidence);
     setArrivalCertainty(selectedLeg.arrivalTimeConfidence);
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
-  }, [selectedLeg?.id, selectedLeg?.revision]);
+  }, [selectedLeg?.id, selectedLeg?.revision, selectedDay?.localDate, timeline?.visits]);
 
   const displayed = useMemo(
     () =>
