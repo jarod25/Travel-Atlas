@@ -531,7 +531,10 @@ export function App() {
           <span>Travel Atlas</span>
         </div>
         <nav aria-label="Main navigation">
-          <button className={view === 'explore' ? 'active' : ''} onClick={() => navigate('explore')}>
+          <button
+            className={view === 'explore' ? 'active' : ''}
+            onClick={() => navigate('explore')}
+          >
             Explore
           </button>
           <button className={view === 'trips' ? 'active' : ''} onClick={() => navigate('trips')}>
