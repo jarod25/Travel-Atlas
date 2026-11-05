@@ -139,3 +139,25 @@ The existing `confirmed / estimated / unknown` source confidence is retained
 independently. All clock values are local and do not imply a timezone or UTC
 instant. Missing times are not filled from Trip or Day dates. The UI may offer
 the selected Day date as an **editable suggestion** for intra-day Legs only.
+
+## Automatic and corrected Trip dates
+
+The Trip's displayed period is calculated from the earliest and latest **dated,
+non-archived** TripDays. Unknown dates remain unknown; the dates of known days
+are not evidence that all days in between were actually recorded. Optional
+manual start and end corrections override only their respective calculated
+bounds. Clearing one correction reverts just that bound to automatic behavior;
+"Use automatic dates" clears both corrections. A corrected start must not
+follow the resulting end when saving. If a later edit to a Day makes existing
+corrections inconsistent, the editor warns instead of presenting a backwards
+period as valid. No existing Trip or Visit history is modified by corrections.
+
+## Suggested connections between days
+
+For adjacent active TripDays, the editor reads the saved Timeline of the next
+day. If each day contains at least one active Visit and no current cross-day Leg
+exists, it offers **Review suggested connection**. Review is followed by an
+explicit confirmation. Declining records nothing. Accepting creates an Unknown
+Leg (or restores a unique historical Leg previously disconnected), never an
+inferred itinerary, clock time, transportation mode or geographic route.
+A connection is never manufactured from calendar dates alone.
