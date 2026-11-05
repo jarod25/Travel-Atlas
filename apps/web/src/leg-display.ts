@@ -6,11 +6,21 @@ function displayLocalTime(
   time: string | null,
   timeZone: string | null,
   confidence: 'confirmed' | 'estimated' | 'unknown',
+  precision: 'unspecified' | 'precise' | 'approximate' | 'range',
+  rangeEndDate: string | null,
+  rangeEndTime: string | null,
 ): string {
   if (!date && !time) return `${label}: Unknown`;
-  const clock = time ? ` ${time.slice(0, 5)}` : '';
   const zone = timeZone ? ` (${timeZone})` : '';
   const certainty = confidence === 'unknown' ? ' · certainty unknown' : ` · ${confidence}`;
+  let clock = time ? ` ${time.slice(0, 5)}` : ' · clock unknown';
+  if (time && precision === 'approximate') clock = ` around ${time.slice(0, 5)}`;
+  if (time && precision === 'unspecified') {
+    clock = ` ${time.slice(0, 5)} (precision unspecified)`;
+  }
+  if (time && precision === 'range' && rangeEndDate && rangeEndTime) {
+    clock = ` ${time.slice(0, 5)} – ${rangeEndDate} ${rangeEndTime.slice(0, 5)}`;
+  }
   return `${label}: ${date ?? 'Date unknown'}${clock}${zone}${certainty}`;
 }
 
@@ -34,6 +44,9 @@ export function describeLegTimes(leg: LegRow): string {
       leg.departureLocalTime,
       leg.departureTimeZone,
       leg.departureTimeConfidence,
+      leg.departureTimePrecision ?? 'unspecified',
+      leg.departureRangeEndLocalDate ?? null,
+      leg.departureRangeEndLocalTime ?? null,
     ),
     displayLocalTime(
       'Arrival',
@@ -41,6 +54,9 @@ export function describeLegTimes(leg: LegRow): string {
       leg.arrivalLocalTime,
       leg.arrivalTimeZone,
       leg.arrivalTimeConfidence,
+      leg.arrivalTimePrecision ?? 'unspecified',
+      leg.arrivalRangeEndLocalDate ?? null,
+      leg.arrivalRangeEndLocalTime ?? null,
     ),
   ].join(' · ');
 }
