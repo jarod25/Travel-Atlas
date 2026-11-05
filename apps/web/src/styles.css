@@ -392,11 +392,44 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   padding: 5px 7px !important;
 }
 .leg-pill {
-  color: #6b7984;
-  font-size: 0.76rem;
-  border-left: 2px dotted #b3c7d0;
-  margin: 0 0 0 23px;
-  padding: 7px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: calc(100% - 23px);
+  color: #39566a;
+  font-size: 0.78rem;
+  text-align: left;
+  background: #f7fafc;
+  border: 1px solid #d7e4ea;
+  border-left: 3px solid #a4c7d9;
+  border-radius: 8px;
+  margin: 4px 0 4px 23px;
+  padding: 9px 11px;
+}
+.leg-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.leg-summary {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.leg-edit {
+  flex: 0 0 auto;
+  color: #175b80;
+  background: #e7f2f8;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-weight: 700;
+}
+.leg-pill:hover:not(:disabled) {
+  border-color: #81b6d0;
+  background: #edf6fa;
 }
 .leg-schedule {
   display: block;
