@@ -74,6 +74,7 @@ export function App() {
   const [features, setFeatures] = useState<FeatureCollection>(emptyFeatures);
   const [tripName, setTripName] = useState('');
   const [newTripParentId, setNewTripParentId] = useState('');
+  const [nextDayFirstVisit, setNextDayFirstVisit] = useState<VisitRow | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
   const [editedDayDate, setEditedDayDate] = useState('');
@@ -305,6 +306,16 @@ export function App() {
   const selectedDay = days.find((day) => day.id === dayId);
   const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
+  useEffect(() => {
+    let active = true;
+    setNextDayFirstVisit(null);
+    if (tripId && followingDay && !followingDay.isArchived) {
+      atlasApi.timeline(tripId, followingDay.id).then((next) => {
+        if (active) setNextDayFirstVisit(next.visits[0] ?? null);
+      }).catch(() => { if (active) setNextDayFirstVisit(null); });
+    }
+    return () => { active = false; };
+  }, [tripId, followingDay?.id, followingDay?.revision, followingDay?.isArchived]);
   const activeTrips = trips.filter((trip) => !trip.isArchived);
   const recentTrips = activeTrips.slice(0, 3);
   const displayedTrips = showArchived ? trips : activeTrips;
@@ -1248,14 +1259,16 @@ export function App() {
                     <span>
                       {outgoingCrossDay
                         ? 'The selected day is connected to the next day.'
-                        : 'Days are not linked automatically.'}
+                        : timeline?.visits.length && nextDayFirstVisit
+                          ? 'Suggested connection: last recorded Visit → first Visit of the next day. Review before creating.'
+                          : 'No complete candidate endpoints recorded; no connection is suggested.'}
                     </span>
                     {outgoingCrossDay ? (
                       <button disabled={pending} onClick={() => void disconnectFromFollowingDay()}>
                         Disconnect from next day
                       </button>
                     ) : (
-                      <button disabled={pending} onClick={() => void connectToFollowingDay()}>
+                      <button disabled={pending || !timeline?.visits.length || !nextDayFirstVisit} onClick={() => void connectToFollowingDay()}>
                         Connect to next day
                       </button>
                     )}
