@@ -700,8 +700,36 @@ export function buildApp(store?: AtlasStore) {
         'departureRangeEnd',
         'arrivalRangeStart',
         'arrivalRangeEnd',
+        'departureTimeZone',
+        'arrivalTimeZone',
       ] as const) {
         if (changes[field] === '') changes[field] = null;
+      }
+      const validZone = (zone: string): boolean => {
+        if (!/^(?:[A-Za-z_+-]+(?:\/[A-Za-z0-9_+-]+)+|UTC)$/.test(zone)) return false;
+        try { new Intl.DateTimeFormat('en', { timeZone: zone }); return true; }
+        catch { return false; }
+      };
+      for (const zone of [changes.departureTimeZone, changes.arrivalTimeZone]) {
+        if (zone != null && !validZone(zone)) {
+          return reply.code(400).send({ error: 'Invalid IANA time zone' });
+        }
+      }
+      const localTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/;
+      for (const key of ['departure', 'arrival'] as const) {
+        const precision = changes[`${key}TimePrecision`];
+        const start = changes[`${key}RangeStart`];
+        const end = changes[`${key}RangeEnd`];
+        if (start !== undefined || end !== undefined || precision === 'range') {
+          if (precision === 'range') {
+            if (!start || !end || !localTimestamp.test(start) ||
+                !localTimestamp.test(end) || start > end) {
+              return reply.code(400).send({ error: 'Invalid local time range' });
+            }
+          } else if (start != null || end != null) {
+            return reply.code(400).send({ error: 'Time range must have range precision' });
+          }
+        }
       }
       const result = await store.updateLeg(request.params.legId, Number(match[1]), changes);
       if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
