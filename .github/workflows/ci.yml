@@ -33,6 +33,10 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
+      - name: Show required Prettier changes (temporary diagnostics)
+        run: |
+          pnpm exec prettier apps/web/src/App.tsx > /tmp/atlas-app-formatted.tsx
+          diff -u apps/web/src/App.tsx /tmp/atlas-app-formatted.tsx || true
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm --filter @travel-atlas/database build
