@@ -1332,6 +1332,7 @@ export function App() {
             {orderedTrips.map(({ trip, depth }) => (
               <div
                 className="trip-card"
+                data-trip-id={trip.id}
                 key={trip.id}
                 style={{ marginLeft: Math.min(depth, 6) * 12 }}
               >
