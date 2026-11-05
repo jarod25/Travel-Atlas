@@ -316,8 +316,25 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
   border-bottom: 1px solid #e7eef0;
   padding-bottom: 12px;
+}
+.timeline-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.jump-to-add-visit {
+  padding: 6px 10px;
+  font-size: 0.76rem;
 }
 .panel-heading h2 {
   margin: 0;
@@ -389,6 +406,7 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   white-space: normal;
 }
 .composer {
+  scroll-margin-top: 80px;
   background: #f4f8fa;
   border-radius: 12px;
   padding: 16px;

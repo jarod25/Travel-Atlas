@@ -301,3 +301,19 @@ test('Unknown Place stays an explicit recoverable choice after typing a name', a
   await page.getByRole('button', { name: '+ Add visit' }).click();
   await expect(page.locator('.visit-row')).toContainText('Unknown place');
 });
+
+test('Timeline Add Visit shortcut works on narrow screens', async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 873 });
+  await page.goto('/trips');
+  await page.getByLabel('New trip').fill(`Synthetic long Timeline ${Date.now()}`);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.locator('.day-tabs button')).toHaveCount(1);
+  for (let i = 0; i < 8; i += 1) {
+    await page.getByRole('button', { name: '+ Add visit' }).click();
+    await expect(page.locator('.visit-row')).toHaveCount(i + 1);
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.getByRole('button', { name: 'Go to Add visit' }).click();
+  await expect(page.locator('.composer')).toBeInViewport();
+});

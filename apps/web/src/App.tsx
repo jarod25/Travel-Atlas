@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Group, Modal, TextInput } from '@mantine/core';
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
@@ -50,6 +50,7 @@ function urlFor(view: View, tripId: string | null, dayId: string | null): string
 }
 
 export function App() {
+  const addVisitRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>(() => readLocation().view);
   const [filterFrom, setFilterFrom] = useState(() => exploreParams().get('from') ?? '');
   const [filterTo, setFilterTo] = useState(() => exploreParams().get('to') ?? '');
@@ -1172,7 +1173,23 @@ export function App() {
                 <aside className={`timeline-panel mobile-${mobilePanel}`}>
                   <div className="panel-heading">
                     <h2>Timeline</h2>
-                    <span>{timeline?.visits.length ?? 0} active visits</span>
+                    <div className="timeline-heading-actions">
+                      <span>{timeline?.visits.length ?? 0} active visits</span>
+                      {dayId && (
+                        <button
+                          className="jump-to-add-visit"
+                          disabled={dayReadOnly}
+                          onClick={() =>
+                            addVisitRef.current?.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'start',
+                            })
+                          }
+                        >
+                          Go to Add visit
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <label htmlFor="visit-visibility">Show visits</label>
                   <select
@@ -1315,7 +1332,7 @@ export function App() {
                           ))}
                         </div>
                       )}
-                      <div className="composer">
+                      <div className="composer" ref={addVisitRef}>
                         <h3>Add a visit</h3>
                         <label htmlFor="place-search">Search or name a Place</label>
                         <input
