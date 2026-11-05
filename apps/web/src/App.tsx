@@ -406,17 +406,33 @@ export function App() {
   }
   async function toggleDayArchive() {
     if (!tripId || !dayId || !selectedDay) return;
-    if (
-      !selectedDay.isArchived &&
-      !window.confirm('Archive this day? Its visits and historical Legs will be preserved.')
-    ) {
+    if (!selectedDay.isArchived) {
+      confirmAction(
+        'Archive day',
+        'Archive this day? Its Visits and historical Legs will be preserved.',
+        'Archive',
+        async () => {
+          await performDayArchive();
+        },
+        true,
+      );
       return;
     }
+    await performDayArchive();
+  }
+
+  async function performDayArchive() {
+    if (!tripId || !dayId || !selectedDay) return;
     await execute(async () => {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
       await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      notifications.show({
+        title: 'Day saved',
+        message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',
+        color: 'teal',
+      });
     });
   }
   async function updateDayDate() {
@@ -429,18 +445,36 @@ export function App() {
 
   async function connectToFollowingDay() {
     if (!tripId || !selectedDay || !followingDay) return;
-    if (!window.confirm('Connect the last Visit of this day to the first of the next day?')) return;
+    confirmAction(
+      'Connect days',
+      'Connect the last Visit of this day to the first of the next day?',
+      'Connect',
+      performConnectToFollowingDay,
+    );
+  }
+
+  async function performConnectToFollowingDay() {
+    if (!tripId || !selectedDay || !followingDay) return;
     await execute(async () => {
       await atlasApi.connectDays(tripId, selectedDay.id, followingDay.id);
       await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
+      notifications.show({ title: 'Days connected', message: 'Travel Leg created.', color: 'teal' });
     });
   }
 
   async function disconnectFromFollowingDay() {
     if (!tripId || !selectedDay || !followingDay || !outgoingCrossDay) return;
-    if (!window.confirm('Disconnect these days? The previous Leg and its evidence remain saved.')) {
-      return;
-    }
+    confirmAction(
+      'Disconnect days',
+      'Disconnect these days? The previous Leg and its evidence remain saved.',
+      'Disconnect',
+      performDisconnectFromFollowingDay,
+      true,
+    );
+  }
+
+  async function performDisconnectFromFollowingDay() {
+    if (!tripId || !selectedDay || !followingDay || !outgoingCrossDay) return;
     await execute(async () => {
       await atlasApi.disconnectDays(
         tripId,
@@ -450,6 +484,11 @@ export function App() {
         outgoingCrossDay.revision,
       );
       await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
+      notifications.show({
+        title: 'Days disconnected',
+        message: 'Historical travel details remain saved.',
+        color: 'teal',
+      });
     });
   }
 
@@ -570,11 +609,24 @@ export function App() {
 
   async function archiveVisit(visit: VisitRow) {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
-    if (!window.confirm('Archive this visit? Historical legs will be preserved.')) return;
+    confirmAction(
+      'Archive visit',
+      'Archive this Visit? Historical Legs will be preserved.',
+      'Archive',
+      async () => {
+        await performArchiveVisit(visit);
+      },
+      true,
+    );
+  }
+
+  async function performArchiveVisit(visit: VisitRow) {
+    if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.archiveVisit(tripId, dayId, visit.id);
       setSelectedVisitId(null);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      notifications.show({ title: 'Visit archived', message: 'Visit history saved.', color: 'teal' });
     });
   }
 
