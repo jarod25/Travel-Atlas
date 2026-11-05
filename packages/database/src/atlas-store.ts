@@ -1,6 +1,8 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { updateTripWithRevision } from './trip-repository.js';
 import { connectAdjacentDays, disconnectAdjacentDays } from './day-connection.js';
+import { connectTrips, disconnectTrips } from './cross-trip-connection.js';
+import type { CrossTripResult } from './cross-trip-connection.js';
 import { setDayArchivedWithRevision } from './day-archive.js';
 import type { DayArchiveResult } from './day-archive.js';
 import type { DayConnectionResult, DayDisconnectionResult } from './day-connection.js';
@@ -73,6 +75,8 @@ export interface AtlasStore {
     legId: string,
   ): Promise<{ from: [number, number] | null; to: [number, number] | null } | null>;
   connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
+  connectTrips(fromTripId: string, fromDayId: string, toTripId: string, toDayId: string): Promise<CrossTripResult>;
+  disconnectTrips(legId: string, revision: number): Promise<CrossTripResult>;
   disconnectDays(
     tripId: string,
     fromDayId: string,
@@ -414,6 +418,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         placeId,
       }),
     updateLeg: (id, revision, changes) => updateLegWithRevision(db, id, revision, changes),
+    connectTrips: (fromTripId, fromDayId, toTripId, toDayId) =>
+      connectTrips(db, { fromTripId, fromDayId, toTripId, toDayId }),
+    disconnectTrips: (legId, revision) => disconnectTrips(db, legId, revision),
     connectDays: (tripId, fromDayId, toDayId) =>
       connectAdjacentDays(db, {
         tripId,

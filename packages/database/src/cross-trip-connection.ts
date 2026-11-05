@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { legs, routeProposals, tripDays, trips, visits } from './schema.js';
+import { legs, routeProposals, tripDays, visits } from './schema.js';
 
 type Leg = typeof legs.$inferSelect;
 export type CrossTripResult =

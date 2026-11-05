@@ -44,6 +44,8 @@ export interface LegRow {
   fromVisitId: string;
   toVisitId: string;
   transportMode: string | null;
+  tripId: string;
+  toTripId: string;
   revision: number;
   departureLocalDate: string | null;
   departureLocalTime: string | null;
@@ -202,6 +204,12 @@ export const atlasApi = {
       method: 'PATCH',
       headers: { 'If-Match': `"${revision}"` },
       body: JSON.stringify(changes),
+    }),
+  connectTrips: (fromTripId: string, fromDayId: string, toTripId: string, toDayId: string) =>
+    post<unknown>(`/trips/${fromTripId}/connect-trip`, { fromDayId, toTripId, toDayId }),
+  disconnectTrips: (legId: string, revision: number) =>
+    request<unknown>(`/legs/${legId}/disconnect-trip`, {
+      method: 'POST', headers: { 'If-Match': `"${revision}"` },
     }),
   connectDays: (tripId: string, fromDayId: string, toDayId: string) =>
     post<unknown>(`/trips/${tripId}/connect-days`, { fromDayId, toDayId }),
