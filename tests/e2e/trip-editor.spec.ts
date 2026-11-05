@@ -320,3 +320,40 @@ test('Timeline Add Visit shortcut works on narrow screens', async ({ page }) => 
   await page.getByRole('button', { name: 'Go to Add visit' }).click();
   await expect(page.locator('.composer')).toBeInViewport();
 });
+
+test('Trip dates derive from active days and allow explicit reversible corrections', async ({
+  page,
+  request,
+}) => {
+  const title = `Synthetic date corrections ${Date.now()}`;
+  await page.goto('/trips');
+  await page.getByLabel('New trip').fill(title);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  const trip = (await (await request.get('/api/v1/trips')).json()).find(
+    (item: { title: string }) => item.title === title,
+  );
+  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
+    'Unknown',
+  );
+  await page.getByLabel('Add day (optional date)').fill('2026-09-12');
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
+    '2026-09-12',
+  );
+  await page.locator('#trip-start-override').fill('2026-09-10');
+  await page.locator('#trip-end-override').fill('2026-09-16');
+  await page.getByRole('button', { name: 'Save trip dates' }).click();
+  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
+    'Displayed period: 2026-09-10 to 2026-09-16',
+  );
+  const corrected = await (await request.get(`/api/v1/trips/${trip.id}`)).json();
+  expect(corrected.startDateOverride).toBe('2026-09-10');
+  expect(corrected.endDateOverride).toBe('2026-09-16');
+  await page.getByRole('button', { name: 'Use automatic dates' }).click();
+  const reset = await (await request.get(`/api/v1/trips/${trip.id}`)).json();
+  expect(reset.startDateOverride).toBeNull();
+  expect(reset.endDateOverride).toBeNull();
+  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
+    'Displayed period: 2026-09-12 to 2026-09-12',
+  );
+});
