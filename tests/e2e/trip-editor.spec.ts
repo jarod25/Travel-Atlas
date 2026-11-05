@@ -36,6 +36,12 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
     await expect(page.locator('.visit-row')).toHaveCount(index);
   }
 
+  await page.locator('.visit-row .visit-title').first().click();
+  await expect(page.getByText('Change place', { exact: true })).toBeVisible();
+  await expect(page.locator('#visit-place-search')).toBeHidden();
+  await page.getByText('Change place', { exact: true }).click();
+  await expect(page.locator('#visit-place-search')).toBeVisible();
+
   const before = await (await request.get(timelineUrl)).json();
   const [first, second, third] = before.visits;
   await page.getByRole('button', { name: 'Move visit 2 up' }).click();
