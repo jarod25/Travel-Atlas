@@ -184,8 +184,9 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
   await expect(page.locator('.visit-row')).toHaveCount(1);
 
   const days = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
+  expect(days.map((day: { activeVisitCount: number }) => day.activeVisitCount)).toEqual([1, 1]);
   await page.locator('.day-tabs button').first().click();
-  await expect(page.getByText('Suggested connection:', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Review suggested connection' })).toBeVisible();
   await page.getByRole('button', { name: 'Review suggested connection' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Connect' }).click();
   const timelineUrl = `/api/v1/trips/${trip.id}/days/${days[0].id}/timeline`;
