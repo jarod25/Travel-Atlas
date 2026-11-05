@@ -91,12 +91,28 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
   const db = drizzle(client);
 
   return {
-    listTrips: (includeArchived = false) =>
-      db
-        .select()
+    listTrips: (includeArchived = false) => {
+      // Aggregate activity without mutating the parent Trip from child-table
+      // triggers, which could otherwise upgrade shared locks and deadlock.
+      const activity = sql<Date>`GREATEST(
+        ${trips.updatedAt},
+        COALESCE((SELECT MAX(updated_at) FROM trip_days WHERE trip_id = ${trips.id}), ${trips.updatedAt}),
+        COALESCE((SELECT MAX(updated_at) FROM visits WHERE trip_id = ${trips.id}), ${trips.updatedAt}),
+        COALESCE((SELECT MAX(updated_at) FROM legs WHERE trip_id = ${trips.id}), ${trips.updatedAt})
+      )`;
+      return db
+        .select({
+          id: trips.id,
+          title: trips.title,
+          isArchived: trips.isArchived,
+          revision: trips.revision,
+          updatedAt: trips.updatedAt,
+          lastActivityAt: activity,
+        })
         .from(trips)
         .where(includeArchived ? undefined : eq(trips.isArchived, false))
-        .orderBy(asc(trips.title)),
+        .orderBy(sql`${activity} DESC`, asc(trips.title));
+    },
     createTrip: async (title) => {
       const [trip] = await db.insert(trips).values({ title }).returning();
       return trip;
