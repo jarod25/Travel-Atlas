@@ -81,19 +81,19 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   expect(savedLeg?.transportConfidence).toBe('confirmed');
 
   await page.locator('.visit-row .visit-title').last().click();
-  page.once('dialog', (dialog) => dialog.accept());
   const archivingVisit = page.waitForResponse(
     (response) =>
       response.url().includes(`/api/v1/trips/${trip.id}/days/${day.id}/visits/`) &&
       response.request().method() === 'DELETE',
   );
   await page.getByRole('button', { name: 'Archive visit' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Archive' }).click();
   const archivedResponse = await archivingVisit;
   expect(archivedResponse.status(), await archivedResponse.text()).toBe(200);
   await expect(page.locator('.visit-row')).toHaveCount(2);
 
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Archive day' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Archive' }).click();
   await expect(page.getByRole('button', { name: 'Restore day' })).toBeEnabled();
   await expect(page.getByRole('button', { name: '+ Add visit' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Save date' })).toBeDisabled();
@@ -116,7 +116,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   ).toBeVisible();
   await page.getByRole('button', { name: 'Timeline', exact: true }).click();
   await expect(page.locator('.visit-row')).toHaveCount(2);
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.locator('.error-banner')).toHaveCount(0);
 });
 
 test('Empty-state layout keeps page footer at bottom and editor aligned with Explore', async ({
@@ -170,8 +170,8 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
 
   const days = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
   await page.locator('.day-tabs button').first().click();
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Connect to next day' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Connect' }).click();
   const timelineUrl = `/api/v1/trips/${trip.id}/days/${days[0].id}/timeline`;
   await expect
     .poll(async () => {
@@ -224,4 +224,37 @@ test('Trip Editor URL survives reload and browser navigation', async ({ page, re
   await page.goBack();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await expect(page.locator('.day-tabs button.selected')).toHaveCount(1);
+});
+
+test('Trip renaming uses a cancellable accessible modal', async ({ page, request }) => {
+  const title = `Synthetic modal trip ${Date.now()}`;
+  await page.goto('/trips');
+  await page.getByLabel('New trip').fill(title);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trips' })
+    .click();
+
+  await page
+    .locator('.trip-card')
+    .filter({ hasText: title })
+    .getByRole('button', { name: 'Rename' })
+    .click();
+  const modal = page.getByRole('dialog', { name: 'Rename trip' });
+  await expect(modal).toBeVisible();
+  await modal.getByRole('button', { name: 'Cancel' }).click();
+  await expect(modal).not.toBeVisible();
+
+  await page
+    .locator('.trip-card')
+    .filter({ hasText: title })
+    .getByRole('button', { name: 'Rename' })
+    .click();
+  await modal.getByRole('textbox', { name: 'Trip name' }).fill(title + ' renamed');
+  await modal.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.trip-card').filter({ hasText: title + ' renamed' })).toBeVisible();
+
+  const trips = await (await request.get('/api/v1/trips')).json();
+  expect(trips.some((trip: { title: string }) => trip.title === title + ' renamed')).toBe(true);
 });

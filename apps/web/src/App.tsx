@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Group, Modal, TextInput } from '@mantine/core';
+import { modals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications';
 import { atlasApi } from './api';
 import type {
   FeatureCollection,
@@ -96,6 +99,8 @@ export function App() {
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<Trip | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   function navigate(
     nextView: View,
@@ -133,13 +138,33 @@ export function App() {
     }
   }, [view, tripId, dayId]);
 
+  function confirmAction(
+    title: string,
+    message: string,
+    confirmLabel: string,
+    action: () => Promise<void>,
+    destructive = false,
+  ) {
+    modals.openConfirmModal({
+      title,
+      children: message,
+      labels: { confirm: confirmLabel, cancel: 'Cancel' },
+      confirmProps: destructive ? { color: 'red' } : undefined,
+      onConfirm: () => {
+        void action();
+      },
+    });
+  }
+
   const execute = useCallback(async (action: () => Promise<void>) => {
     setPending(true);
     setError(null);
     try {
       await action();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unexpected error');
+      const message = cause instanceof Error ? cause.message : 'Unexpected error';
+      setError(message);
+      notifications.show({ title: 'Operation failed', message, color: 'red' });
     } finally {
       setPending(false);
     }
@@ -328,18 +353,46 @@ export function App() {
         setTripId(null);
         navigate('trips');
       }
+      if (changes.title) setRenameTarget(null);
+      notifications.show({
+        title: 'Trip saved',
+        message: changes.title
+          ? 'Trip renamed successfully.'
+          : changes.isArchived
+            ? 'Trip archived.'
+            : 'Trip restored.',
+        color: 'teal',
+      });
     });
   }
 
-  async function renameTrip(trip: Trip) {
-    const title = window.prompt('Rename trip', trip.title)?.trim();
-    if (title && title !== trip.title) await changeTrip(trip, { title });
+  function renameTrip(trip: Trip) {
+    setRenameTarget(trip);
+    setRenameValue(trip.title);
+  }
+
+  async function submitRename() {
+    if (!renameTarget) return;
+    const title = renameValue.trim();
+    if (!title || title === renameTarget.title) {
+      setRenameTarget(null);
+      return;
+    }
+    await changeTrip(renameTarget, { title });
   }
 
   async function toggleTripArchive(trip: Trip) {
-    if (!trip.isArchived && !window.confirm('Archive this trip? Its history will remain saved.'))
+    if (!trip.isArchived) {
+      confirmAction(
+        'Archive trip',
+        'Archive this trip? Its history will remain saved.',
+        'Archive',
+        () => changeTrip(trip, { isArchived: true }),
+        true,
+      );
       return;
-    await changeTrip(trip, { isArchived: !trip.isArchived });
+    }
+    await changeTrip(trip, { isArchived: false });
   }
 
   async function addDay() {
@@ -353,17 +406,33 @@ export function App() {
   }
   async function toggleDayArchive() {
     if (!tripId || !dayId || !selectedDay) return;
-    if (
-      !selectedDay.isArchived &&
-      !window.confirm('Archive this day? Its visits and historical Legs will be preserved.')
-    ) {
+    if (!selectedDay.isArchived) {
+      confirmAction(
+        'Archive day',
+        'Archive this day? Its Visits and historical Legs will be preserved.',
+        'Archive',
+        async () => {
+          await performDayArchive();
+        },
+        true,
+      );
       return;
     }
+    await performDayArchive();
+  }
+
+  async function performDayArchive() {
+    if (!tripId || !dayId || !selectedDay) return;
     await execute(async () => {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
       await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      notifications.show({
+        title: 'Day saved',
+        message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',
+        color: 'teal',
+      });
     });
   }
   async function updateDayDate() {
@@ -376,18 +445,40 @@ export function App() {
 
   async function connectToFollowingDay() {
     if (!tripId || !selectedDay || !followingDay) return;
-    if (!window.confirm('Connect the last Visit of this day to the first of the next day?')) return;
+    confirmAction(
+      'Connect days',
+      'Connect the last Visit of this day to the first of the next day?',
+      'Connect',
+      performConnectToFollowingDay,
+    );
+  }
+
+  async function performConnectToFollowingDay() {
+    if (!tripId || !selectedDay || !followingDay) return;
     await execute(async () => {
       await atlasApi.connectDays(tripId, selectedDay.id, followingDay.id);
       await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
+      notifications.show({
+        title: 'Days connected',
+        message: 'Travel Leg created.',
+        color: 'teal',
+      });
     });
   }
 
   async function disconnectFromFollowingDay() {
     if (!tripId || !selectedDay || !followingDay || !outgoingCrossDay) return;
-    if (!window.confirm('Disconnect these days? The previous Leg and its evidence remain saved.')) {
-      return;
-    }
+    confirmAction(
+      'Disconnect days',
+      'Disconnect these days? The previous Leg and its evidence remain saved.',
+      'Disconnect',
+      performDisconnectFromFollowingDay,
+      true,
+    );
+  }
+
+  async function performDisconnectFromFollowingDay() {
+    if (!tripId || !selectedDay || !followingDay || !outgoingCrossDay) return;
     await execute(async () => {
       await atlasApi.disconnectDays(
         tripId,
@@ -397,6 +488,11 @@ export function App() {
         outgoingCrossDay.revision,
       );
       await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
+      notifications.show({
+        title: 'Days disconnected',
+        message: 'Historical travel details remain saved.',
+        color: 'teal',
+      });
     });
   }
 
@@ -517,11 +613,28 @@ export function App() {
 
   async function archiveVisit(visit: VisitRow) {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
-    if (!window.confirm('Archive this visit? Historical legs will be preserved.')) return;
+    confirmAction(
+      'Archive visit',
+      'Archive this Visit? Historical Legs will be preserved.',
+      'Archive',
+      async () => {
+        await performArchiveVisit(visit);
+      },
+      true,
+    );
+  }
+
+  async function performArchiveVisit(visit: VisitRow) {
+    if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.archiveVisit(tripId, dayId, visit.id);
       setSelectedVisitId(null);
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+      notifications.show({
+        title: 'Visit archived',
+        message: 'Visit history saved.',
+        color: 'teal',
+      });
     });
   }
 
@@ -548,6 +661,37 @@ export function App() {
         </nav>
         <span className="local-label">Local workspace</span>
       </header>
+
+      <Modal
+        opened={Boolean(renameTarget)}
+        onClose={() => setRenameTarget(null)}
+        title="Rename trip"
+        centered
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submitRename();
+          }}
+        >
+          <TextInput
+            label="Trip name"
+            value={renameValue}
+            onChange={(event) => setRenameValue(event.currentTarget.value)}
+            maxLength={200}
+            required
+            autoFocus
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => setRenameTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={pending} disabled={!renameValue.trim()}>
+              Save
+            </Button>
+          </Group>
+        </form>
+      </Modal>
 
       {error && (
         <div className="error-banner" role="alert">
