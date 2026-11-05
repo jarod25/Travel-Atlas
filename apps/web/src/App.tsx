@@ -326,6 +326,21 @@ export function App() {
   const activeTrips = trips.filter((trip) => !trip.isArchived);
   const recentTrips = activeTrips.slice(0, 3);
   const displayedTrips = showArchived ? trips : activeTrips;
+  const orderedTrips = useMemo(() => {
+    const ordered: Array<{ trip: Trip; depth: number }> = [];
+    const visited = new Set<string>();
+    const visit = (parentId: string | null, depth: number) => {
+      for (const trip of displayedTrips.filter((item) => item.parentTripId === parentId)) {
+        if (visited.has(trip.id)) continue;
+        visited.add(trip.id);
+        ordered.push({ trip, depth });
+        visit(trip.id, depth + 1);
+      }
+    };
+    visit(null, 0);
+    for (const trip of displayedTrips) if (!visited.has(trip.id)) visit(trip.parentTripId, 0);
+    return ordered;
+  }, [displayedTrips]);
   useEffect(() => {
     setEditedDayDate(selectedDay?.localDate ?? '');
   }, [selectedDay?.id, selectedDay?.revision]);
@@ -1085,11 +1100,11 @@ export function App() {
             Show archived trips
           </label>
           <div className="trip-grid">
-            {displayedTrips.map((trip) => (
-              <div className="trip-card" key={trip.id}>
+            {orderedTrips.map(({ trip, depth }) => (
+              <div className="trip-card" key={trip.id} style={{ marginLeft: Math.min(depth, 6) * 12 }}>
                 <span>{trip.isArchived ? 'ARCHIVED TRIP' : 'TRIP'}</span>
                 <strong>
-                  {trip.parentTripId ? '↳ ' : ''}
+                  {depth ? '↳ '.repeat(depth) : ''}
                   {trip.title}
                 </strong>
                 <small>
@@ -1135,6 +1150,28 @@ export function App() {
                   >
                     Edit dates
                   </button>
+                  <label>
+                    Parent trip
+                    <select
+                      aria-label={`Parent trip for ${trip.title}`}
+                      value={trip.parentTripId ?? ''}
+                      disabled={pending || trip.isArchived}
+                      onChange={(event) => {
+                        const next = event.target.value || null;
+                        confirmAction(
+                          'Move trip',
+                          'Move this trip and its subtrips? Existing days and journeys will be preserved.',
+                          'Move',
+                          () => changeTrip(trip, { parentTripId: next }),
+                        );
+                      }}
+                    >
+                      <option value="">Top-level trip</option>
+                      {activeTrips.filter((candidate) => candidate.id !== trip.id).map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>{candidate.title}</option>
+                      ))}
+                    </select>
+                  </label>
                   <button onClick={() => void renameTrip(trip)} disabled={pending}>
                     Rename
                   </button>
@@ -1199,6 +1236,18 @@ export function App() {
             </section>
           ) : (
             <>
+              {trips.some((candidate) => candidate.parentTripId === tripId) && (
+                <section className="recent-trips" aria-label="Subtrips of selected trip">
+                  <h2>Subtrips</h2>
+                  <div className="recent-trip-grid">
+                    {trips.filter((candidate) => candidate.parentTripId === tripId && !candidate.isArchived).map((candidate) => (
+                      <button key={candidate.id} onClick={() => navigate('editor', candidate.id)}>
+                        <strong>{candidate.title}</strong><span>Open subtrip timeline</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
               <div className="day-bar">
                 <div className="day-tabs">
                   {days.map((day) => (
