@@ -783,38 +783,66 @@ export function buildApp(store?: AtlasStore) {
   app.post<{
     Params: { tripId: string };
     Body: { fromDayId: string; toTripId: string; toDayId: string };
-  }>('/api/v1/trips/:tripId/connect-trip', {
-    schema: {
-      params: idParams,
-      body: {
-        type: 'object', required: ['fromDayId', 'toTripId', 'toDayId'],
-        additionalProperties: false,
-        properties: { fromDayId: uuid, toTripId: uuid, toDayId: uuid },
+  }>(
+    '/api/v1/trips/:tripId/connect-trip',
+    {
+      schema: {
+        params: idParams,
+        body: {
+          type: 'object',
+          required: ['fromDayId', 'toTripId', 'toDayId'],
+          additionalProperties: false,
+          properties: { fromDayId: uuid, toTripId: uuid, toDayId: uuid },
+        },
       },
     },
-  }, async (request, reply) => {
-    const result = await store.connectTrips(request.params.tripId, request.body.fromDayId, request.body.toTripId, request.body.toDayId);
-    if (result.status === 'not_found') return reply.code(404).send({ error: 'Day not found' });
-    if (result.status === 'invalid') return reply.code(409).send({ error: result.reason });
-    if (result.status !== 'connected') return reply.code(409).send({ error: 'Unexpected connection status' });
-    return reply.code(result.created ? 201 : 200).send(result);
-  });
+    async (request, reply) => {
+      const result = await store.connectTrips(
+        request.params.tripId,
+        request.body.fromDayId,
+        request.body.toTripId,
+        request.body.toDayId,
+      );
+      if (result.status === 'not_found') return reply.code(404).send({ error: 'Day not found' });
+      if (result.status === 'invalid') return reply.code(409).send({ error: result.reason });
+      if (result.status !== 'connected')
+        return reply.code(409).send({ error: 'Unexpected connection status' });
+      return reply.code(result.created ? 201 : 200).send(result);
+    },
+  );
   app.post<{
     Params: { legId: string };
     Headers: { 'if-match'?: string };
-  }>('/api/v1/legs/:legId/disconnect-trip', {
-    schema: { params: { type: 'object', required: ['legId'], properties: { legId: uuid }, additionalProperties: false } },
-  }, async (request, reply) => {
-    const match = /^"([1-9][0-9]*)"$/.exec(request.headers['if-match'] ?? '');
-    if (!request.headers['if-match']) return reply.code(428).send({ error: 'If-Match is required' });
-    if (!match) return reply.code(400).send({ error: 'Invalid revision' });
-    const result = await store.disconnectTrips(request.params.legId, Number(match[1]));
-    if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
-    if (result.status === 'invalid') return reply.code(409).send({ error: result.reason });
-    if (result.status === 'conflict') return reply.code(412).header('ETag', `"${result.currentRevision}"`).send({ error: 'Leg changed; reload' });
-    if (result.status !== 'disconnected') return reply.code(409).send({ error: 'Unexpected disconnection status' });
-    return reply.header('ETag', `"${result.leg.revision}"`).send(result);
-  });
+  }>(
+    '/api/v1/legs/:legId/disconnect-trip',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['legId'],
+          properties: { legId: uuid },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const match = /^"([1-9][0-9]*)"$/.exec(request.headers['if-match'] ?? '');
+      if (!request.headers['if-match'])
+        return reply.code(428).send({ error: 'If-Match is required' });
+      if (!match) return reply.code(400).send({ error: 'Invalid revision' });
+      const result = await store.disconnectTrips(request.params.legId, Number(match[1]));
+      if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
+      if (result.status === 'invalid') return reply.code(409).send({ error: result.reason });
+      if (result.status === 'conflict')
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Leg changed; reload' });
+      if (result.status !== 'disconnected')
+        return reply.code(409).send({ error: 'Unexpected disconnection status' });
+      return reply.header('ETag', `"${result.leg.revision}"`).send(result);
+    },
+  );
   app.get('/api/v1/explore/geojson', async () => store.getExplore());
   return app;
 }

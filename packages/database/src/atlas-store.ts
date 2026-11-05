@@ -75,7 +75,12 @@ export interface AtlasStore {
     legId: string,
   ): Promise<{ from: [number, number] | null; to: [number, number] | null } | null>;
   connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
-  connectTrips(fromTripId: string, fromDayId: string, toTripId: string, toDayId: string): Promise<CrossTripResult>;
+  connectTrips(
+    fromTripId: string,
+    fromDayId: string,
+    toTripId: string,
+    toDayId: string,
+  ): Promise<CrossTripResult>;
   disconnectTrips(legId: string, revision: number): Promise<CrossTripResult>;
   disconnectDays(
     tripId: string,

@@ -209,7 +209,8 @@ export const atlasApi = {
     post<unknown>(`/trips/${fromTripId}/connect-trip`, { fromDayId, toTripId, toDayId }),
   disconnectTrips: (legId: string, revision: number) =>
     request<unknown>(`/legs/${legId}/disconnect-trip`, {
-      method: 'POST', headers: { 'If-Match': `"${revision}"` },
+      method: 'POST',
+      headers: { 'If-Match': `"${revision}"` },
     }),
   connectDays: (tripId: string, fromDayId: string, toDayId: string) =>
     post<unknown>(`/trips/${tripId}/connect-days`, { fromDayId, toDayId }),
