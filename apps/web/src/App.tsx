@@ -654,6 +654,37 @@ export function App() {
         <span className="local-label">Local workspace</span>
       </header>
 
+      <Modal
+        opened={Boolean(renameTarget)}
+        onClose={() => setRenameTarget(null)}
+        title="Rename trip"
+        centered
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submitRename();
+          }}
+        >
+          <TextInput
+            label="Trip name"
+            value={renameValue}
+            onChange={(event) => setRenameValue(event.currentTarget.value)}
+            maxLength={200}
+            required
+            autoFocus
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => setRenameTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={pending} disabled={!renameValue.trim()}>
+              Save
+            </Button>
+          </Group>
+        </form>
+      </Modal>
+
       {error && (
         <div className="error-banner" role="alert">
           {error}
