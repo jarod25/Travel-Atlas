@@ -39,8 +39,10 @@ for (const viewport of viewports) {
       )
       .toBe(true);
 
-    await page.getByRole('navigation', { name: 'Main navigation' })
-      .getByRole('button', { name: 'Trip Editor' }).click();
+    await page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('button', { name: 'Trip Editor' })
+      .click();
     await expect(page.getByRole('heading', { name: 'Recently modified trips' })).toBeVisible();
     await expect
       .poll(async () =>

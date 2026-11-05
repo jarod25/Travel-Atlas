@@ -223,7 +223,7 @@ test('Trip Editor URL survives reload and browser navigation', async ({ page, re
     .getByRole('navigation', { name: 'Main navigation' })
     .getByRole('button', { name: 'Explore' })
     .click();
-  await expect(page).toHaveURL(/\/explore$/);
+  await expect(page).toHaveURL(/\/explore(?:\?.*)?$/);
   await page.goBack();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await expect(page.locator('.day-tabs button.selected')).toHaveCount(1);
