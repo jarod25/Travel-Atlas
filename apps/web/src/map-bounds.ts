@@ -32,5 +32,10 @@ export function geographicBounds(data: FeatureCollection): MapBounds | null {
       readCoordinates(feature.geometry.coordinates);
     }
   }
-  return west === Infinity ? null : [[west, south], [east, north]];
+  return west === Infinity
+    ? null
+    : [
+        [west, south],
+        [east, north],
+      ];
 }
