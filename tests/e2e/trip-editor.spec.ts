@@ -139,12 +139,13 @@ test('Empty-state layout keeps page footer at bottom and editor aligned with Exp
   expect(Math.abs(editor!.width - explore!.width)).toBeLessThanOrEqual(2);
 });
 
-
 test('Connected days expose the same editable Leg on both timelines', async ({ page, request }) => {
   const title = `Synthetic cross-day trip ${Date.now()}`;
   await page.goto('/');
-  await page.getByRole('navigation', { name: 'Main navigation' })
-    .getByRole('button', { name: 'Trips' }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trips' })
+    .click();
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
   const trips = await (await request.get('/api/v1/trips')).json();
@@ -166,10 +167,12 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Connect to next day' }).click();
   const timelineUrl = `/api/v1/trips/${trip.id}/days/${days[0].id}/timeline`;
-  await expect.poll(async () => {
-    const timeline = await (await request.get(timelineUrl)).json();
-    return timeline.crossDayLegs.length;
-  }).toBe(1);
+  await expect
+    .poll(async () => {
+      const timeline = await (await request.get(timelineUrl)).json();
+      return timeline.crossDayLegs.length;
+    })
+    .toBe(1);
   const first = await (await request.get(timelineUrl)).json();
   const legId = first.crossDayLegs[0].id;
   const link = page.locator(`.cross-day-leg[data-leg-id="${legId}"]`);
@@ -178,6 +181,6 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
   await expect(page.locator('#leg-transport')).toBeVisible();
 
   await page.locator('.day-tabs button').nth(1).click();
-  await expect(page.locator(`.cross-day-leg[data-leg-id="${legId}"]`))
-    .toContainText('From previous day');
+  const nextDayLink = page.locator(`.cross-day-leg[data-leg-id="${legId}"]`);
+  await expect(nextDayLink).toContainText('From previous day');
 });
