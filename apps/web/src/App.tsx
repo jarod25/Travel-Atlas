@@ -1349,7 +1349,10 @@ export function App() {
                         </button>
                         {placeQuery.trim() && !placeId && (
                           <>
-                            <button disabled={pending || dayReadOnly} onClick={() => void addPlace()}>
+                            <button
+                              disabled={pending || dayReadOnly}
+                              onClick={() => void addPlace()}
+                            >
                               Create new Place from this name
                             </button>
                             <button
@@ -1362,7 +1365,7 @@ export function App() {
                               Use unknown place
                             </button>
                             <p className="muted">
-                              Select an existing Place, create one, or record an unknown location.
+                              Select a Place, create one, or record an unknown location.
                             </p>
                           </>
                         )}
