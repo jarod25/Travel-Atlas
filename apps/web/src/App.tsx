@@ -1348,10 +1348,7 @@ export function App() {
                           + Add visit
                         </button>
                         {placeQuery.trim() && !placeId && (
-                          <button
-                            disabled={pending || dayReadOnly}
-                            onClick={() => void addPlace()}
-                          >
+                          <button disabled={pending || dayReadOnly} onClick={() => void addPlace()}>
                             Create new Place from this name
                           </button>
                         )}
