@@ -108,34 +108,36 @@ Before declaring Lot 3 complete, check the following in that local database
    silent loss. Re-run the critical cases against a separate backup/restored
    test database where possible.
 
-Decisions deliberately deferred until a separate design review:
+## Stabilization — hierarchy, local time and cross-trip travel
 
-- Trip start/end dates: avoid storing a second contradictory date range before
-  defining whether dates are manually entered or derived from known TripDays.
-- Time precision: an approximate clock time and the confidence of its source
-  are distinct concepts. Do not treat minute-level input as exact just because
-  a date/time is present; the data model may need a separate precision field.
-- Automatic cross-day suggestions: dates alone do not establish destinations.
-  No new Visit or Leg may be inferred from an arrival date alone.
+Trips can contain descendant Trips to arbitrary depth. Trips may be reparented through a
+revision-protected request; cycles are rejected and existing records retain their IDs.
+The parent map and the combined-day timeline include non-archived descendants exactly once.
+A parent editor navigates to each descendant's own editable Day instead of duplicating Visits.
 
-Lot 4 routing proposals remain separate from evidence of journeys actually
-taken. Do not mark Lot 3 accepted before the manual acceptance above.
+Date bounds are derived from dated active Days; optional manual corrections are kept
+separately and can be reset. Unknown dates remain unknown. A parent archive hides its
+descendants from Explore and retires current Legs involving its subtree without erasing
+historical evidence or route versions.
 
-## Leg clock precision
+Cross-trip connections require explicit review of recorded last/first active Visits
+within a common Trip family. The underlying Leg is owned by its departure Trip and
+points to a destination Visit in another related Trip. It is never generated
+automatically and begins with Unknown transport/geometry. The editor can disconnect and
+reconnect historical directed pairs unambiguously. A family move that would orphan a
+cross-trip link is refused.
 
-Departure and arrival timestamps have independent source confidence and clock
-precision. The optional precision choices are:
+Departure and arrival have independent IANA time zones, temporal precision and
+source certainty. The timezone provider offers suggestions from already-stored
+endpoint coordinates; it never silently accepts them. Manual overrides are supported.
+Exact, approximate and range precisions are editable. Range endpoints are stored as
+local datetimes without a fabricated UTC instant. A calculated duration is displayed
+only when both local clocks and zones map uniquely to instants; DST gaps and overlaps
+remain explicitly unresolved.
 
-- Unspecified: the date or clock may be missing, and legacy recorded clock
-  values are **not** assumed exact after migration 0019.
-- Precise clock: an explicitly recorded date and HH:mm clock value, without
-  independently asserting source certainty.
-- Approximate clock: an explicitly recorded date and clock value preceded by
-  "around"; no tolerance interval is manufactured.
-- Range: two recorded date-and-clock endpoints, inclusive, including ranges
-  that cross midnight. The end cannot precede the beginning.
+Validation includes migrations 0018–0021, unit/API/PostGIS integration tests and
+Playwright responsive workflows, followed by the separate manual checklist in
+[Lot 3 acceptance](LOT3_RECETTE.md).
 
-The existing `confirmed / estimated / unknown` source confidence is retained
-independently. All clock values are local and do not imply a timezone or UTC
-instant. Missing times are not filled from Trip or Day dates. The UI may offer
-the selected Day date as an **editable suggestion** for intra-day Legs only.
+Lot 4 routing proposals remain separate from evidence of journeys actually taken.
+Do not declare the personal database accepted before completing that checklist.

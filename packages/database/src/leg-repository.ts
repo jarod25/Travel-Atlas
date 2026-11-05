@@ -10,17 +10,17 @@ export type LegChanges = Partial<
     | 'transportConfidence'
     | 'departureLocalDate'
     | 'departureLocalTime'
-    | 'departureTimePrecision'
-    | 'departureRangeEndLocalDate'
-    | 'departureRangeEndLocalTime'
     | 'departureTimeZone'
+    | 'departureTimePrecision'
+    | 'departureRangeStart'
+    | 'departureRangeEnd'
     | 'departureTimeConfidence'
     | 'arrivalLocalDate'
     | 'arrivalLocalTime'
-    | 'arrivalTimePrecision'
-    | 'arrivalRangeEndLocalDate'
-    | 'arrivalRangeEndLocalTime'
     | 'arrivalTimeZone'
+    | 'arrivalTimePrecision'
+    | 'arrivalRangeStart'
+    | 'arrivalRangeEnd'
     | 'arrivalTimeConfidence'
   >
 >;
@@ -53,33 +53,61 @@ export async function updateLegWithRevision(
     if (current.revision !== expectedRevision) {
       return { status: 'conflict', currentRevision: current.revision };
     }
-    for (const kind of ['departure', 'arrival'] as const) {
-      const precisionKey = kind === 'departure' ? 'departureTimePrecision' : 'arrivalTimePrecision';
-      const dateKey = kind === 'departure' ? 'departureLocalDate' : 'arrivalLocalDate';
-      const timeKey = kind === 'departure' ? 'departureLocalTime' : 'arrivalLocalTime';
-      const endDateKey =
-        kind === 'departure' ? 'departureRangeEndLocalDate' : 'arrivalRangeEndLocalDate';
-      const endTimeKey =
-        kind === 'departure' ? 'departureRangeEndLocalTime' : 'arrivalRangeEndLocalTime';
-      const precision = changes[precisionKey] ?? current[precisionKey];
-      const startDate = changes[dateKey] === undefined ? current[dateKey] : changes[dateKey];
-      const startTime = changes[timeKey] === undefined ? current[timeKey] : changes[timeKey];
-      const endDate = changes[endDateKey] === undefined ? current[endDateKey] : changes[endDateKey];
-      const endTime = changes[endTimeKey] === undefined ? current[endTimeKey] : changes[endTimeKey];
-      if (precision === 'range') {
-        if (!startDate || !startTime || !endDate || !endTime) {
+    const schedule = [
+      {
+        precision: changes.departureTimePrecision ?? current.departureTimePrecision,
+        date:
+          changes.departureLocalDate === undefined
+            ? current.departureLocalDate
+            : changes.departureLocalDate,
+        time:
+          changes.departureLocalTime === undefined
+            ? current.departureLocalTime
+            : changes.departureLocalTime,
+        rangeStart:
+          changes.departureRangeStart === undefined
+            ? current.departureRangeStart
+            : changes.departureRangeStart,
+        rangeEnd:
+          changes.departureRangeEnd === undefined
+            ? current.departureRangeEnd
+            : changes.departureRangeEnd,
+      },
+      {
+        precision: changes.arrivalTimePrecision ?? current.arrivalTimePrecision,
+        date:
+          changes.arrivalLocalDate === undefined
+            ? current.arrivalLocalDate
+            : changes.arrivalLocalDate,
+        time:
+          changes.arrivalLocalTime === undefined
+            ? current.arrivalLocalTime
+            : changes.arrivalLocalTime,
+        rangeStart:
+          changes.arrivalRangeStart === undefined
+            ? current.arrivalRangeStart
+            : changes.arrivalRangeStart,
+        rangeEnd:
+          changes.arrivalRangeEnd === undefined ? current.arrivalRangeEnd : changes.arrivalRangeEnd,
+      },
+    ];
+    for (const clock of schedule) {
+      if (clock.precision === 'range') {
+        const start = clock.rangeStart?.replace(' ', 'T');
+        const end = clock.rangeEnd?.replace(' ', 'T');
+        if (!start || !end || start > end) {
           return { status: 'invalid_times' };
         }
-        if (`${endDate}T${endTime}` < `${startDate}T${startTime}`) {
-          return { status: 'invalid_times' };
-        }
-      } else if (
-        endDate != null ||
-        endTime != null ||
-        (precision !== 'unspecified' && (!startDate || !startTime))
+      } else if (clock.rangeStart != null || clock.rangeEnd != null) {
+        return { status: 'invalid_times' };
+      }
+      if (
+        (clock.precision === 'exact' || clock.precision === 'approximate') &&
+        (!clock.date || !clock.time)
       ) {
         return { status: 'invalid_times' };
       }
+      if (clock.time && !clock.date) return { status: 'invalid_times' };
     }
     const modeChanged =
       changes.transportMode !== undefined && changes.transportMode !== current.transportMode;

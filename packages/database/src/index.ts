@@ -24,5 +24,7 @@ export { updateTripWithRevision } from './trip-repository.js';
 export type { TripUpdateResult } from './trip-repository.js';
 export { connectAdjacentDays, disconnectAdjacentDays } from './day-connection.js';
 export type { DayConnectionResult, DayDisconnectionResult } from './day-connection.js';
+export { connectTrips, disconnectTrips } from './cross-trip-connection.js';
+export type { CrossTripResult } from './cross-trip-connection.js';
 export { setDayArchivedWithRevision } from './day-archive.js';
 export type { DayArchiveResult } from './day-archive.js';

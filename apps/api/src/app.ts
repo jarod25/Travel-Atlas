@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { find as findTimeZones } from 'geo-tz';
 import type { AtlasStore } from '@travel-atlas/database';
 
 const uuid = { type: 'string', format: 'uuid' } as const;
@@ -41,8 +42,9 @@ export function buildApp(store?: AtlasStore) {
     Body: {
       title?: string;
       isArchived?: boolean;
-      startDateOverride?: string | null;
-      endDateOverride?: string | null;
+      parentTripId?: string | null;
+      manualStartDate?: string | null;
+      manualEndDate?: string | null;
     };
   }>(
     '/api/v1/trips/:tripId',
@@ -56,8 +58,9 @@ export function buildApp(store?: AtlasStore) {
           properties: {
             title: nonblank,
             isArchived: { type: 'boolean' },
-            startDateOverride: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
-            endDateOverride: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+            parentTripId: { anyOf: [uuid, { type: 'null' }] },
+            manualStartDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
+            manualEndDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
           },
         },
       },
@@ -75,11 +78,9 @@ export function buildApp(store?: AtlasStore) {
         ...request.body,
         ...(title === undefined ? {} : { title }),
       });
+      if (result.status === 'invalid') return reply.code(422).send({ error: result.reason });
       if (result.status === 'not_found') {
         return reply.code(404).send({ error: 'Trip not found' });
-      }
-      if (result.status === 'invalid_dates') {
-        return reply.code(409).send({ error: 'Trip start must not be later than Trip end' });
       }
       if (result.status === 'conflict') {
         return reply
@@ -91,14 +92,14 @@ export function buildApp(store?: AtlasStore) {
     },
   );
 
-  app.post<{ Body: { title: string } }>(
+  app.post<{ Body: { title: string; parentTripId?: string | null } }>(
     '/api/v1/trips',
     {
       schema: {
         body: {
           type: 'object',
           required: ['title'],
-          properties: { title: nonblank },
+          properties: { title: nonblank, parentTripId: { anyOf: [uuid, { type: 'null' }] } },
           additionalProperties: false,
         },
       },
@@ -106,7 +107,10 @@ export function buildApp(store?: AtlasStore) {
     async (request, reply) => {
       const title = request.body.title.trim();
       if (!title) return reply.code(400).send({ error: 'Invalid title' });
-      return reply.code(201).send(await store.createTrip(title));
+      const created = await store.createTrip(title, request.body.parentTripId ?? null);
+      return created
+        ? reply.code(201).send(created)
+        : reply.code(400).send({ error: 'Parent trip not found or archived' });
     },
   );
   app.get<{ Params: { tripId: string } }>(
@@ -128,6 +132,11 @@ export function buildApp(store?: AtlasStore) {
       const days = await store.listDays(request.params.tripId);
       return days ?? reply.code(404).send({ error: 'Trip not found' });
     },
+  );
+  app.get<{ Params: { tripId: string } }>(
+    '/api/v1/trips/:tripId/combined-days',
+    { schema: { params: idParams } },
+    async (request) => store.listCombinedDays(request.params.tripId),
   );
   app.post<{ Params: { tripId: string }; Body: { localDate: string | null } }>(
     '/api/v1/trips/:tripId/days',
@@ -547,6 +556,31 @@ export function buildApp(store?: AtlasStore) {
     },
   );
 
+  app.get<{ Params: { legId: string } }>(
+    '/api/v1/legs/:legId/time-zone-suggestions',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['legId'],
+          properties: { legId: uuid },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const positions = await store.getLegEndpointCoordinates(request.params.legId);
+      if (!positions) return reply.code(404).send({ error: 'Current Leg not found' });
+      const suggest = (point: [number, number] | null) =>
+        point ? findTimeZones(point[1], point[0]) : [];
+      return {
+        departure: suggest(positions.from),
+        arrival: suggest(positions.to),
+        source: 'recorded-place-coordinates',
+        confirmed: false,
+      };
+    },
+  );
   app.patch<{
     Params: { legId: string };
     Body: {
@@ -568,17 +602,17 @@ export function buildApp(store?: AtlasStore) {
       transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
       departureLocalDate?: string | null;
       departureLocalTime?: string | null;
-      departureTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
-      departureRangeEndLocalDate?: string | null;
-      departureRangeEndLocalTime?: string | null;
       departureTimeZone?: string | null;
+      departureTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      departureRangeStart?: string | null;
+      departureRangeEnd?: string | null;
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
-      arrivalTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
-      arrivalRangeEndLocalDate?: string | null;
-      arrivalRangeEndLocalTime?: string | null;
       arrivalTimeZone?: string | null;
+      arrivalTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      arrivalRangeStart?: string | null;
+      arrivalRangeEnd?: string | null;
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
     };
     Headers: { 'if-match'?: string };
@@ -623,30 +657,26 @@ export function buildApp(store?: AtlasStore) {
             transportConfidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
             departureLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
             departureLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            departureTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
             departureTimePrecision: {
               type: 'string',
-              enum: ['unspecified', 'precise', 'approximate', 'range'],
+              enum: ['exact', 'approximate', 'range', 'unknown'],
             },
-            departureRangeEndLocalDate: {
-              anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }],
-            },
-            departureRangeEndLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-            departureTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+            departureRangeStart: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            departureRangeEnd: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             departureTimeConfidence: {
               type: 'string',
               enum: ['confirmed', 'estimated', 'unknown'],
             },
             arrivalLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
             arrivalLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            arrivalTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
             arrivalTimePrecision: {
               type: 'string',
-              enum: ['unspecified', 'precise', 'approximate', 'range'],
+              enum: ['exact', 'approximate', 'range', 'unknown'],
             },
-            arrivalRangeEndLocalDate: {
-              anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }],
-            },
-            arrivalRangeEndLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-            arrivalTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+            arrivalRangeStart: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            arrivalRangeEnd: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             arrivalTimeConfidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
           },
         },
@@ -664,20 +694,57 @@ export function buildApp(store?: AtlasStore) {
       for (const field of [
         'departureLocalDate',
         'departureLocalTime',
-        'departureRangeEndLocalDate',
-        'departureRangeEndLocalTime',
         'arrivalLocalDate',
         'arrivalLocalTime',
-        'arrivalRangeEndLocalDate',
-        'arrivalRangeEndLocalTime',
+        'departureRangeStart',
+        'departureRangeEnd',
+        'arrivalRangeStart',
+        'arrivalRangeEnd',
+        'departureTimeZone',
+        'arrivalTimeZone',
       ] as const) {
         if (changes[field] === '') changes[field] = null;
       }
-      const result = await store.updateLeg(request.params.legId, Number(match[1]), changes);
-      if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
-      if (result.status === 'invalid_times') {
-        return reply.code(409).send({ error: 'Invalid Leg clock precision or time range' });
+      const validZone = (zone: string): boolean => {
+        if (!/^(?:[A-Za-z_+-]+(?:\/[A-Za-z0-9_+-]+)+|UTC)$/.test(zone)) return false;
+        try {
+          new Intl.DateTimeFormat('en', { timeZone: zone });
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      for (const zone of [changes.departureTimeZone, changes.arrivalTimeZone]) {
+        if (zone != null && !validZone(zone)) {
+          return reply.code(400).send({ error: 'Invalid IANA time zone' });
+        }
       }
+      const localTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/;
+      for (const key of ['departure', 'arrival'] as const) {
+        const precision = changes[`${key}TimePrecision`];
+        const start = changes[`${key}RangeStart`];
+        const end = changes[`${key}RangeEnd`];
+        if (start !== undefined || end !== undefined || precision === 'range') {
+          if (precision === 'range') {
+            if (
+              !start ||
+              !end ||
+              !localTimestamp.test(start) ||
+              !localTimestamp.test(end) ||
+              start > end
+            ) {
+              return reply.code(400).send({ error: 'Invalid local time range' });
+            }
+          } else if (start != null || end != null) {
+            return reply.code(400).send({ error: 'Time range must have range precision' });
+          }
+        }
+      }
+      const result = await store.updateLeg(request.params.legId, Number(match[1]), changes);
+      if (result.status === 'invalid_times') {
+        return reply.code(400).send({ error: 'Invalid time precision or local range' });
+      }
+      if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
       if (result.status === 'conflict') {
         return reply
           .code(412)
@@ -755,6 +822,69 @@ export function buildApp(store?: AtlasStore) {
           .header('ETag', `"${result.currentRevision}"`)
           .send({ error: 'Leg was modified; reload before disconnecting' });
       }
+      return reply.header('ETag', `"${result.leg.revision}"`).send(result);
+    },
+  );
+  app.post<{
+    Params: { tripId: string };
+    Body: { fromDayId: string; toTripId: string; toDayId: string };
+  }>(
+    '/api/v1/trips/:tripId/connect-trip',
+    {
+      schema: {
+        params: idParams,
+        body: {
+          type: 'object',
+          required: ['fromDayId', 'toTripId', 'toDayId'],
+          additionalProperties: false,
+          properties: { fromDayId: uuid, toTripId: uuid, toDayId: uuid },
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await store.connectTrips(
+        request.params.tripId,
+        request.body.fromDayId,
+        request.body.toTripId,
+        request.body.toDayId,
+      );
+      if (result.status === 'not_found') return reply.code(404).send({ error: 'Day not found' });
+      if (result.status === 'invalid') return reply.code(409).send({ error: result.reason });
+      if (result.status !== 'connected')
+        return reply.code(409).send({ error: 'Unexpected connection status' });
+      return reply.code(result.created ? 201 : 200).send(result);
+    },
+  );
+  app.post<{
+    Params: { legId: string };
+    Headers: { 'if-match'?: string };
+  }>(
+    '/api/v1/legs/:legId/disconnect-trip',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['legId'],
+          properties: { legId: uuid },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const match = /^"([1-9][0-9]*)"$/.exec(request.headers['if-match'] ?? '');
+      if (!request.headers['if-match'])
+        return reply.code(428).send({ error: 'If-Match is required' });
+      if (!match) return reply.code(400).send({ error: 'Invalid revision' });
+      const result = await store.disconnectTrips(request.params.legId, Number(match[1]));
+      if (result.status === 'not_found') return reply.code(404).send({ error: 'Leg not found' });
+      if (result.status === 'invalid') return reply.code(409).send({ error: result.reason });
+      if (result.status === 'conflict')
+        return reply
+          .code(412)
+          .header('ETag', `"${result.currentRevision}"`)
+          .send({ error: 'Leg changed; reload' });
+      if (result.status !== 'disconnected')
+        return reply.code(409).send({ error: 'Unexpected disconnection status' });
       return reply.header('ETag', `"${result.leg.revision}"`).send(result);
     },
   );

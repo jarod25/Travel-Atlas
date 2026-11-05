@@ -42,19 +42,24 @@ export const trips = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     title: text('title').notNull(),
-    startDateOverride: date('start_date_override', { mode: 'string' }),
-    endDateOverride: date('end_date_override', { mode: 'string' }),
+    parentTripId: uuid('parent_trip_id'),
+    manualStartDate: date('manual_start_date', { mode: 'string' }),
+    manualEndDate: date('manual_end_date', { mode: 'string' }),
     isArchived: boolean('is_archived').notNull().default(false),
     revision: integer('revision').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check('trips_title_nonempty', sql`length(btrim(${table.title})) > 0`),
-    check('trips_revision_positive', sql`${table.revision} > 0`),
     check(
-      'trips_date_override_order',
-      sql`${table.startDateOverride} IS NULL OR ${table.endDateOverride} IS NULL OR ${table.startDateOverride} <= ${table.endDateOverride}`,
+      'trips_not_own_parent',
+      sql`${table.parentTripId} IS NULL OR ${table.parentTripId} <> ${table.id}`,
     ),
+    check(
+      'trips_manual_date_range',
+      sql`${table.manualStartDate} IS NULL OR ${table.manualEndDate} IS NULL OR ${table.manualStartDate} <= ${table.manualEndDate}`,
+    ),
+    check('trips_revision_positive', sql`${table.revision} > 0`),
   ],
 );
 
@@ -148,9 +153,15 @@ export const legs = pgTable(
   'legs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    tripId: uuid('trip_id').notNull(),
-    fromVisitId: uuid('from_visit_id').notNull(),
-    toVisitId: uuid('to_visit_id').notNull(),
+    tripId: uuid('trip_id')
+      .notNull()
+      .references(() => trips.id),
+    fromVisitId: uuid('from_visit_id')
+      .notNull()
+      .references(() => visits.id),
+    toVisitId: uuid('to_visit_id')
+      .notNull()
+      .references(() => visits.id),
     isCurrent: boolean('is_current').notNull().default(true),
     revision: integer('revision').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -167,42 +178,32 @@ export const legs = pgTable(
       .default('unknown'),
     departureLocalDate: date('departure_local_date', { mode: 'string' }),
     departureLocalTime: time('departure_local_time'),
+    departureTimeZone: text('departure_time_zone'),
+    departureRangeStart: timestamp('departure_range_start', { mode: 'string' }),
+    departureRangeEnd: timestamp('departure_range_end', { mode: 'string' }),
     departureTimePrecision: text('departure_time_precision', {
-      enum: ['unspecified', 'precise', 'approximate', 'range'],
+      enum: ['exact', 'approximate', 'range', 'unknown'],
     })
       .notNull()
-      .default('unspecified'),
-    departureRangeEndLocalDate: date('departure_range_end_local_date', { mode: 'string' }),
-    departureRangeEndLocalTime: time('departure_range_end_local_time'),
-    departureTimeZone: text('departure_time_zone'),
+      .default('unknown'),
     departureTimeConfidence: text('departure_time_confidence', { enum: confidenceValues })
       .notNull()
       .default('unknown'),
     arrivalLocalDate: date('arrival_local_date', { mode: 'string' }),
     arrivalLocalTime: time('arrival_local_time'),
+    arrivalTimeZone: text('arrival_time_zone'),
+    arrivalRangeStart: timestamp('arrival_range_start', { mode: 'string' }),
+    arrivalRangeEnd: timestamp('arrival_range_end', { mode: 'string' }),
     arrivalTimePrecision: text('arrival_time_precision', {
-      enum: ['unspecified', 'precise', 'approximate', 'range'],
+      enum: ['exact', 'approximate', 'range', 'unknown'],
     })
       .notNull()
-      .default('unspecified'),
-    arrivalRangeEndLocalDate: date('arrival_range_end_local_date', { mode: 'string' }),
-    arrivalRangeEndLocalTime: time('arrival_range_end_local_time'),
-    arrivalTimeZone: text('arrival_time_zone'),
+      .default('unknown'),
     arrivalTimeConfidence: text('arrival_time_confidence', { enum: confidenceValues })
       .notNull()
       .default('unknown'),
   },
   (table) => [
-    foreignKey({
-      name: 'legs_from_visit_same_trip_fk',
-      columns: [table.tripId, table.fromVisitId],
-      foreignColumns: [visits.tripId, visits.id],
-    }),
-    foreignKey({
-      name: 'legs_to_visit_same_trip_fk',
-      columns: [table.tripId, table.toVisitId],
-      foreignColumns: [visits.tripId, visits.id],
-    }),
     check('legs_revision_positive', sql`${table.revision} > 0`),
     check('legs_distinct_endpoints', sql`${table.fromVisitId} <> ${table.toVisitId}`),
     check(
@@ -234,50 +235,28 @@ export const legs = pgTable(
       sql`${table.departureLocalTime} IS NULL OR ${table.departureLocalDate} IS NOT NULL`,
     ),
     check(
-      'legs_departure_precision_valid',
-      sql`${table.departureTimePrecision} IN ('unspecified','precise','approximate','range')`,
-    ),
-    check(
-      'legs_departure_range_valid',
-      sql`(
-        (${table.departureTimePrecision} = 'range'
-         AND ${table.departureLocalDate} IS NOT NULL
-         AND ${table.departureLocalTime} IS NOT NULL
-         AND ${table.departureRangeEndLocalDate} IS NOT NULL
-         AND ${table.departureRangeEndLocalTime} IS NOT NULL
-         AND (${table.departureRangeEndLocalDate}, ${table.departureRangeEndLocalTime})
-             >= (${table.departureLocalDate}, ${table.departureLocalTime}))
-        OR (${table.departureTimePrecision} <> 'range'
-         AND ${table.departureRangeEndLocalDate} IS NULL
-         AND ${table.departureRangeEndLocalTime} IS NULL
-         AND (${table.departureTimePrecision} = 'unspecified'
-           OR (${table.departureLocalDate} IS NOT NULL AND ${table.departureLocalTime} IS NOT NULL)))
-      )`,
-    ),
-    check(
       'legs_arrival_time_needs_date',
       sql`${table.arrivalLocalTime} IS NULL OR ${table.arrivalLocalDate} IS NOT NULL`,
     ),
     check(
-      'legs_arrival_precision_valid',
-      sql`${table.arrivalTimePrecision} IN ('unspecified','precise','approximate','range')`,
+      'legs_departure_precision_valid',
+      sql`${table.departureTimePrecision} IN ('exact','approximate','range','unknown')`,
     ),
     check(
-      'legs_arrival_range_valid',
-      sql`(
-        (${table.arrivalTimePrecision} = 'range'
-         AND ${table.arrivalLocalDate} IS NOT NULL
-         AND ${table.arrivalLocalTime} IS NOT NULL
-         AND ${table.arrivalRangeEndLocalDate} IS NOT NULL
-         AND ${table.arrivalRangeEndLocalTime} IS NOT NULL
-         AND (${table.arrivalRangeEndLocalDate}, ${table.arrivalRangeEndLocalTime})
-             >= (${table.arrivalLocalDate}, ${table.arrivalLocalTime}))
-        OR (${table.arrivalTimePrecision} <> 'range'
-         AND ${table.arrivalRangeEndLocalDate} IS NULL
-         AND ${table.arrivalRangeEndLocalTime} IS NULL
-         AND (${table.arrivalTimePrecision} = 'unspecified'
-           OR (${table.arrivalLocalDate} IS NOT NULL AND ${table.arrivalLocalTime} IS NOT NULL)))
-      )`,
+      'legs_arrival_precision_valid',
+      sql`${table.arrivalTimePrecision} IN ('exact','approximate','range','unknown')`,
+    ),
+    check(
+      'legs_departure_range_complete',
+      sql`(${table.departureRangeStart} IS NULL AND ${table.departureRangeEnd} IS NULL AND ${table.departureTimePrecision} <> 'range')
+      OR (${table.departureRangeStart} IS NOT NULL AND ${table.departureRangeEnd} IS NOT NULL AND ${table.departureTimePrecision} = 'range'
+      AND ${table.departureRangeStart} <= ${table.departureRangeEnd})`,
+    ),
+    check(
+      'legs_arrival_range_complete',
+      sql`(${table.arrivalRangeStart} IS NULL AND ${table.arrivalRangeEnd} IS NULL AND ${table.arrivalTimePrecision} <> 'range')
+      OR (${table.arrivalRangeStart} IS NOT NULL AND ${table.arrivalRangeEnd} IS NOT NULL AND ${table.arrivalTimePrecision} = 'range'
+      AND ${table.arrivalRangeStart} <= ${table.arrivalRangeEnd})`,
     ),
     // The circular selected-version FK is enforced by migration 0004.
     unique('legs_trip_id_id_unique').on(table.tripId, table.id),

@@ -146,3 +146,11 @@ Legs are left untouched, and a fresh Unknown draft is created instead.
 ### Place revisions
 
 Migration `0015_place_revisions.sql` adds a positive integer `places.revision` with default 1. Updates lock the Place row, compare the supplied revision, and increment it on a real change. The migration is additive; previously applied migrations are not modified. Existing Place IDs and historical links are preserved.
+
+## Lot 3 hierarchy and temporal migrations (0018–0021)
+
+- `0018_trip_date_overrides.sql` and `0019_leg_time_precision.sql` are **already in develop**. Never edit or replay them under another name: databases may already contain user-entered override dates and precise/approximate/range clock values.
+- `0020_upgrade_trip_hierarchy_time.sql` renames the existing date-override columns to the new manual date fields without losing dates; adds the nullable `trips.parent_trip_id`; maps `unspecified` → `unknown` and `precise` → `exact`; and migrates existing local range endpoints into timestamp-without-time-zone bounds. New constraints enforce explicit range semantics. This is a data migration, not a replacement for 0018/0019.
+- `0021_cross_trip_legs.sql`: a Leg remains owned by its departure Trip, but may reference a Visit in a related Trip. A database trigger enforces the shared ancestor root even for raw SQL. Current endpoint uniqueness, historical route versions and evidence remain intact.
+
+Before applying to a personal database, verify a backup and restore into a separate isolated test database. Check before/after row counts, date overrides and time-range values. See [Lot 3 acceptance](LOT3_RECETTE.md).

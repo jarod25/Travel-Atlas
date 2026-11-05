@@ -3,12 +3,12 @@ const prefix = '/api/v1';
 export interface Trip {
   id: string;
   title: string;
-  startDateOverride?: string | null;
-  endDateOverride?: string | null;
-  derivedStartDate?: string | null;
-  derivedEndDate?: string | null;
-  effectiveStartDate?: string | null;
-  effectiveEndDate?: string | null;
+  parentTripId: string | null;
+  archivedByParent: boolean;
+  manualStartDate: string | null;
+  manualEndDate: string | null;
+  computedStartDate: string | null;
+  computedEndDate: string | null;
   revision: number;
   isArchived: boolean;
   updatedAt?: string;
@@ -45,20 +45,22 @@ export interface LegRow {
   fromVisitId: string;
   toVisitId: string;
   transportMode: string | null;
+  tripId: string;
+  toTripId: string;
   revision: number;
   departureLocalDate: string | null;
   departureLocalTime: string | null;
-  departureTimePrecision: 'unspecified' | 'precise' | 'approximate' | 'range';
-  departureRangeEndLocalDate: string | null;
-  departureRangeEndLocalTime: string | null;
   departureTimeZone: string | null;
+  departureTimePrecision: 'exact' | 'approximate' | 'range' | 'unknown';
+  departureRangeStart: string | null;
+  departureRangeEnd: string | null;
   departureTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   arrivalLocalDate: string | null;
   arrivalLocalTime: string | null;
-  arrivalTimePrecision: 'unspecified' | 'precise' | 'approximate' | 'range';
-  arrivalRangeEndLocalDate: string | null;
-  arrivalRangeEndLocalTime: string | null;
   arrivalTimeZone: string | null;
+  arrivalTimePrecision: 'exact' | 'approximate' | 'range' | 'unknown';
+  arrivalRangeStart: string | null;
+  arrivalRangeEnd: string | null;
   arrivalTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   movementConfidence: string;
   transportConfidence: string;
@@ -109,8 +111,9 @@ export const atlasApi = {
     changes: {
       title?: string;
       isArchived?: boolean;
-      startDateOverride?: string | null;
-      endDateOverride?: string | null;
+      parentTripId?: string | null;
+      manualStartDate?: string | null;
+      manualEndDate?: string | null;
     },
   ) =>
     request<Trip>(`/trips/${id}`, {
@@ -119,8 +122,13 @@ export const atlasApi = {
       body: JSON.stringify(changes),
     }),
   trip: (id: string) => request<Trip>(`/trips/${encodeURIComponent(id)}`),
-  addTrip: (title: string) => post<Trip>('/trips', { title }),
+  addTrip: (title: string, parentTripId: string | null = null) =>
+    post<Trip>('/trips', { title, parentTripId }),
   days: (id: string) => request<TripDay[]>(`/trips/${encodeURIComponent(id)}/days`),
+  combinedDays: (id: string) =>
+    request<(TripDay & { tripTitle: string; depth: number })[]>(
+      `/trips/${encodeURIComponent(id)}/combined-days`,
+    ),
   addDay: (id: string, localDate: string | null) =>
     post<TripDay>(`/trips/${id}/days`, { localDate }),
   archiveDay: (id: string, day: string, revision: number, isArchived: boolean) =>
@@ -171,6 +179,10 @@ export const atlasApi = {
     request<ArchivedVisitRow[]>(`/trips/${id}/days/${day}/archived-visits`),
   restoreVisit: (id: string, day: string, visit: string) =>
     post<unknown>(`/trips/${id}/days/${day}/visits/${visit}/restore`, {}),
+  suggestLegTimeZones: (id: string) =>
+    request<{ departure: string[]; arrival: string[]; source: string; confirmed: false }>(
+      `/legs/${id}/time-zone-suggestions`,
+    ),
   updateLeg: (
     id: string,
     revision: number,
@@ -179,22 +191,31 @@ export const atlasApi = {
       transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
       departureLocalDate?: string | null;
       departureLocalTime?: string | null;
-      departureTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
-      departureRangeEndLocalDate?: string | null;
-      departureRangeEndLocalTime?: string | null;
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      departureTimeZone?: string | null;
+      departureTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      departureRangeStart?: string | null;
+      departureRangeEnd?: string | null;
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
-      arrivalTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
-      arrivalRangeEndLocalDate?: string | null;
-      arrivalRangeEndLocalTime?: string | null;
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
+      arrivalTimeZone?: string | null;
+      arrivalTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
+      arrivalRangeStart?: string | null;
+      arrivalRangeEnd?: string | null;
     },
   ) =>
     request<LegRow>(`/legs/${id}`, {
       method: 'PATCH',
       headers: { 'If-Match': `"${revision}"` },
       body: JSON.stringify(changes),
+    }),
+  connectTrips: (fromTripId: string, fromDayId: string, toTripId: string, toDayId: string) =>
+    post<unknown>(`/trips/${fromTripId}/connect-trip`, { fromDayId, toTripId, toDayId }),
+  disconnectTrips: (legId: string, revision: number) =>
+    request<unknown>(`/legs/${legId}/disconnect-trip`, {
+      method: 'POST',
+      headers: { 'If-Match': `"${revision}"` },
     }),
   connectDays: (tripId: string, fromDayId: string, toDayId: string) =>
     post<unknown>(`/trips/${tripId}/connect-days`, { fromDayId, toDayId }),

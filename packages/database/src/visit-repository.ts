@@ -147,7 +147,6 @@ export async function reorderVisitsInDay(
       .from(legs)
       .where(
         and(
-          eq(legs.tripId, input.tripId),
           eq(legs.isCurrent, true),
           or(inArray(legs.fromVisitId, ids), inArray(legs.toVisitId, ids)),
         ),
@@ -285,7 +284,6 @@ export async function archiveVisitFromDay(
       .from(legs)
       .where(
         and(
-          eq(legs.tripId, input.tripId),
           eq(legs.isCurrent, true),
           or(inArray(legs.fromVisitId, [...owned]), inArray(legs.toVisitId, [...owned])),
         ),
@@ -393,7 +391,6 @@ export async function restoreVisitToDay(
           .from(legs)
           .where(
             and(
-              eq(legs.tripId, input.tripId),
               eq(legs.isCurrent, true),
               or(inArray(legs.fromVisitId, activeIds), inArray(legs.toVisitId, activeIds)),
             ),
@@ -553,7 +550,6 @@ export async function reassignVisitPlace(
       .from(legs)
       .where(
         and(
-          eq(legs.tripId, input.tripId),
           eq(legs.isCurrent, true),
           or(eq(legs.fromVisitId, input.visitId), eq(legs.toVisitId, input.visitId)),
         ),

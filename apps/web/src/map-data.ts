@@ -4,6 +4,7 @@ export const emptyFeatures: FeatureCollection = { type: 'FeatureCollection', fea
 
 export interface ExploreFilters {
   tripId?: string | null;
+  tripIds?: readonly string[];
   fromDate?: string;
   toDate?: string;
   transportMode?: string;
@@ -25,7 +26,12 @@ export function visibleFeatures(
     features: data.features.filter((feature) => {
       const { geometry, properties } = feature;
       if (!['Point', 'LineString', 'MultiLineString'].includes(geometry.type)) return false;
-      if (options.tripId && properties.tripId !== options.tripId) return false;
+      if (
+        options.tripIds
+          ? !options.tripIds.includes(properties.tripId ?? '')
+          : options.tripId && properties.tripId !== options.tripId
+      )
+        return false;
       if (options.fromDate || options.toDate) {
         if (!properties.localDate) return false;
         if (options.fromDate && properties.localDate < options.fromDate) return false;

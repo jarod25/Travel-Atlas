@@ -1,10 +1,12 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { updateTripWithRevision } from './trip-repository.js';
 import { connectAdjacentDays, disconnectAdjacentDays } from './day-connection.js';
+import { connectTrips, disconnectTrips } from './cross-trip-connection.js';
+import type { CrossTripResult } from './cross-trip-connection.js';
 import { setDayArchivedWithRevision } from './day-archive.js';
 import type { DayArchiveResult } from './day-archive.js';
 import type { DayConnectionResult, DayDisconnectionResult } from './day-connection.js';
-import type { TripUpdateResult } from './trip-repository.js';
+import type { TripChanges, TripUpdateResult } from './trip-repository.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import {
@@ -21,19 +23,11 @@ import type { LegChanges, LegUpdateResult } from './leg-repository.js';
 
 export interface AtlasStore {
   listTrips(includeArchived?: boolean): Promise<unknown>;
-  createTrip(title: string): Promise<unknown>;
+  createTrip(title: string, parentTripId?: string | null): Promise<unknown | null>;
   getTrip(tripId: string): Promise<unknown | null>;
-  editTrip(
-    id: string,
-    revision: number,
-    changes: {
-      title?: string;
-      isArchived?: boolean;
-      startDateOverride?: string | null;
-      endDateOverride?: string | null;
-    },
-  ): Promise<TripUpdateResult>;
+  editTrip(id: string, revision: number, changes: TripChanges): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
+  listCombinedDays(tripId: string): Promise<unknown[]>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
   archiveDay(
     tripId: string,
@@ -78,7 +72,17 @@ export interface AtlasStore {
     placeId: string | null,
   ): Promise<VisitPlaceEditResult>;
   getExplore(): Promise<unknown>;
+  getLegEndpointCoordinates(
+    legId: string,
+  ): Promise<{ from: [number, number] | null; to: [number, number] | null } | null>;
   connectDays(tripId: string, fromDayId: string, toDayId: string): Promise<DayConnectionResult>;
+  connectTrips(
+    fromTripId: string,
+    fromDayId: string,
+    toTripId: string,
+    toDayId: string,
+  ): Promise<CrossTripResult>;
+  disconnectTrips(legId: string, revision: number): Promise<CrossTripResult>;
   disconnectDays(
     tripId: string,
     fromDayId: string,
@@ -96,7 +100,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
   const db = drizzle(client);
 
   return {
-    listTrips: (includeArchived = false) => {
+    listTrips: async (includeArchived = false) => {
       // Aggregate activity without mutating the parent Trip from child-table
       // triggers, which could otherwise upgrade shared locks and deadlock.
       const activity = sql<string>`GREATEST(
@@ -105,74 +109,76 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         COALESCE((SELECT MAX(updated_at) FROM visits WHERE trip_id = ${trips.id}), ${trips.updatedAt}),
         COALESCE((SELECT MAX(updated_at) FROM legs WHERE trip_id = ${trips.id}), ${trips.updatedAt})
       )`;
-      const derivedStart = sql<string | null>`(
-        SELECT MIN(local_date)::text FROM trip_days
-        WHERE trip_id = ${trips.id} AND is_archived = false
-      )`;
-      const derivedEnd = sql<string | null>`(
-        SELECT MAX(local_date)::text FROM trip_days
-        WHERE trip_id = ${trips.id} AND is_archived = false
-      )`;
-      const effectiveStart = sql<string | null>`
-        COALESCE(${trips.startDateOverride}::text, ${derivedStart})
-      `;
-      const effectiveEnd = sql<string | null>`
-        COALESCE(${trips.endDateOverride}::text, ${derivedEnd})
-      `;
-      return db
+      const rows = await db
         .select({
           id: trips.id,
           title: trips.title,
+          parentTripId: trips.parentTripId,
+          manualStartDate: trips.manualStartDate,
+          manualEndDate: trips.manualEndDate,
+          computedStartDate: sql<
+            string | null
+          >`(WITH RECURSIVE descendants AS (SELECT ${trips.id} AS id UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id WHERE t.is_archived = false) SELECT MIN(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
+          computedEndDate: sql<
+            string | null
+          >`(WITH RECURSIVE descendants AS (SELECT ${trips.id} AS id UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id WHERE t.is_archived = false) SELECT MAX(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
           isArchived: trips.isArchived,
           revision: trips.revision,
-          startDateOverride: trips.startDateOverride,
-          endDateOverride: trips.endDateOverride,
-          derivedStartDate: derivedStart,
-          derivedEndDate: derivedEnd,
-          effectiveStartDate: effectiveStart,
-          effectiveEndDate: effectiveEnd,
           updatedAt: trips.updatedAt,
           lastActivityAt: activity,
         })
         .from(trips)
         .where(includeArchived ? undefined : eq(trips.isArchived, false))
         .orderBy(sql`${activity} DESC`, asc(trips.title));
+      const hierarchy = await db
+        .select({ id: trips.id, parentTripId: trips.parentTripId, archived: trips.isArchived })
+        .from(trips);
+      const byId = new Map(hierarchy.map((item) => [item.id, item]));
+      const archivedByParent = (id: string): boolean => {
+        const seen = new Set<string>([id]);
+        let parent = byId.get(id)?.parentTripId;
+        while (parent && !seen.has(parent)) {
+          seen.add(parent);
+          const node = byId.get(parent);
+          if (node?.archived) return true;
+          parent = node?.parentTripId;
+        }
+        return false;
+      };
+      return rows.map((row) => ({ ...row, archivedByParent: archivedByParent(row.id) }));
     },
-    createTrip: async (title) => {
-      const [trip] = await db.insert(trips).values({ title }).returning();
+    createTrip: async (title, parentTripId = null) => {
+      if (parentTripId) {
+        const [parent] = await db
+          .select({ id: trips.id, isArchived: trips.isArchived })
+          .from(trips)
+          .where(eq(trips.id, parentTripId));
+        if (!parent || parent.isArchived) return null;
+        const archivedAncestors = await db.execute(sql`
+          WITH RECURSIVE lineage AS (
+            SELECT parent_trip_id, is_archived FROM trips WHERE id = ${parentTripId}
+            UNION ALL
+            SELECT t.parent_trip_id, t.is_archived FROM trips t
+            JOIN lineage l ON t.id = l.parent_trip_id
+          )
+          SELECT 1 FROM lineage WHERE is_archived = true LIMIT 1
+        `);
+        if (archivedAncestors.length) return null;
+      }
+      const [trip] = await db.insert(trips).values({ title, parentTripId }).returning();
       return trip;
     },
     getTrip: async (id) => {
-      const derivedStart = sql<string | null>`(
-        SELECT MIN(local_date)::text FROM trip_days
-        WHERE trip_id = ${trips.id} AND is_archived = false
-      )`;
-      const derivedEnd = sql<string | null>`(
-        SELECT MAX(local_date)::text FROM trip_days
-        WHERE trip_id = ${trips.id} AND is_archived = false
-      )`;
-      const effectiveStart = sql<string | null>`
-        COALESCE(${trips.startDateOverride}::text, ${derivedStart})
-      `;
-      const effectiveEnd = sql<string | null>`
-        COALESCE(${trips.endDateOverride}::text, ${derivedEnd})
-      `;
-      const [trip] = await db
-        .select({
-          id: trips.id,
-          title: trips.title,
-          isArchived: trips.isArchived,
-          revision: trips.revision,
-          startDateOverride: trips.startDateOverride,
-          endDateOverride: trips.endDateOverride,
-          derivedStartDate: derivedStart,
-          derivedEndDate: derivedEnd,
-          effectiveStartDate: effectiveStart,
-          effectiveEndDate: effectiveEnd,
-        })
-        .from(trips)
-        .where(eq(trips.id, id));
-      return trip ?? null;
+      const [trip] = await db.select().from(trips).where(eq(trips.id, id));
+      if (!trip) return null;
+      const dates = await db.execute(
+        sql`WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${id} UNION ALL SELECT child.id FROM trips child JOIN descendants d ON child.parent_trip_id = d.id WHERE child.is_archived = false) SELECT MIN(local_date)::text AS start_date, MAX(local_date)::text AS end_date FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants)`,
+      );
+      return {
+        ...trip,
+        computedStartDate: dates[0]?.start_date ?? null,
+        computedEndDate: dates[0]?.end_date ?? null,
+      };
     },
     editTrip: (id, revision, changes) => updateTripWithRevision(db, id, revision, changes),
     listDays: async (id) => {
@@ -183,6 +189,25 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .from(tripDays)
         .where(eq(tripDays.tripId, id))
         .orderBy(asc(tripDays.position));
+    },
+    listCombinedDays: async (tripId) => {
+      const result = await db.execute(sql`
+        WITH RECURSIVE tree AS (
+          SELECT id, title, parent_trip_id, 0 AS depth
+          FROM trips WHERE id = ${tripId} AND is_archived = false
+          UNION ALL
+          SELECT t.id, t.title, t.parent_trip_id, tree.depth + 1
+          FROM trips t JOIN tree ON t.parent_trip_id = tree.id
+          WHERE t.is_archived = false
+        )
+        SELECT d.id, d.trip_id AS "tripId", d.local_date::text AS "localDate",
+          d.position, d.revision, d.is_archived AS "isArchived",
+          tree.title AS "tripTitle", tree.depth
+        FROM trip_days d JOIN tree ON tree.id = d.trip_id
+        WHERE d.is_archived = false
+        ORDER BY d.local_date ASC NULLS LAST, tree.depth, d.position, d.id
+      `);
+      return [...result];
     },
     createDay: async (id, localDate) =>
       db.transaction(async (tx) => {
@@ -261,30 +286,37 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
       const edges = await db
         .select({
           id: legs.id,
+          tripId: legs.tripId,
+          toTripId: sql<string>`(SELECT v.trip_id FROM visits v WHERE v.id = ${legs.toVisitId})`,
           fromVisitId: legs.fromVisitId,
           toVisitId: legs.toVisitId,
           transportMode: legs.transportMode,
           revision: legs.revision,
           departureLocalDate: legs.departureLocalDate,
           departureLocalTime: legs.departureLocalTime,
-          departureTimePrecision: legs.departureTimePrecision,
-          departureRangeEndLocalDate: legs.departureRangeEndLocalDate,
-          departureRangeEndLocalTime: legs.departureRangeEndLocalTime,
           departureTimeZone: legs.departureTimeZone,
+          departureTimePrecision: legs.departureTimePrecision,
+          departureRangeStart: legs.departureRangeStart,
+          departureRangeEnd: legs.departureRangeEnd,
           departureTimeConfidence: legs.departureTimeConfidence,
           arrivalLocalDate: legs.arrivalLocalDate,
           arrivalLocalTime: legs.arrivalLocalTime,
-          arrivalTimePrecision: legs.arrivalTimePrecision,
-          arrivalRangeEndLocalDate: legs.arrivalRangeEndLocalDate,
-          arrivalRangeEndLocalTime: legs.arrivalRangeEndLocalTime,
           arrivalTimeZone: legs.arrivalTimeZone,
+          arrivalTimePrecision: legs.arrivalTimePrecision,
+          arrivalRangeStart: legs.arrivalRangeStart,
+          arrivalRangeEnd: legs.arrivalRangeEnd,
           arrivalTimeConfidence: legs.arrivalTimeConfidence,
           movementConfidence: legs.movementConfidence,
           transportConfidence: legs.transportConfidence,
           geometryConfidence: legs.geometryConfidence,
         })
         .from(legs)
-        .where(and(eq(legs.tripId, tripId), eq(legs.isCurrent, true)));
+        .where(
+          and(
+            eq(legs.isCurrent, true),
+            sql`(${legs.tripId} = ${tripId} OR EXISTS (SELECT 1 FROM visits v WHERE v.id = ${legs.toVisitId} AND v.trip_id = ${tripId}))`,
+          ),
+        );
       const memberIds = new Set(ordered.map((visit) => visit.id));
       return {
         day,
@@ -370,6 +402,30 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         }
         return { status: 'updated' as const, place: updated };
       }),
+    getLegEndpointCoordinates: async (legId) => {
+      const [row] = await db.execute(sql`
+        SELECT
+          ST_X(p1.location) AS from_lon, ST_Y(p1.location) AS from_lat,
+          ST_X(p2.location) AS to_lon, ST_Y(p2.location) AS to_lat
+        FROM legs l
+        JOIN visits v1 ON l.from_visit_id = v1.id
+        JOIN visits v2 ON l.to_visit_id = v2.id
+        LEFT JOIN places p1 ON p1.id = v1.place_id
+        LEFT JOIN places p2 ON p2.id = v2.place_id
+        WHERE l.id = ${legId} AND l.is_current = true
+      `);
+      if (!row) return null;
+      return {
+        from:
+          row.from_lon === null || row.from_lat === null
+            ? null
+            : [Number(row.from_lon), Number(row.from_lat)],
+        to:
+          row.to_lon === null || row.to_lat === null
+            ? null
+            : [Number(row.to_lon), Number(row.to_lat)],
+      };
+    },
     addVisit: async (tripId, dayId, placeId) => {
       return appendVisitToDay(db, { tripId, tripDayId: dayId, placeId });
     },
@@ -413,6 +469,9 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         placeId,
       }),
     updateLeg: (id, revision, changes) => updateLegWithRevision(db, id, revision, changes),
+    connectTrips: (fromTripId, fromDayId, toTripId, toDayId) =>
+      connectTrips(db, { fromTripId, fromDayId, toTripId, toDayId }),
+    disconnectTrips: (legId, revision) => disconnectTrips(db, legId, revision),
     connectDays: (tripId, fromDayId, toDayId) =>
       connectAdjacentDays(db, {
         tripId,
@@ -441,6 +500,7 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           and(
             eq(visits.isArchived, false),
             eq(trips.isArchived, false),
+            sql`NOT EXISTS (WITH RECURSIVE ancestors AS (SELECT parent_trip_id, is_archived FROM trips WHERE id = ${visits.tripId} UNION ALL SELECT t.parent_trip_id, t.is_archived FROM trips t JOIN ancestors a ON t.id = a.parent_trip_id) SELECT 1 FROM ancestors WHERE is_archived = true)`,
             eq(tripDays.isArchived, false),
             sql`${places.location} IS NOT NULL`,
           ),
@@ -457,6 +517,8 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           JOIN trip_days td2 ON td2.id = v2.trip_day_id
           JOIN trips t ON t.id = l.trip_id
         WHERE l.is_current = true AND t.is_archived = false
+          AND NOT EXISTS (WITH RECURSIVE ancestors AS (SELECT parent_trip_id, is_archived FROM trips WHERE id = v.trip_id UNION ALL SELECT p.parent_trip_id, p.is_archived FROM trips p JOIN ancestors a ON p.id = a.parent_trip_id) SELECT 1 FROM ancestors WHERE is_archived)
+          AND NOT EXISTS (WITH RECURSIVE ancestors AS (SELECT parent_trip_id, is_archived FROM trips WHERE id = v2.trip_id UNION ALL SELECT p.parent_trip_id, p.is_archived FROM trips p JOIN ancestors a ON p.id = a.parent_trip_id) SELECT 1 FROM ancestors WHERE is_archived)
           AND td.is_archived = false AND td2.is_archived = false
           AND v.is_archived = false AND v2.is_archived = false
           AND rv.geometry IS NOT NULL

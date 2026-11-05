@@ -76,3 +76,7 @@ The initial foundation lives on `main`; daily integration uses `develop`. Change
 ## Privacy and license
 
 This repository contains application source code and **synthetic test data only**. Do not commit personal itineraries, GPS histories, photographs, tickets, passwords, or real database exports. The repository currently has **no open-source license**; redistribution rights are not granted by default.
+
+### Lot 3 manual recipe
+
+Read [Lot 3 acceptance and safe migrations](docs/LOT3_RECETTE.md) before using a pre-existing personal PostgreSQL database. Migrations 0018–0021 include nested Trips, explicit cross-trip connections, and local time ranges; never skip a tested backup.
