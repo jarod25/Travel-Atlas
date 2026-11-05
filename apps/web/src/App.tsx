@@ -96,6 +96,10 @@ export function App() {
   const [departureTime, setDepartureTime] = useState('');
   const [arrivalDate, setArrivalDate] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
+  const [departureRangeStart, setDepartureRangeStart] = useState('');
+  const [departureRangeEnd, setDepartureRangeEnd] = useState('');
+  const [arrivalRangeStart, setArrivalRangeStart] = useState('');
+  const [arrivalRangeEnd, setArrivalRangeEnd] = useState('');
   const [departureZone, setDepartureZone] = useState('');
   const [arrivalZone, setArrivalZone] = useState('');
   const [suggestedZones, setSuggestedZones] = useState<{
@@ -385,6 +389,11 @@ export function App() {
     setDepartureTime(selectedLeg.departureLocalTime?.slice(0, 5) ?? '');
     setArrivalDate(selectedLeg.arrivalLocalDate ?? suggestedDate);
     setArrivalTime(selectedLeg.arrivalLocalTime?.slice(0, 5) ?? '');
+    const datetimeInput = (value: string | null) => value ? value.slice(0, 16).replace(' ', 'T') : '';
+    setDepartureRangeStart(datetimeInput(selectedLeg.departureRangeStart));
+    setDepartureRangeEnd(datetimeInput(selectedLeg.departureRangeEnd));
+    setArrivalRangeStart(datetimeInput(selectedLeg.arrivalRangeStart));
+    setArrivalRangeEnd(datetimeInput(selectedLeg.arrivalRangeEnd));
     setDepartureZone(selectedLeg.departureTimeZone ?? '');
     setArrivalZone(selectedLeg.arrivalTimeZone ?? '');
     setDeparturePrecision(
@@ -753,6 +762,15 @@ export function App() {
       setError('A clock time needs a date; leave both empty if unknown.');
       return;
     }
+    for (const [precision, start, end] of [
+      [departurePrecision, departureRangeStart, departureRangeEnd],
+      [arrivalPrecision, arrivalRangeStart, arrivalRangeEnd],
+    ]) {
+      if (precision === 'range' && (!start || !end || start > end)) {
+        setError('A time range needs ordered start and end local datetimes.');
+        return;
+      }
+    }
     for (const zone of [departureZone, arrivalZone]) {
       if (!zone) continue;
       try {
@@ -770,12 +788,16 @@ export function App() {
         departureLocalTime: departureDate && departureTime ? departureTime + ':00' : null,
         departureTimeConfidence: departureCertainty,
         departureTimeZone: departureZone || null,
-        departureTimePrecision: departureTime ? departurePrecision : 'unknown',
+        departureTimePrecision: departurePrecision === 'range' ? 'range' : departureTime ? departurePrecision : 'unknown',
+        departureRangeStart: departurePrecision === 'range' ? departureRangeStart : null,
+        departureRangeEnd: departurePrecision === 'range' ? departureRangeEnd : null,
         arrivalLocalDate: arrivalDate || null,
         arrivalLocalTime: arrivalDate && arrivalTime ? arrivalTime + ':00' : null,
         arrivalTimeConfidence: arrivalCertainty,
         arrivalTimeZone: arrivalZone || null,
-        arrivalTimePrecision: arrivalTime ? arrivalPrecision : 'unknown',
+        arrivalTimePrecision: arrivalPrecision === 'range' ? 'range' : arrivalTime ? arrivalPrecision : 'unknown',
+        arrivalRangeStart: arrivalPrecision === 'range' ? arrivalRangeStart : null,
+        arrivalRangeEnd: arrivalPrecision === 'range' ? arrivalRangeEnd : null,
       });
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
@@ -1777,11 +1799,19 @@ export function App() {
                         >
                           <option value="unknown">Unknown</option>
                           <option value="approximate">Approximate</option>
-                          <option value="range" disabled>
-                            Range (not editable yet)
+                          <option value="range">
+                            Range
                           </option>
                           <option value="exact">Exact</option>
                         </select>
+                        {departurePrecision === 'range' && (
+                          <>
+                            <label htmlFor="departure-range-start">Earliest departure (local)</label>
+                            <input id="departure-range-start" type="datetime-local" disabled={dayReadOnly} value={departureRangeStart} onChange={(e) => setDepartureRangeStart(e.target.value)} />
+                            <label htmlFor="departure-range-end">Latest departure (local)</label>
+                            <input id="departure-range-end" type="datetime-local" disabled={dayReadOnly} value={departureRangeEnd} onChange={(e) => setDepartureRangeEnd(e.target.value)} />
+                          </>
+                        )}
                         <label htmlFor="departure-confidence">Departure certainty</label>
                         <select
                           id="departure-confidence"
@@ -1844,11 +1874,19 @@ export function App() {
                         >
                           <option value="unknown">Unknown</option>
                           <option value="approximate">Approximate</option>
-                          <option value="range" disabled>
-                            Range (not editable yet)
+                          <option value="range">
+                            Range
                           </option>
                           <option value="exact">Exact</option>
                         </select>
+                        {arrivalPrecision === 'range' && (
+                          <>
+                            <label htmlFor="arrival-range-start">Earliest arrival (local)</label>
+                            <input id="arrival-range-start" type="datetime-local" disabled={dayReadOnly} value={arrivalRangeStart} onChange={(e) => setArrivalRangeStart(e.target.value)} />
+                            <label htmlFor="arrival-range-end">Latest arrival (local)</label>
+                            <input id="arrival-range-end" type="datetime-local" disabled={dayReadOnly} value={arrivalRangeEnd} onChange={(e) => setArrivalRangeEnd(e.target.value)} />
+                          </>
+                        )}
                         <label htmlFor="arrival-confidence">Arrival certainty</label>
                         <select
                           id="arrival-confidence"
