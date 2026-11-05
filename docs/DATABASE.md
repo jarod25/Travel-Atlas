@@ -139,7 +139,9 @@ archived history is overwritten by this migration.
 A disconnect operation locks both adjacent day rows and the exact current
 cross-day Leg, checks its revision and endpoint order, then marks it historical.
 It invalidates pending RouteProposals but preserves evidence and RouteVersions.
-An explicit reconnect creates an independent Unknown draft Leg.
+An explicit reconnect reactivates an unambiguous historical Leg for the same
+directed Visit pair, incrementing its revision. Several matching historical
+Legs are left untouched, and a fresh Unknown draft is created instead.
 
 ### Place revisions
 

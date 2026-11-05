@@ -70,8 +70,10 @@ and requires the current Leg's `If-Match: "<revision>"` header. It returns
 The connection must be current, between two consecutive non-archived days in
 the same non-archived Trip, with the exact last/first active Visit endpoints.
 Disconnecting preserves the historical Leg, RouteVersions and evidence while
-invalidating its pending proposals. A later explicit Connect Days creates a
-**new Unknown** Leg; old Confirmed facts are not transferred automatically.
+invalidating its pending proposals. A later explicit Connect Days reactivates a
+single historical Leg for the same directed Visit pair, preserving its facts,
+RouteVersions and evidence. When several historical Legs match, it creates a
+new Unknown draft rather than guessing which journey was intended.
 
 ### Existing Visit Place correction (Lot 3 stabilization)
 
