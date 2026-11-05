@@ -20,6 +20,7 @@ import { describeLeg, describeLegTimes } from './leg-display';
 
 type View = 'explore' | 'trips' | 'editor';
 type MobilePanel = 'timeline' | 'map';
+type TimePrecision = 'unspecified' | 'precise' | 'approximate' | 'range';
 
 function exploreParams() {
   return new URLSearchParams(window.location.search);
@@ -94,8 +95,14 @@ export function App() {
   const [legMode, setLegMode] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [departureTime, setDepartureTime] = useState('');
+  const [departureTimePrecision, setDepartureTimePrecision] = useState<TimePrecision>('unspecified');
+  const [departureRangeEndDate, setDepartureRangeEndDate] = useState('');
+  const [departureRangeEndTime, setDepartureRangeEndTime] = useState('');
   const [arrivalDate, setArrivalDate] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
+  const [arrivalTimePrecision, setArrivalTimePrecision] = useState<TimePrecision>('unspecified');
+  const [arrivalRangeEndDate, setArrivalRangeEndDate] = useState('');
+  const [arrivalRangeEndTime, setArrivalRangeEndTime] = useState('');
   const [departureCertainty, setDepartureCertainty] = useState<
     'confirmed' | 'estimated' | 'unknown'
   >('unknown');
@@ -343,8 +350,14 @@ export function App() {
     setLegMode(selectedLeg.transportMode ?? '');
     setDepartureDate(selectedLeg.departureLocalDate ?? suggestedDate);
     setDepartureTime(selectedLeg.departureLocalTime?.slice(0, 5) ?? '');
+    setDepartureTimePrecision(selectedLeg.departureTimePrecision);
+    setDepartureRangeEndDate(selectedLeg.departureRangeEndLocalDate ?? '');
+    setDepartureRangeEndTime(selectedLeg.departureRangeEndLocalTime?.slice(0, 5) ?? '');
     setArrivalDate(selectedLeg.arrivalLocalDate ?? suggestedDate);
     setArrivalTime(selectedLeg.arrivalLocalTime?.slice(0, 5) ?? '');
+    setArrivalTimePrecision(selectedLeg.arrivalTimePrecision);
+    setArrivalRangeEndDate(selectedLeg.arrivalRangeEndLocalDate ?? '');
+    setArrivalRangeEndTime(selectedLeg.arrivalRangeEndLocalTime?.slice(0, 5) ?? '');
     setDepartureCertainty(selectedLeg.departureTimeConfidence);
     setArrivalCertainty(selectedLeg.arrivalTimeConfidence);
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
@@ -676,15 +689,56 @@ export function App() {
       setError('A clock time needs a date; leave both empty if unknown.');
       return;
     }
+    for (const interval of [
+      {
+        name: 'Departure',
+        precision: departureTimePrecision,
+        date: departureDate,
+        time: departureTime,
+        endDate: departureRangeEndDate,
+        endTime: departureRangeEndTime,
+      },
+      {
+        name: 'Arrival',
+        precision: arrivalTimePrecision,
+        date: arrivalDate,
+        time: arrivalTime,
+        endDate: arrivalRangeEndDate,
+        endTime: arrivalRangeEndTime,
+      },
+    ]) {
+      if (interval.precision !== 'unspecified' && (!interval.date || !interval.time)) {
+        setError(`${interval.name}: supply a date and clock time for this precision.`);
+        return;
+      }
+      if (interval.precision === 'range') {
+        if (!interval.endDate || !interval.endTime) {
+          setError(`${interval.name}: a range needs an end date and clock time.`);
+          return;
+        }
+        if (`${interval.endDate}T${interval.endTime}` < `${interval.date}T${interval.time}`) {
+          setError(`${interval.name}: the end of a range must follow its start.`);
+          return;
+        }
+      }
+    }
     await execute(async () => {
       await atlasApi.updateLeg(selectedLeg.id, selectedLeg.revision, {
         transportMode: legMode || null,
         transportConfidence: legConfidence,
         departureLocalDate: departureDate || null,
         departureLocalTime: departureDate && departureTime ? departureTime + ':00' : null,
+        departureTimePrecision: departureTimePrecision,
+        departureRangeEndLocalDate: departureTimePrecision === 'range' ? departureRangeEndDate : null,
+        departureRangeEndLocalTime:
+          departureTimePrecision === 'range' ? departureRangeEndTime + ':00' : null,
         departureTimeConfidence: departureCertainty,
         arrivalLocalDate: arrivalDate || null,
         arrivalLocalTime: arrivalDate && arrivalTime ? arrivalTime + ':00' : null,
+        arrivalTimePrecision: arrivalTimePrecision,
+        arrivalRangeEndLocalDate: arrivalTimePrecision === 'range' ? arrivalRangeEndDate : null,
+        arrivalRangeEndLocalTime:
+          arrivalTimePrecision === 'range' ? arrivalRangeEndTime + ':00' : null,
         arrivalTimeConfidence: arrivalCertainty,
       });
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
