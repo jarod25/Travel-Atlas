@@ -73,6 +73,29 @@ describe('Leg revision transactions', () => {
       expect(updated.leg.transportConfidence).toBe('confirmed');
     }
   });
+  it('persists a local time range without promoting confidence or inventing UTC', async () => {
+    const { leg } = await fixture();
+    const changed = await updateLegWithRevision(db, leg.id, leg.revision, {
+      departureTimePrecision: 'range',
+      departureRangeStart: '2026-09-12T14:00:00',
+      departureRangeEnd: '2026-09-12T15:00:00',
+      departureTimeZone: 'Europe/Paris',
+      departureTimeConfidence: 'estimated',
+    });
+    expect(changed.status).toBe('updated');
+    if (changed.status !== 'updated') throw new Error('Unexpected update status');
+    expect(changed.leg.departureTimePrecision).toBe('range');
+    expect(changed.leg.departureTimeConfidence).toBe('estimated');
+    expect(changed.leg.departureRangeStart).toContain('2026-09-12');
+    expect(changed.leg.departureRangeEnd).toContain('2026-09-12');
+    const cleared = await updateLegWithRevision(db, leg.id, changed.leg.revision, {
+      departureTimePrecision: 'unknown',
+      departureRangeStart: null,
+      departureRangeEnd: null,
+    });
+    expect(cleared.status).toBe('updated');
+  });
+
   it('increments revisions and rejects stale concurrent changes', async () => {
     const { leg } = await fixture();
     expect(leg.revision).toBe(1);

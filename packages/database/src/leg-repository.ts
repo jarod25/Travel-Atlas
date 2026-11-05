@@ -10,17 +10,17 @@ export type LegChanges = Partial<
     | 'transportConfidence'
     | 'departureLocalDate'
     | 'departureLocalTime'
-    | 'departureTimePrecision'
-    | 'departureRangeEndLocalDate'
-    | 'departureRangeEndLocalTime'
     | 'departureTimeZone'
+    | 'departureTimePrecision'
+    | 'departureRangeStart'
+    | 'departureRangeEnd'
     | 'departureTimeConfidence'
     | 'arrivalLocalDate'
     | 'arrivalLocalTime'
-    | 'arrivalTimePrecision'
-    | 'arrivalRangeEndLocalDate'
-    | 'arrivalRangeEndLocalTime'
     | 'arrivalTimeZone'
+    | 'arrivalTimePrecision'
+    | 'arrivalRangeStart'
+    | 'arrivalRangeEnd'
     | 'arrivalTimeConfidence'
   >
 >;
@@ -28,7 +28,6 @@ export type LegChanges = Partial<
 export type LegUpdateResult =
   | { status: 'not_found' }
   | { status: 'conflict'; currentRevision: number }
-  | { status: 'invalid_times' }
   | { status: 'updated'; leg: typeof legs.$inferSelect };
 
 /** Optimistic revisions protect a user from overwriting another edit. */
@@ -52,34 +51,6 @@ export async function updateLegWithRevision(
     if (!current || !current.isCurrent) return { status: 'not_found' };
     if (current.revision !== expectedRevision) {
       return { status: 'conflict', currentRevision: current.revision };
-    }
-    for (const kind of ['departure', 'arrival'] as const) {
-      const precisionKey = kind === 'departure' ? 'departureTimePrecision' : 'arrivalTimePrecision';
-      const dateKey = kind === 'departure' ? 'departureLocalDate' : 'arrivalLocalDate';
-      const timeKey = kind === 'departure' ? 'departureLocalTime' : 'arrivalLocalTime';
-      const endDateKey =
-        kind === 'departure' ? 'departureRangeEndLocalDate' : 'arrivalRangeEndLocalDate';
-      const endTimeKey =
-        kind === 'departure' ? 'departureRangeEndLocalTime' : 'arrivalRangeEndLocalTime';
-      const precision = changes[precisionKey] ?? current[precisionKey];
-      const startDate = changes[dateKey] === undefined ? current[dateKey] : changes[dateKey];
-      const startTime = changes[timeKey] === undefined ? current[timeKey] : changes[timeKey];
-      const endDate = changes[endDateKey] === undefined ? current[endDateKey] : changes[endDateKey];
-      const endTime = changes[endTimeKey] === undefined ? current[endTimeKey] : changes[endTimeKey];
-      if (precision === 'range') {
-        if (!startDate || !startTime || !endDate || !endTime) {
-          return { status: 'invalid_times' };
-        }
-        if (`${endDate}T${endTime}` < `${startDate}T${startTime}`) {
-          return { status: 'invalid_times' };
-        }
-      } else if (
-        endDate != null ||
-        endTime != null ||
-        (precision !== 'unspecified' && (!startDate || !startTime))
-      ) {
-        return { status: 'invalid_times' };
-      }
     }
     const modeChanged =
       changes.transportMode !== undefined && changes.transportMode !== current.transportMode;

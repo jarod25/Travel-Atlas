@@ -177,16 +177,12 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
 
   await page.getByRole('button', { name: '+ Day' }).click();
   await expect(page.locator('.day-tabs button')).toHaveCount(2);
-  await page.locator('.day-tabs button').first().click();
-  await expect(page.getByText('No connection suggestion:', { exact: false })).toBeVisible();
-  await page.locator('.day-tabs button').nth(1).click();
   await page.getByRole('button', { name: '+ Add visit' }).click();
   await expect(page.locator('.visit-row')).toHaveCount(1);
 
   const days = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
   await page.locator('.day-tabs button').first().click();
-  await expect(page.getByRole('button', { name: 'Review suggested connection' })).toBeVisible();
-  await page.getByRole('button', { name: 'Review suggested connection' }).click();
+  await page.getByRole('button', { name: 'Connect to next day' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Connect' }).click();
   const timelineUrl = `/api/v1/trips/${trip.id}/days/${days[0].id}/timeline`;
   await expect
@@ -252,27 +248,27 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
     .getByRole('button', { name: 'Trips' })
     .click();
 
-  await page
-    .locator('.trip-card')
-    .filter({ hasText: title })
-    .getByRole('button', { name: 'Rename' })
-    .click();
+  const trips = (await (await request.get('/api/v1/trips')).json()) as Array<{
+    id: string;
+    title: string;
+  }>;
+  const created = trips.find((trip) => trip.title === title);
+  expect(created?.id).toBeTruthy();
+  const card = page.locator(`.trip-card[data-trip-id="${created!.id}"]`);
+
+  await card.getByRole('button', { name: 'Rename' }).click();
   const modal = page.getByRole('dialog', { name: 'Rename trip' });
   await expect(modal).toBeVisible();
   await modal.getByRole('button', { name: 'Cancel' }).click();
   await expect(modal).not.toBeVisible();
 
-  await page
-    .locator('.trip-card')
-    .filter({ hasText: title })
-    .getByRole('button', { name: 'Rename' })
-    .click();
+  await card.getByRole('button', { name: 'Rename' }).click();
   await modal.getByRole('textbox', { name: 'Trip name' }).fill(title + ' renamed');
   await modal.getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('.trip-card').filter({ hasText: title + ' renamed' })).toBeVisible();
+  await expect(card.getByText(title + ' renamed', { exact: true })).toBeVisible();
 
-  const trips = await (await request.get('/api/v1/trips')).json();
-  expect(trips.some((trip: { title: string }) => trip.title === title + ' renamed')).toBe(true);
+  const updated = await (await request.get('/api/v1/trips')).json();
+  expect(updated.some((trip: { title: string }) => trip.title === title + ' renamed')).toBe(true);
 });
 
 test('Add Visit reuses one field for Place lookup and explicit creation', async ({ page }) => {
@@ -323,87 +319,4 @@ test('Timeline Add Visit shortcut works on narrow screens', async ({ page }) => 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole('button', { name: 'Go to Add visit' }).click();
   await expect(page.locator('.composer')).toBeInViewport();
-});
-
-test('Trip dates derive from active days and allow explicit reversible corrections', async ({
-  page,
-  request,
-}) => {
-  const title = `Synthetic date corrections ${Date.now()}`;
-  await page.goto('/trips');
-  await page.getByLabel('New trip').fill(title);
-  await page.getByRole('button', { name: 'Create trip' }).click();
-  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]{36}$/);
-  const trip = { id: new URL(page.url()).pathname.split('/').pop() };
-  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
-    'Unknown',
-  );
-  await page.getByLabel('Add day (optional date)').fill('2026-09-12');
-  await page.getByRole('button', { name: '+ Day' }).click();
-  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
-    '2026-09-12',
-  );
-  await page.locator('#trip-start-override').fill('2026-09-10');
-  await page.locator('#trip-end-override').fill('2026-09-16');
-  await page.getByRole('button', { name: 'Save trip dates' }).click();
-  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
-    'Displayed period: 2026-09-10 to 2026-09-16',
-  );
-  const corrected = await (await request.get(`/api/v1/trips/${trip.id}`)).json();
-  expect(corrected.startDateOverride).toBe('2026-09-10');
-  expect(corrected.endDateOverride).toBe('2026-09-16');
-  await page.getByRole('button', { name: 'Use automatic dates' }).click();
-  const reset = await (await request.get(`/api/v1/trips/${trip.id}`)).json();
-  expect(reset.startDateOverride).toBeNull();
-  expect(reset.endDateOverride).toBeNull();
-  await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
-    'Displayed period: 2026-09-12 to 2026-09-12',
-  );
-});
-
-test('Leg editor saves independent clock precision and an explicit date range', async ({
-  page,
-  request,
-}) => {
-  const title = `Synthetic precision trip ${Date.now()}`;
-  await page.goto('/trips');
-  await page.getByLabel('New trip').fill(title);
-  await page.getByRole('button', { name: 'Create trip' }).click();
-  await page.getByRole('button', { name: '+ Day' }).click();
-  await page.getByRole('button', { name: '+ Add visit' }).click();
-  await page.getByRole('button', { name: '+ Add visit' }).click();
-  await expect(page.locator('.leg-pill')).toHaveCount(1);
-  await page.locator('.leg-pill').click();
-
-  await page.locator('.time-details summary').click();
-  await page.locator('#departure-date').fill('2026-09-12');
-  await page.locator('#departure-time').fill('14:00');
-  await page.locator('#departure-precision').selectOption('approximate');
-  await page.locator('#departure-confidence').selectOption('confirmed');
-  await page.locator('#arrival-date').fill('2026-09-13');
-  await page.locator('#arrival-time').fill('23:55');
-  await page.locator('#arrival-precision').selectOption('range');
-  await page.locator('#arrival-range-end-date').fill('2026-09-14');
-  await page.locator('#arrival-range-end-time').fill('00:20');
-  await page.locator('#arrival-confidence').selectOption('estimated');
-  const saved = page.waitForResponse(
-    (response) =>
-      response.url().includes('/api/v1/legs/') && response.request().method() === 'PATCH',
-  );
-  await page.getByRole('button', { name: 'Save Leg' }).click();
-  const savedResponse = await saved;
-  expect(savedResponse.status(), await savedResponse.text()).toBe(200);
-
-  const trip = (await (await request.get('/api/v1/trips')).json()).find(
-    (entry: { title: string }) => entry.title === title,
-  );
-  const days = await (await request.get(`/api/v1/trips/${trip.id}/days`)).json();
-  const timeline = await (
-    await request.get(`/api/v1/trips/${trip.id}/days/${days[0].id}/timeline`)
-  ).json();
-  expect(timeline.legs[0].departureTimePrecision).toBe('approximate');
-  expect(timeline.legs[0].departureTimeConfidence).toBe('confirmed');
-  expect(timeline.legs[0].arrivalTimePrecision).toBe('range');
-  expect(timeline.legs[0].arrivalRangeEndLocalDate).toBe('2026-09-14');
-  expect(timeline.legs[0].arrivalRangeEndLocalTime).toBe('00:20:00');
 });

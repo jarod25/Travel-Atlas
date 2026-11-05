@@ -17,10 +17,10 @@ import { MapCanvas } from './MapCanvas';
 import type { ColorMode } from './MapCanvas';
 import { emptyFeatures, visibleFeatures } from './map-data';
 import { describeLeg, describeLegTimes } from './leg-display';
+import { describeLegDuration } from './time-zones';
 
 type View = 'explore' | 'trips' | 'editor';
 type MobilePanel = 'timeline' | 'map';
-type TimePrecision = 'unspecified' | 'precise' | 'approximate' | 'range';
 
 function exploreParams() {
   return new URLSearchParams(window.location.search);
@@ -50,6 +50,67 @@ function urlFor(view: View, tripId: string | null, dayId: string | null): string
   return '/trips/' + tripId + (dayId ? '?day=' + encodeURIComponent(dayId) : '');
 }
 
+function TripDateEditor({
+  trip,
+  disabled,
+  onSave,
+}: {
+  trip: Trip;
+  disabled: boolean;
+  onSave: (changes: { manualStartDate: string | null; manualEndDate: string | null }) => void;
+}) {
+  const [start, setStart] = useState(trip.manualStartDate ?? '');
+  const [end, setEnd] = useState(trip.manualEndDate ?? '');
+  const [invalid, setInvalid] = useState(false);
+  useEffect(() => {
+    setStart(trip.manualStartDate ?? '');
+    setEnd(trip.manualEndDate ?? '');
+    setInvalid(false);
+  }, [trip.id, trip.revision, trip.manualStartDate, trip.manualEndDate]);
+  return (
+    <details className="trip-dates">
+      <summary>Edit dates</summary>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (start && end && start > end) {
+            setInvalid(true);
+            return;
+          }
+          setInvalid(false);
+          onSave({ manualStartDate: start || null, manualEndDate: end || null });
+        }}
+      >
+        <label>
+          Start date override (optional)
+          <input
+            type="date"
+            value={start}
+            disabled={disabled}
+            onChange={(event) => setStart(event.target.value)}
+          />
+        </label>
+        <label>
+          End date override (optional)
+          <input
+            type="date"
+            value={end}
+            disabled={disabled}
+            onChange={(event) => setEnd(event.target.value)}
+          />
+        </label>
+        <p className="muted">
+          Leave empty to use dates calculated from recorded days and subtrips.
+        </p>
+        {invalid && <p role="alert">End date cannot be before start date.</p>}
+        <button type="submit" disabled={disabled}>
+          Save trip dates
+        </button>
+      </form>
+    </details>
+  );
+}
+
 export function App() {
   const addVisitRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>(() => readLocation().view);
@@ -67,19 +128,27 @@ export function App() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripId, setTripId] = useState<string | null>(() => readLocation().tripId);
   const [days, setDays] = useState<TripDay[]>([]);
+  const [combinedDays, setCombinedDays] = useState<
+    (TripDay & { tripTitle: string; depth: number })[]
+  >([]);
   const [dayId, setDayId] = useState<string | null>(() => readLocation().dayId);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
-  const [nextDayHasVisit, setNextDayHasVisit] = useState(false);
   const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
   const [visitVisibility, setVisitVisibility] = useState<'active' | 'archived' | 'all'>('active');
   const [places, setPlaces] = useState<Place[]>([]);
   const [features, setFeatures] = useState<FeatureCollection>(emptyFeatures);
   const [tripName, setTripName] = useState('');
+  const [newTripParentId, setNewTripParentId] = useState('');
+  const [nextDayFirstVisit, setNextDayFirstVisit] = useState<VisitRow | null>(null);
+  const [connectionTargetTripId, setConnectionTargetTripId] = useState('');
+  const [connectionTargetDayId, setConnectionTargetDayId] = useState('');
+  const [connectionTargetDays, setConnectionTargetDays] = useState<TripDay[]>([]);
+  const [connectionTargetFirstVisit, setConnectionTargetFirstVisit] = useState<VisitRow | null>(
+    null,
+  );
   const [showArchived, setShowArchived] = useState(false);
   const [dayDate, setDayDate] = useState('');
   const [editedDayDate, setEditedDayDate] = useState('');
-  const [tripStartOverride, setTripStartOverride] = useState('');
-  const [tripEndOverride, setTripEndOverride] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
   const [placeLon, setPlaceLon] = useState('');
   const [placeLat, setPlaceLat] = useState('');
@@ -96,15 +165,24 @@ export function App() {
   const [legMode, setLegMode] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [departureTime, setDepartureTime] = useState('');
-  const [departureTimePrecision, setDepartureTimePrecision] =
-    useState<TimePrecision>('unspecified');
-  const [departureRangeEndDate, setDepartureRangeEndDate] = useState('');
-  const [departureRangeEndTime, setDepartureRangeEndTime] = useState('');
   const [arrivalDate, setArrivalDate] = useState('');
   const [arrivalTime, setArrivalTime] = useState('');
-  const [arrivalTimePrecision, setArrivalTimePrecision] = useState<TimePrecision>('unspecified');
-  const [arrivalRangeEndDate, setArrivalRangeEndDate] = useState('');
-  const [arrivalRangeEndTime, setArrivalRangeEndTime] = useState('');
+  const [departureRangeStart, setDepartureRangeStart] = useState('');
+  const [departureRangeEnd, setDepartureRangeEnd] = useState('');
+  const [arrivalRangeStart, setArrivalRangeStart] = useState('');
+  const [arrivalRangeEnd, setArrivalRangeEnd] = useState('');
+  const [departureZone, setDepartureZone] = useState('');
+  const [arrivalZone, setArrivalZone] = useState('');
+  const [suggestedZones, setSuggestedZones] = useState<{
+    departure: string[];
+    arrival: string[];
+  } | null>(null);
+  const [departurePrecision, setDeparturePrecision] = useState<
+    'exact' | 'approximate' | 'range' | 'unknown'
+  >('unknown');
+  const [arrivalPrecision, setArrivalPrecision] = useState<
+    'exact' | 'approximate' | 'range' | 'unknown'
+  >('unknown');
   const [departureCertainty, setDepartureCertainty] = useState<
     'confirmed' | 'estimated' | 'unknown'
   >('unknown');
@@ -303,40 +381,122 @@ export function App() {
     };
   }, [placeQuery]);
 
-  const selectedTrip = trips.find((trip) => trip.id === tripId);
   useEffect(() => {
-    setTripStartOverride(selectedTrip?.startDateOverride ?? '');
-    setTripEndOverride(selectedTrip?.endDateOverride ?? '');
-  }, [selectedTrip?.id, selectedTrip?.revision]);
+    let active = true;
+    setCombinedDays([]);
+    if (tripId)
+      atlasApi
+        .combinedDays(tripId)
+        .then((result) => {
+          if (active) setCombinedDays(result);
+        })
+        .catch(() => {
+          if (active) setCombinedDays([]);
+        });
+    return () => {
+      active = false;
+    };
+  }, [tripId, trips, days]);
+  const selectedTrip = trips.find((trip) => trip.id === tripId);
+  const relatedTrips = useMemo(() => {
+    const byId = new Map(trips.map((trip) => [trip.id, trip]));
+    const root = (id: string): string => {
+      const seen = new Set<string>();
+      let current = id;
+      while (byId.get(current)?.parentTripId && !seen.has(current)) {
+        seen.add(current);
+        current = byId.get(current)!.parentTripId!;
+      }
+      return current;
+    };
+    return tripId
+      ? trips.filter(
+          (trip) => trip.id !== tripId && !trip.isArchived && root(trip.id) === root(tripId),
+        )
+      : [];
+  }, [tripId, trips]);
+  useEffect(() => {
+    let active = true;
+    setConnectionTargetDays([]);
+    setConnectionTargetDayId('');
+    setConnectionTargetFirstVisit(null);
+    if (connectionTargetTripId) {
+      atlasApi
+        .days(connectionTargetTripId)
+        .then((result) => {
+          if (active) setConnectionTargetDays(result.filter((day) => !day.isArchived));
+        })
+        .catch(() => {
+          if (active) setConnectionTargetDays([]);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [connectionTargetTripId]);
+  useEffect(() => {
+    let active = true;
+    setConnectionTargetFirstVisit(null);
+    if (connectionTargetTripId && connectionTargetDayId) {
+      atlasApi
+        .timeline(connectionTargetTripId, connectionTargetDayId)
+        .then((result) => {
+          if (active) setConnectionTargetFirstVisit(result.visits[0] ?? null);
+        })
+        .catch(() => {
+          if (active) setConnectionTargetFirstVisit(null);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [connectionTargetTripId, connectionTargetDayId]);
   const selectedDay = days.find((day) => day.id === dayId);
-  const dayReadOnly = Boolean(selectedDay?.isArchived || selectedTrip?.isArchived);
+  const dayReadOnly = Boolean(
+    selectedDay?.isArchived || selectedTrip?.isArchived || selectedTrip?.archivedByParent,
+  );
   const followingDay = days.find((day) => selectedDay && day.position === selectedDay.position + 1);
-  const activeTrips = trips.filter((trip) => !trip.isArchived);
+  useEffect(() => {
+    let active = true;
+    setNextDayFirstVisit(null);
+    if (tripId && followingDay && !followingDay.isArchived) {
+      atlasApi
+        .timeline(tripId, followingDay.id)
+        .then((next) => {
+          if (active) setNextDayFirstVisit(next.visits[0] ?? null);
+        })
+        .catch(() => {
+          if (active) setNextDayFirstVisit(null);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [tripId, followingDay?.id, followingDay?.revision, followingDay?.isArchived]);
+  const activeTrips = trips.filter((trip) => !trip.isArchived && !trip.archivedByParent);
   const recentTrips = activeTrips.slice(0, 3);
   const displayedTrips = showArchived ? trips : activeTrips;
+  const orderedTrips = useMemo(() => {
+    const ordered: Array<{ trip: Trip; depth: number }> = [];
+    const visited = new Set<string>();
+    const visit = (parentId: string | null, depth: number) => {
+      for (const trip of displayedTrips.filter((item) => item.parentTripId === parentId)) {
+        if (visited.has(trip.id)) continue;
+        visited.add(trip.id);
+        ordered.push({ trip, depth });
+        visit(trip.id, depth + 1);
+      }
+    };
+    visit(null, 0);
+    for (const trip of displayedTrips) if (!visited.has(trip.id)) visit(trip.parentTripId, 0);
+    return ordered;
+  }, [displayedTrips]);
   useEffect(() => {
     setEditedDayDate(selectedDay?.localDate ?? '');
   }, [selectedDay?.id, selectedDay?.revision]);
   const outgoingCrossDay = timeline?.crossDayLegs.find((leg) =>
     timeline.visits.some((visit) => visit.id === leg.fromVisitId),
   );
-  const canSuggestDayConnection = (timeline?.visits.length ?? 0) > 0 && nextDayHasVisit;
-  useEffect(() => {
-    let active = true;
-    setNextDayHasVisit(false);
-    if (!tripId || !followingDay || followingDay.isArchived) return;
-    void atlasApi
-      .timeline(tripId, followingDay.id)
-      .then((result) => {
-        if (active) setNextDayHasVisit(result.visits.length > 0);
-      })
-      .catch((cause: unknown) => {
-        if (active) setError(String(cause));
-      });
-    return () => {
-      active = false;
-    };
-  }, [tripId, followingDay?.id, followingDay?.isArchived, dayId]);
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = [...(timeline?.legs ?? []), ...(timeline?.crossDayLegs ?? [])].find(
     (leg) => leg.id === selectedLegId,
@@ -369,29 +529,66 @@ export function App() {
     setLegMode(selectedLeg.transportMode ?? '');
     setDepartureDate(selectedLeg.departureLocalDate ?? suggestedDate);
     setDepartureTime(selectedLeg.departureLocalTime?.slice(0, 5) ?? '');
-    setDepartureTimePrecision(selectedLeg.departureTimePrecision);
-    setDepartureRangeEndDate(selectedLeg.departureRangeEndLocalDate ?? '');
-    setDepartureRangeEndTime(selectedLeg.departureRangeEndLocalTime?.slice(0, 5) ?? '');
     setArrivalDate(selectedLeg.arrivalLocalDate ?? suggestedDate);
     setArrivalTime(selectedLeg.arrivalLocalTime?.slice(0, 5) ?? '');
-    setArrivalTimePrecision(selectedLeg.arrivalTimePrecision);
-    setArrivalRangeEndDate(selectedLeg.arrivalRangeEndLocalDate ?? '');
-    setArrivalRangeEndTime(selectedLeg.arrivalRangeEndLocalTime?.slice(0, 5) ?? '');
+    const datetimeInput = (value: string | null) =>
+      value ? value.slice(0, 16).replace(' ', 'T') : '';
+    setDepartureRangeStart(datetimeInput(selectedLeg.departureRangeStart));
+    setDepartureRangeEnd(datetimeInput(selectedLeg.departureRangeEnd));
+    setArrivalRangeStart(datetimeInput(selectedLeg.arrivalRangeStart));
+    setArrivalRangeEnd(datetimeInput(selectedLeg.arrivalRangeEnd));
+    setDepartureZone(selectedLeg.departureTimeZone ?? '');
+    setArrivalZone(selectedLeg.arrivalTimeZone ?? '');
+    setDeparturePrecision(selectedLeg.departureTimePrecision);
+    setArrivalPrecision(selectedLeg.arrivalTimePrecision);
     setDepartureCertainty(selectedLeg.departureTimeConfidence);
     setArrivalCertainty(selectedLeg.arrivalTimeConfidence);
     setLegConfidence(selectedLeg.transportConfidence as 'confirmed' | 'estimated' | 'unknown');
   }, [selectedLeg?.id, selectedLeg?.revision, selectedDay?.localDate, timeline?.visits]);
 
+  useEffect(() => {
+    let active = true;
+    setSuggestedZones(null);
+    if (selectedLeg?.id) {
+      atlasApi
+        .suggestLegTimeZones(selectedLeg.id)
+        .then((suggestions) => {
+          if (active) setSuggestedZones(suggestions);
+        })
+        .catch(() => {
+          if (active) setSuggestedZones(null);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [selectedLeg?.id]);
   const displayed = useMemo(
     () =>
       visibleFeatures(features, {
         tripId,
+        tripIds: tripId
+          ? (() => {
+              const ids = new Set([tripId]);
+              let changed = true;
+              while (changed) {
+                changed = false;
+                for (const trip of trips) {
+                  if (trip.parentTripId && ids.has(trip.parentTripId) && !ids.has(trip.id)) {
+                    ids.add(trip.id);
+                    changed = true;
+                  }
+                }
+              }
+              return [...ids];
+            })()
+          : undefined,
         fromDate: view === 'explore' ? filterFrom : '',
         toDate: view === 'explore' ? filterTo : '',
         transportMode: view === 'explore' ? filterMode : '',
         confidence: view === 'explore' ? filterConfidence : 'all',
       }),
-    [features, tripId, view, filterFrom, filterTo, filterMode, filterConfidence],
+    [features, tripId, trips, view, filterFrom, filterTo, filterMode, filterConfidence],
   );
 
   const focusFeatures = useMemo(() => {
@@ -432,9 +629,10 @@ export function App() {
     const title = tripName.trim();
     if (!title) return;
     await execute(async () => {
-      const trip = await atlasApi.addTrip(title);
+      const trip = await atlasApi.addTrip(title, newTripParentId || null);
       await loadTrips();
       setTripName('');
+      setNewTripParentId('');
       navigate('editor', trip.id);
       notifications.show({
         title: 'Trip created',
@@ -448,8 +646,9 @@ export function App() {
     changes: {
       title?: string;
       isArchived?: boolean;
-      startDateOverride?: string | null;
-      endDateOverride?: string | null;
+      parentTripId?: string | null;
+      manualStartDate?: string | null;
+      manualEndDate?: string | null;
     },
   ) {
     await execute(async () => {
@@ -464,11 +663,9 @@ export function App() {
         title: 'Trip saved',
         message: changes.title
           ? 'Trip renamed successfully.'
-          : changes.startDateOverride !== undefined || changes.endDateOverride !== undefined
-            ? 'Trip date preferences saved.'
-            : changes.isArchived
-              ? 'Trip archived.'
-              : 'Trip restored.',
+          : changes.isArchived
+            ? 'Trip archived.'
+            : 'Trip restored.',
         color: 'teal',
       });
     });
@@ -507,7 +704,7 @@ export function App() {
     if (!tripId) return;
     await execute(async () => {
       const created = await atlasApi.addDay(tripId, dayDate || null);
-      await Promise.all([loadDays(tripId), loadTrips()]);
+      await loadDays(tripId);
       setDayId(created.id);
       setDayDate('');
       notifications.show({
@@ -540,12 +737,7 @@ export function App() {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
-      await Promise.all([
-        loadDays(tripId),
-        loadTrips(),
-        loadTimeline(tripId, dayId),
-        loadExplore(),
-      ]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Day saved',
         message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',
@@ -557,7 +749,7 @@ export function App() {
     if (!tripId || !dayId || !selectedDay) return;
     await execute(async () => {
       await atlasApi.editDay(tripId, dayId, selectedDay.revision, editedDayDate || null);
-      await Promise.all([loadDays(tripId), loadTrips(), loadTimeline(tripId, dayId)]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId)]);
       notifications.show({
         title: 'Day date saved',
         message: 'Changes saved.',
@@ -570,7 +762,7 @@ export function App() {
     if (!tripId || !selectedDay || !followingDay) return;
     confirmAction(
       'Connect days',
-      'Create an Unknown draft Leg between the last Visit of this day and the first Visit of the next? Confirm only if these days should be linked.',
+      'Connect the last Visit of this day to the first of the next day?',
       'Connect',
       performConnectToFollowingDay,
     );
@@ -589,6 +781,52 @@ export function App() {
     });
   }
 
+  function proposeCrossTripConnection() {
+    if (
+      !tripId ||
+      !selectedDay ||
+      !connectionTargetTripId ||
+      !connectionTargetDayId ||
+      !connectionTargetFirstVisit ||
+      !timeline?.visits.length
+    )
+      return;
+    confirmAction(
+      'Connect trips',
+      `Connect the last Visit of this day to ${connectionTargetFirstVisit.placeName ?? 'the first Visit of the selected day'}? No travel route or transport will be assumed.`,
+      'Connect',
+      async () => {
+        await execute(async () => {
+          await atlasApi.connectTrips(
+            tripId,
+            selectedDay.id,
+            connectionTargetTripId,
+            connectionTargetDayId,
+          );
+          await Promise.all([loadTimeline(tripId, selectedDay.id), loadExplore()]);
+          notifications.show({
+            title: 'Trips connected',
+            message: 'Unknown draft Leg created or restored.',
+            color: 'teal',
+          });
+        });
+      },
+    );
+  }
+  function proposeCrossTripDisconnect(leg: NonNullable<typeof selectedLeg>) {
+    confirmAction(
+      'Disconnect trips',
+      'Disconnect this cross-trip Leg? Its route history and evidence will be retained.',
+      'Disconnect',
+      async () => {
+        await execute(async () => {
+          await atlasApi.disconnectTrips(leg.id, leg.revision);
+          if (tripId && dayId) await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
+          setSelectedLegId(null);
+        });
+      },
+    );
+  }
   async function disconnectFromFollowingDay() {
     if (!tripId || !selectedDay || !followingDay || !outgoingCrossDay) return;
     confirmAction(
@@ -678,7 +916,7 @@ export function App() {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.addVisit(tripId, dayId, placeId || null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit added',
         message: 'Visit saved.',
@@ -708,37 +946,22 @@ export function App() {
       setError('A clock time needs a date; leave both empty if unknown.');
       return;
     }
-    for (const interval of [
-      {
-        name: 'Departure',
-        precision: departureTimePrecision,
-        date: departureDate,
-        time: departureTime,
-        endDate: departureRangeEndDate,
-        endTime: departureRangeEndTime,
-      },
-      {
-        name: 'Arrival',
-        precision: arrivalTimePrecision,
-        date: arrivalDate,
-        time: arrivalTime,
-        endDate: arrivalRangeEndDate,
-        endTime: arrivalRangeEndTime,
-      },
+    for (const [precision, start, end] of [
+      [departurePrecision, departureRangeStart, departureRangeEnd],
+      [arrivalPrecision, arrivalRangeStart, arrivalRangeEnd],
     ]) {
-      if (interval.precision !== 'unspecified' && (!interval.date || !interval.time)) {
-        setError(`${interval.name}: supply a date and clock time for this precision.`);
+      if (precision === 'range' && (!start || !end || start > end)) {
+        setError('A time range needs ordered start and end local datetimes.');
         return;
       }
-      if (interval.precision === 'range') {
-        if (!interval.endDate || !interval.endTime) {
-          setError(`${interval.name}: a range needs an end date and clock time.`);
-          return;
-        }
-        if (`${interval.endDate}T${interval.endTime}` < `${interval.date}T${interval.time}`) {
-          setError(`${interval.name}: the end of a range must follow its start.`);
-          return;
-        }
+    }
+    for (const zone of [departureZone, arrivalZone]) {
+      if (!zone) continue;
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: zone });
+      } catch {
+        setError('Invalid IANA time zone: ' + zone);
+        return;
       }
     }
     await execute(async () => {
@@ -747,19 +970,20 @@ export function App() {
         transportConfidence: legConfidence,
         departureLocalDate: departureDate || null,
         departureLocalTime: departureDate && departureTime ? departureTime + ':00' : null,
-        departureTimePrecision: departureTimePrecision,
-        departureRangeEndLocalDate:
-          departureTimePrecision === 'range' ? departureRangeEndDate : null,
-        departureRangeEndLocalTime:
-          departureTimePrecision === 'range' ? departureRangeEndTime + ':00' : null,
         departureTimeConfidence: departureCertainty,
+        departureTimeZone: departureZone || null,
+        departureTimePrecision:
+          departurePrecision === 'range' ? 'range' : departureTime ? departurePrecision : 'unknown',
+        departureRangeStart: departurePrecision === 'range' ? departureRangeStart : null,
+        departureRangeEnd: departurePrecision === 'range' ? departureRangeEnd : null,
         arrivalLocalDate: arrivalDate || null,
         arrivalLocalTime: arrivalDate && arrivalTime ? arrivalTime + ':00' : null,
-        arrivalTimePrecision: arrivalTimePrecision,
-        arrivalRangeEndLocalDate: arrivalTimePrecision === 'range' ? arrivalRangeEndDate : null,
-        arrivalRangeEndLocalTime:
-          arrivalTimePrecision === 'range' ? arrivalRangeEndTime + ':00' : null,
         arrivalTimeConfidence: arrivalCertainty,
+        arrivalTimeZone: arrivalZone || null,
+        arrivalTimePrecision:
+          arrivalPrecision === 'range' ? 'range' : arrivalTime ? arrivalPrecision : 'unknown',
+        arrivalRangeStart: arrivalPrecision === 'range' ? arrivalRangeStart : null,
+        arrivalRangeEnd: arrivalPrecision === 'range' ? arrivalRangeEnd : null,
       });
       await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
@@ -801,7 +1025,7 @@ export function App() {
     if (!tripId || !dayId || selectedDay?.isArchived) return;
     await execute(async () => {
       await atlasApi.restoreVisit(tripId, dayId, visit.id);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit restored',
         message: 'Visit active again.',
@@ -828,7 +1052,7 @@ export function App() {
     await execute(async () => {
       await atlasApi.archiveVisit(tripId, dayId, visit.id);
       setSelectedVisitId(null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([loadTimeline(tripId, dayId), loadExplore()]);
       notifications.show({
         title: 'Visit archived',
         message: 'Visit history saved.',
@@ -1079,6 +1303,19 @@ export function App() {
               maxLength={200}
               required
             />
+            <label htmlFor="parent-trip">Inside trip (optional)</label>
+            <select
+              id="parent-trip"
+              value={newTripParentId}
+              onChange={(event) => setNewTripParentId(event.target.value)}
+            >
+              <option value="">Top-level trip</option>
+              {activeTrips.map((trip) => (
+                <option key={trip.id} value={trip.id}>
+                  {trip.title}
+                </option>
+              ))}
+            </select>
             <button type="submit" disabled={pending}>
               Create trip
             </button>
@@ -1092,12 +1329,25 @@ export function App() {
             Show archived trips
           </label>
           <div className="trip-grid">
-            {displayedTrips.map((trip) => (
-              <div className="trip-card" key={trip.id}>
+            {orderedTrips.map(({ trip, depth }) => (
+              <div
+                className="trip-card"
+                data-trip-id={trip.id}
+                key={trip.id}
+                style={{ marginLeft: Math.min(depth, 6) * 12 }}
+              >
                 <span>{trip.isArchived ? 'ARCHIVED TRIP' : 'TRIP'}</span>
-                <strong>{trip.title}</strong>
+                <strong>
+                  {depth ? '↳ '.repeat(depth) : ''}
+                  {trip.title}
+                </strong>
+                <small>
+                  {trip.manualStartDate ?? trip.computedStartDate ?? 'Start unknown'} —{' '}
+                  {trip.manualEndDate ?? trip.computedEndDate ?? 'End unknown'}
+                  {trip.parentTripId ? ' · Subtrip' : ''}
+                </small>
                 <div className="trip-actions">
-                  {!trip.isArchived && (
+                  {!trip.isArchived && !trip.archivedByParent && (
                     <button
                       onClick={() => {
                         navigate('editor', trip.id);
@@ -1106,11 +1356,49 @@ export function App() {
                       Open timeline
                     </button>
                   )}
+                  <TripDateEditor
+                    trip={trip}
+                    disabled={pending || trip.isArchived || trip.archivedByParent}
+                    onSave={(dates) => void changeTrip(trip, dates)}
+                  />
+                  <label>
+                    Parent trip
+                    <select
+                      aria-label={`Parent trip for ${trip.title}`}
+                      value={trip.parentTripId ?? ''}
+                      disabled={pending || trip.isArchived || trip.archivedByParent}
+                      onChange={(event) => {
+                        const next = event.target.value || null;
+                        confirmAction(
+                          'Move trip',
+                          'Move this trip and its subtrips? Existing days and journeys will be preserved.',
+                          'Move',
+                          () => changeTrip(trip, { parentTripId: next }),
+                        );
+                      }}
+                    >
+                      <option value="">Top-level trip</option>
+                      {activeTrips
+                        .filter((candidate) => candidate.id !== trip.id)
+                        .map((candidate) => (
+                          <option key={candidate.id} value={candidate.id}>
+                            {candidate.title}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
                   <button onClick={() => void renameTrip(trip)} disabled={pending}>
                     Rename
                   </button>
-                  <button onClick={() => void toggleTripArchive(trip)} disabled={pending}>
-                    {trip.isArchived ? 'Restore' : 'Archive'}
+                  <button
+                    onClick={() => void toggleTripArchive(trip)}
+                    disabled={pending || trip.archivedByParent}
+                  >
+                    {trip.archivedByParent
+                      ? 'Restore parent first'
+                      : trip.isArchived
+                        ? 'Restore'
+                        : 'Archive'}
                   </button>
                 </div>
               </div>
@@ -1152,63 +1440,6 @@ export function App() {
               Include archived trips
             </label>
           </div>
-          {selectedTrip && (
-            <section className="trip-date-editor" aria-label="Trip date corrections">
-              <h2>Trip dates</h2>
-              <p>
-                From dated, active days: {selectedTrip.derivedStartDate ?? 'Unknown'} to{' '}
-                {selectedTrip.derivedEndDate ?? 'Unknown'}. Undated days are not inferred.
-              </p>
-              <p>
-                Displayed period: {selectedTrip.effectiveStartDate ?? 'Unknown'} to{' '}
-                {selectedTrip.effectiveEndDate ?? 'Unknown'}
-              </p>
-              <div className="trip-date-controls">
-                <label htmlFor="trip-start-override">
-                  Correct start (optional)
-                  <input
-                    id="trip-start-override"
-                    type="date"
-                    disabled={pending || selectedTrip.isArchived}
-                    value={tripStartOverride}
-                    onChange={(event) => setTripStartOverride(event.target.value)}
-                  />
-                </label>
-                <label htmlFor="trip-end-override">
-                  Correct end (optional)
-                  <input
-                    id="trip-end-override"
-                    type="date"
-                    disabled={pending || selectedTrip.isArchived}
-                    value={tripEndOverride}
-                    onChange={(event) => setTripEndOverride(event.target.value)}
-                  />
-                </label>
-                <button
-                  disabled={pending || selectedTrip.isArchived}
-                  onClick={() =>
-                    void changeTrip(selectedTrip, {
-                      startDateOverride: tripStartOverride || null,
-                      endDateOverride: tripEndOverride || null,
-                    })
-                  }
-                >
-                  Save trip dates
-                </button>
-                <button
-                  disabled={pending || selectedTrip.isArchived}
-                  onClick={() =>
-                    void changeTrip(selectedTrip, {
-                      startDateOverride: null,
-                      endDateOverride: null,
-                    })
-                  }
-                >
-                  Use automatic dates
-                </button>
-              </div>
-            </section>
-          )}
           {!tripId ? (
             <section className="recent-trips" aria-label="Recently modified trips">
               <h2>Recently modified trips</h2>
@@ -1227,6 +1458,86 @@ export function App() {
             </section>
           ) : (
             <>
+              {trips.some((candidate) => candidate.parentTripId === tripId) && (
+                <section className="recent-trips" aria-label="Subtrips of selected trip">
+                  <h2>Subtrips</h2>
+                  <div className="recent-trip-grid">
+                    {trips
+                      .filter(
+                        (candidate) => candidate.parentTripId === tripId && !candidate.isArchived,
+                      )
+                      .map((candidate) => (
+                        <button key={candidate.id} onClick={() => navigate('editor', candidate.id)}>
+                          <strong>{candidate.title}</strong>
+                          <span>Open subtrip timeline</span>
+                        </button>
+                      ))}
+                  </div>
+                </section>
+              )}
+              {relatedTrips.length > 0 && selectedDay && !dayReadOnly && (
+                <details className="connect-day">
+                  <summary>Connect to another trip (review required)</summary>
+                  <p>Connect recorded Visits only. No movement is created until you approve.</p>
+                  <label htmlFor="connection-target-trip">Destination trip</label>
+                  <select
+                    id="connection-target-trip"
+                    value={connectionTargetTripId}
+                    onChange={(event) => setConnectionTargetTripId(event.target.value)}
+                  >
+                    <option value="">Choose a related trip</option>
+                    {relatedTrips.map((candidate) => (
+                      <option value={candidate.id} key={candidate.id}>
+                        {candidate.title}
+                      </option>
+                    ))}
+                  </select>
+                  <label htmlFor="connection-target-day">Destination day</label>
+                  <select
+                    id="connection-target-day"
+                    value={connectionTargetDayId}
+                    onChange={(event) => setConnectionTargetDayId(event.target.value)}
+                  >
+                    <option value="">Choose a day</option>
+                    {connectionTargetDays.map((candidate) => (
+                      <option value={candidate.id} key={candidate.id}>
+                        {candidate.localDate ?? 'Undated day'} (day {candidate.position + 1})
+                      </option>
+                    ))}
+                  </select>
+                  <p>
+                    {connectionTargetFirstVisit
+                      ? `First destination Visit: ${connectionTargetFirstVisit.placeName ?? 'Unknown Place'}`
+                      : 'Select a day with at least one recorded Visit.'}
+                  </p>
+                  <button
+                    disabled={pending || !connectionTargetFirstVisit || !timeline?.visits.length}
+                    onClick={proposeCrossTripConnection}
+                  >
+                    Review trip connection
+                  </button>
+                </details>
+              )}
+              <details className="recent-trips" aria-label="Complete trip family timeline">
+                <summary>All days in this trip and its subtrips ({combinedDays.length})</summary>
+                <p>Only recorded days are included. Select one to open its editable timeline.</p>
+                <div className="recent-trip-grid">
+                  {combinedDays.map((entry) => (
+                    <button
+                      key={entry.id}
+                      onClick={() => navigate('editor', entry.tripId, entry.id)}
+                    >
+                      <strong>
+                        {'↳ '.repeat(entry.depth)}
+                        {entry.tripTitle}
+                      </strong>
+                      <span>
+                        {entry.localDate ?? 'Date unknown'} · Day {entry.position + 1}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </details>
               <div className="day-bar">
                 <div className="day-tabs">
                   {days.map((day) => (
@@ -1291,28 +1602,24 @@ export function App() {
                 followingDay &&
                 !followingDay.isArchived && (
                   <div className="connect-day">
+                    <span>
+                      {outgoingCrossDay
+                        ? 'The selected day is connected to the next day.'
+                        : timeline?.visits.length && nextDayFirstVisit
+                          ? 'Suggested connection: last recorded Visit → first Visit of the next day. Review before creating.'
+                          : 'No complete candidate endpoints recorded; no connection is suggested.'}
+                    </span>
                     {outgoingCrossDay ? (
-                      <>
-                        <span>The selected day is connected to the next day.</span>
-                        <button
-                          disabled={pending}
-                          onClick={() => void disconnectFromFollowingDay()}
-                        >
-                          Disconnect from next day
-                        </button>
-                      </>
-                    ) : canSuggestDayConnection ? (
-                      <>
-                        <span role="status">
-                          Suggested connection: this day's last Visit to the next day's first Visit.
-                          No movement is assumed until you confirm.
-                        </span>
-                        <button disabled={pending} onClick={() => void connectToFollowingDay()}>
-                          Review suggested connection
-                        </button>
-                      </>
+                      <button disabled={pending} onClick={() => void disconnectFromFollowingDay()}>
+                        Disconnect from next day
+                      </button>
                     ) : (
-                      <span>No connection suggestion: both days need an active Visit.</span>
+                      <button
+                        disabled={pending || !timeline?.visits.length || !nextDayFirstVisit}
+                        onClick={() => void connectToFollowingDay()}
+                      >
+                        Connect to next day
+                      </button>
                     )}
                   </div>
                 )}
@@ -1632,6 +1939,7 @@ export function App() {
                         <span className="eyebrow">Leg details</span>
                         <h2>Travel between visits</h2>
                         <p>Transport and geometry have independent certainty.</p>
+                        <p role="status">{describeLegDuration(selectedLeg)}</p>
                       </div>
                       <label htmlFor="leg-transport">Transport mode</label>
                       <select
@@ -1675,7 +1983,10 @@ export function App() {
                       </select>
                       <details className="time-details">
                         <summary>Departure and arrival times (optional)</summary>
-                        <p className="muted">Local calendar values; no timezone is inferred.</p>
+                        <p className="muted">
+                          Local time at each endpoint. Enter an IANA zone if known (e.g.
+                          Europe/Paris, Asia/Tokyo). No zone is guessed.
+                        </p>
                         <label htmlFor="departure-date">Departure date</label>
                         <input
                           id="departure-date"
@@ -1692,41 +2003,59 @@ export function App() {
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
                         />
-                        <label htmlFor="departure-precision">Departure time precision</label>
+                        <label htmlFor="departure-zone">Departure time zone (IANA, optional)</label>
+                        <input
+                          id="departure-zone"
+                          disabled={dayReadOnly}
+                          value={departureZone}
+                          placeholder="Europe/Paris"
+                          onChange={(e) => setDepartureZone(e.target.value)}
+                        />
+                        {suggestedZones?.departure.map((zone) => (
+                          <button
+                            key={zone}
+                            type="button"
+                            disabled={dayReadOnly}
+                            onClick={() => setDepartureZone(zone)}
+                          >
+                            Use suggested departure zone: {zone}
+                          </button>
+                        ))}
+                        <label htmlFor="departure-precision">Departure precision</label>
                         <select
                           id="departure-precision"
                           disabled={dayReadOnly}
-                          value={departureTimePrecision}
-                          onChange={(event) =>
-                            setDepartureTimePrecision(event.target.value as TimePrecision)
+                          value={departurePrecision}
+                          onChange={(e) =>
+                            setDeparturePrecision(
+                              e.target.value as 'exact' | 'approximate' | 'range' | 'unknown',
+                            )
                           }
                         >
-                          <option value="unspecified">Unspecified or date only</option>
-                          <option value="precise">Precise clock time</option>
-                          <option value="approximate">Around this clock time</option>
-                          <option value="range">Between two moments</option>
+                          <option value="unknown">Unknown</option>
+                          <option value="approximate">Approximate</option>
+                          <option value="range">Range</option>
+                          <option value="exact">Exact</option>
                         </select>
-                        {departureTimePrecision === 'range' && (
+                        {departurePrecision === 'range' && (
                           <>
-                            <label htmlFor="departure-range-end-date">
-                              Departure range end date
+                            <label htmlFor="departure-range-start">
+                              Earliest departure (local)
                             </label>
                             <input
-                              id="departure-range-end-date"
+                              id="departure-range-start"
+                              type="datetime-local"
                               disabled={dayReadOnly}
-                              type="date"
-                              value={departureRangeEndDate}
-                              onChange={(event) => setDepartureRangeEndDate(event.target.value)}
+                              value={departureRangeStart}
+                              onChange={(e) => setDepartureRangeStart(e.target.value)}
                             />
-                            <label htmlFor="departure-range-end-time">
-                              Departure range end clock time
-                            </label>
+                            <label htmlFor="departure-range-end">Latest departure (local)</label>
                             <input
-                              id="departure-range-end-time"
+                              id="departure-range-end"
+                              type="datetime-local"
                               disabled={dayReadOnly}
-                              type="time"
-                              value={departureRangeEndTime}
-                              onChange={(event) => setDepartureRangeEndTime(event.target.value)}
+                              value={departureRangeEnd}
+                              onChange={(e) => setDepartureRangeEnd(e.target.value)}
                             />
                           </>
                         )}
@@ -1761,39 +2090,57 @@ export function App() {
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
                         />
-                        <label htmlFor="arrival-precision">Arrival time precision</label>
+                        <label htmlFor="arrival-zone">Arrival time zone (IANA, optional)</label>
+                        <input
+                          id="arrival-zone"
+                          disabled={dayReadOnly}
+                          value={arrivalZone}
+                          placeholder="Asia/Tokyo"
+                          onChange={(e) => setArrivalZone(e.target.value)}
+                        />
+                        {suggestedZones?.arrival.map((zone) => (
+                          <button
+                            key={zone}
+                            type="button"
+                            disabled={dayReadOnly}
+                            onClick={() => setArrivalZone(zone)}
+                          >
+                            Use suggested arrival zone: {zone}
+                          </button>
+                        ))}
+                        <label htmlFor="arrival-precision">Arrival precision</label>
                         <select
                           id="arrival-precision"
                           disabled={dayReadOnly}
-                          value={arrivalTimePrecision}
-                          onChange={(event) =>
-                            setArrivalTimePrecision(event.target.value as TimePrecision)
+                          value={arrivalPrecision}
+                          onChange={(e) =>
+                            setArrivalPrecision(
+                              e.target.value as 'exact' | 'approximate' | 'range' | 'unknown',
+                            )
                           }
                         >
-                          <option value="unspecified">Unspecified or date only</option>
-                          <option value="precise">Precise clock time</option>
-                          <option value="approximate">Around this clock time</option>
-                          <option value="range">Between two moments</option>
+                          <option value="unknown">Unknown</option>
+                          <option value="approximate">Approximate</option>
+                          <option value="range">Range</option>
+                          <option value="exact">Exact</option>
                         </select>
-                        {arrivalTimePrecision === 'range' && (
+                        {arrivalPrecision === 'range' && (
                           <>
-                            <label htmlFor="arrival-range-end-date">Arrival range end date</label>
+                            <label htmlFor="arrival-range-start">Earliest arrival (local)</label>
                             <input
-                              id="arrival-range-end-date"
+                              id="arrival-range-start"
+                              type="datetime-local"
                               disabled={dayReadOnly}
-                              type="date"
-                              value={arrivalRangeEndDate}
-                              onChange={(event) => setArrivalRangeEndDate(event.target.value)}
+                              value={arrivalRangeStart}
+                              onChange={(e) => setArrivalRangeStart(e.target.value)}
                             />
-                            <label htmlFor="arrival-range-end-time">
-                              Arrival range end clock time
-                            </label>
+                            <label htmlFor="arrival-range-end">Latest arrival (local)</label>
                             <input
-                              id="arrival-range-end-time"
+                              id="arrival-range-end"
+                              type="datetime-local"
                               disabled={dayReadOnly}
-                              type="time"
-                              value={arrivalRangeEndTime}
-                              onChange={(event) => setArrivalRangeEndTime(event.target.value)}
+                              value={arrivalRangeEnd}
+                              onChange={(e) => setArrivalRangeEnd(e.target.value)}
                             />
                           </>
                         )}
@@ -1813,6 +2160,14 @@ export function App() {
                           <option value="confirmed">Confirmed</option>
                         </select>
                       </details>
+                      {selectedLeg.tripId !== selectedLeg.toTripId && (
+                        <button
+                          disabled={pending || dayReadOnly}
+                          onClick={() => proposeCrossTripDisconnect(selectedLeg)}
+                        >
+                          Disconnect cross-trip Leg
+                        </button>
+                      )}
                       <button disabled={pending || dayReadOnly} onClick={() => void saveLeg()}>
                         Save Leg
                       </button>

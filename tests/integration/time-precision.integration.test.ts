@@ -55,28 +55,27 @@ describe('Leg time precision independent of certainty', () => {
       departureLocalDate: '2026-09-12',
       departureLocalTime: '23:55:00',
       departureTimePrecision: 'range',
-      departureRangeEndLocalDate: '2026-09-13',
-      departureRangeEndLocalTime: '00:20:00',
+      departureRangeStart: '2026-09-12T23:55:00',
+      departureRangeEnd: '2026-09-13T00:20:00',
     });
     expect(ranged.status).toBe('updated');
     if (ranged.status !== 'updated') throw new Error('Expected recorded time range');
-    expect(ranged.leg.departureRangeEndLocalDate).toBe('2026-09-13');
+    expect(ranged.leg.departureRangeEnd).toContain('2026-09-13');
     expect(ranged.leg.departureTimeConfidence).toBe('confirmed');
 
     const invalid = await updateLegWithRevision(db, leg.id, 3, {
-      departureRangeEndLocalDate: '2026-09-12',
-      departureRangeEndLocalTime: '23:00:00',
+      departureRangeEnd: '2026-09-12T23:00:00',
     });
     expect(invalid).toEqual({ status: 'invalid_times' });
 
     const reset = await updateLegWithRevision(db, leg.id, 3, {
-      departureTimePrecision: 'unspecified',
-      departureRangeEndLocalDate: null,
-      departureRangeEndLocalTime: null,
+      departureTimePrecision: 'unknown',
+      departureRangeStart: null,
+      departureRangeEnd: null,
     });
     expect(reset.status).toBe('updated');
     if (reset.status !== 'updated') throw new Error('Expected reset');
-    expect(reset.leg.departureTimePrecision).toBe('unspecified');
-    expect(reset.leg.departureRangeEndLocalDate).toBeNull();
+    expect(reset.leg.departureTimePrecision).toBe('unknown');
+    expect(reset.leg.departureRangeEnd).toBeNull();
   });
 });

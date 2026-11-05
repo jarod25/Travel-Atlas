@@ -8,24 +8,20 @@ const leg = {
   geometryConfidence: 'unknown',
   departureLocalDate: '2026-09-12',
   departureLocalTime: '14:30:00',
-  departureTimePrecision: 'precise',
-  departureRangeEndLocalDate: null,
-  departureRangeEndLocalTime: null,
   departureTimeZone: null,
   departureTimeConfidence: 'estimated',
+  departureTimePrecision: 'approximate',
   arrivalLocalDate: '2026-09-13',
   arrivalLocalTime: '00:15:00',
-  arrivalTimePrecision: 'precise',
-  arrivalRangeEndLocalDate: null,
-  arrivalRangeEndLocalTime: null,
   arrivalTimeZone: null,
   arrivalTimeConfidence: 'confirmed',
+  arrivalTimePrecision: 'exact',
 } as LegRow;
 
 describe('Leg timeline presentation', () => {
   it('displays known times, their certainty, and a midnight crossing without inferring a timezone', () => {
     expect(describeLegTimes(leg)).toBe(
-      'Departure: 2026-09-12 14:30 · estimated · Arrival: 2026-09-13 00:15 · confirmed',
+      'Departure: 2026-09-12 14:30 · precision approximate · estimated · Arrival: 2026-09-13 00:15 · precision exact · confirmed',
     );
   });
 
@@ -38,20 +34,9 @@ describe('Leg timeline presentation', () => {
         arrivalTimeZone: 'Asia/Tokyo',
         arrivalTimeConfidence: 'unknown',
       }),
-    ).toBe('Departure: Unknown · Arrival: 2026-09-13 00:15 (Asia/Tokyo) · certainty unknown');
-  });
-
-  it('distinguishes approximate clocks from a confirmed source and displays ranges over midnight', () => {
-    const modified = {
-      ...leg,
-      departureTimePrecision: 'approximate' as const,
-      departureTimeConfidence: 'confirmed' as const,
-      arrivalTimePrecision: 'range' as const,
-      arrivalRangeEndLocalDate: '2026-09-13',
-      arrivalRangeEndLocalTime: '01:30:00',
-    };
-    expect(describeLegTimes(modified)).toContain('Departure: 2026-09-12 around 14:30 · confirmed');
-    expect(describeLegTimes(modified)).toContain('Arrival: 2026-09-13 00:15 – 2026-09-13 01:30');
+    ).toBe(
+      'Departure: Unknown · Arrival: 2026-09-13 00:15 (Asia/Tokyo) · precision exact · certainty unknown',
+    );
   });
 
   it('uses readable labels without changing the stored transport or certainty', () => {

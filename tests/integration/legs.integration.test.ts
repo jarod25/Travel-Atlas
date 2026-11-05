@@ -81,7 +81,7 @@ describe('Persisted Legs', () => {
     expect(leg.arrivalLocalDate).toBeNull();
   });
 
-  it('disallows cross-trip endpoints, including a mismatched trip id', async () => {
+  it('rejects unrelated cross-trip endpoints and mismatched Leg ownership', async () => {
     const one = await fixture('Leg source');
     const two = await fixture('Leg destination');
     await rejectCode(
@@ -91,7 +91,7 @@ describe('Persisted Legs', () => {
           fromVisitId: one.points[0].id,
           toVisitId: two.points[0].id,
         }),
-      '23503',
+      '23514',
     );
     await rejectCode(
       () =>
@@ -100,7 +100,7 @@ describe('Persisted Legs', () => {
           fromVisitId: one.points[0].id,
           toVisitId: one.points[1].id,
         }),
-      '23503',
+      '23514',
     );
   });
 

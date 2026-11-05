@@ -70,6 +70,12 @@ describe('Explore map filtering', () => {
     expect(visibleFeatures(data, 'b').features).toHaveLength(1);
     expect(visibleFeatures(data, null).features).toHaveLength(3);
   });
+  it('includes descendant trip geometries exactly once', () => {
+    const features = visibleFeatures(data, { tripId: 'a', tripIds: ['a', 'b'] }).features;
+    expect(features).toHaveLength(3);
+    expect(features.filter((feature) => feature.properties.tripId === 'b')).toHaveLength(1);
+    expect(visibleFeatures(data, { tripId: 'a', tripIds: ['a'] }).features).toHaveLength(2);
+  });
   it('filters by local calendar date without guessing dates for unknown entries', () => {
     expect(
       visibleFeatures(data, { fromDate: '2026-09-12', toDate: '2026-09-12' }).features,

@@ -16,6 +16,7 @@ function stub(): AtlasStore {
     }),
     getTrip: async (id: string) => (id === tripId ? { id, title: 'Synthetic' } : null),
     listDays: async (id: string) => (id === tripId ? [] : null),
+    listCombinedDays: async () => [],
     createDay: async (id: string, localDate: string | null) =>
       id === tripId ? { id: dayId, tripId: id, localDate } : null,
     archiveDay: async (id: string, dayId: string, revision: number) => ({
@@ -29,6 +30,7 @@ function stub(): AtlasStore {
     getTimeline: async (id: string, day: string) =>
       id === tripId && day === dayId ? { visits: [], legs: [] } : null,
     listPlaces: async () => [],
+    getLegEndpointCoordinates: async () => null,
     createPlace: async (name: string) => ({ id: 'new-place', name }),
     updatePlace: async (id: string, revision: number) => ({
       status: 'conflict',
@@ -48,6 +50,8 @@ function stub(): AtlasStore {
       currentRevision: revision + 1,
     }),
     connectDays: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
+    connectTrips: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
+    disconnectTrips: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
     disconnectDays: async () => ({ status: 'invalid', reason: 'Synthetic conflict' }),
     getExplore: async () => ({ type: 'FeatureCollection', features: [] }),
     close: async () => undefined,
