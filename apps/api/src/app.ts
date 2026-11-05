@@ -38,7 +38,7 @@ export function buildApp(store?: AtlasStore) {
   app.patch<{
     Params: { tripId: string };
     Headers: { 'if-match'?: string };
-    Body: { title?: string; isArchived?: boolean };
+    Body: { title?: string; isArchived?: boolean; manualStartDate?: string | null; manualEndDate?: string | null };
   }>(
     '/api/v1/trips/:tripId',
     {
@@ -48,7 +48,7 @@ export function buildApp(store?: AtlasStore) {
           type: 'object',
           minProperties: 1,
           additionalProperties: false,
-          properties: { title: nonblank, isArchived: { type: 'boolean' } },
+          properties: { title: nonblank, isArchived: { type: 'boolean' }, manualStartDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] }, manualEndDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] } },
         },
       },
     },
@@ -78,14 +78,14 @@ export function buildApp(store?: AtlasStore) {
     },
   );
 
-  app.post<{ Body: { title: string } }>(
+  app.post<{ Body: { title: string; parentTripId?: string | null } }>(
     '/api/v1/trips',
     {
       schema: {
         body: {
           type: 'object',
           required: ['title'],
-          properties: { title: nonblank },
+          properties: { title: nonblank, parentTripId: { anyOf: [uuid, { type: 'null' }] } },
           additionalProperties: false,
         },
       },
@@ -93,7 +93,8 @@ export function buildApp(store?: AtlasStore) {
     async (request, reply) => {
       const title = request.body.title.trim();
       if (!title) return reply.code(400).send({ error: 'Invalid title' });
-      return reply.code(201).send(await store.createTrip(title));
+      const created = await store.createTrip(title, request.body.parentTripId ?? null);
+      return created ? reply.code(201).send(created) : reply.code(400).send({ error: 'Parent trip not found or archived' });
     },
   );
   app.get<{ Params: { tripId: string } }>(
@@ -556,10 +557,12 @@ export function buildApp(store?: AtlasStore) {
       departureLocalDate?: string | null;
       departureLocalTime?: string | null;
       departureTimeZone?: string | null;
+      departureTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
       arrivalTimeZone?: string | null;
+      arrivalTimePrecision?: 'exact' | 'approximate' | 'range' | 'unknown';
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
     };
     Headers: { 'if-match'?: string };
@@ -605,6 +608,7 @@ export function buildApp(store?: AtlasStore) {
             departureLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
             departureLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             departureTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+            departureTimePrecision: { type: 'string', enum: ['exact', 'approximate', 'range', 'unknown'] },
             departureTimeConfidence: {
               type: 'string',
               enum: ['confirmed', 'estimated', 'unknown'],
@@ -612,6 +616,7 @@ export function buildApp(store?: AtlasStore) {
             arrivalLocalDate: { anyOf: [{ type: 'string', format: 'date' }, { type: 'null' }] },
             arrivalLocalTime: { anyOf: [{ type: 'string' }, { type: 'null' }] },
             arrivalTimeZone: { anyOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
+            arrivalTimePrecision: { type: 'string', enum: ['exact', 'approximate', 'range', 'unknown'] },
             arrivalTimeConfidence: { type: 'string', enum: ['confirmed', 'estimated', 'unknown'] },
           },
         },

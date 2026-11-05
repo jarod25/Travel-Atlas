@@ -21,12 +21,12 @@ import type { LegChanges, LegUpdateResult } from './leg-repository.js';
 
 export interface AtlasStore {
   listTrips(includeArchived?: boolean): Promise<unknown>;
-  createTrip(title: string): Promise<unknown>;
+  createTrip(title: string, parentTripId?: string | null): Promise<unknown | null>;
   getTrip(tripId: string): Promise<unknown | null>;
   editTrip(
     id: string,
     revision: number,
-    changes: { title?: string; isArchived?: boolean },
+    changes: { title?: string; isArchived?: boolean; manualStartDate?: string | null; manualEndDate?: string | null },
   ): Promise<TripUpdateResult>;
   listDays(tripId: string): Promise<unknown[] | null>;
   createDay(tripId: string, localDate: string | null): Promise<unknown | null>;
@@ -104,6 +104,11 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .select({
           id: trips.id,
           title: trips.title,
+          parentTripId: trips.parentTripId,
+          manualStartDate: trips.manualStartDate,
+          manualEndDate: trips.manualEndDate,
+          computedStartDate: sql<string | null>`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MIN(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
+          computedEndDate: sql<string | null>`(WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${trips.id} UNION ALL SELECT t.id FROM trips t JOIN descendants d ON t.parent_trip_id = d.id) SELECT MAX(local_date)::text FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants))`,
           isArchived: trips.isArchived,
           revision: trips.revision,
           updatedAt: trips.updatedAt,
@@ -113,13 +118,19 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         .where(includeArchived ? undefined : eq(trips.isArchived, false))
         .orderBy(sql`${activity} DESC`, asc(trips.title));
     },
-    createTrip: async (title) => {
-      const [trip] = await db.insert(trips).values({ title }).returning();
+    createTrip: async (title, parentTripId = null) => {
+      if (parentTripId) {
+        const [parent] = await db.select({ id: trips.id, isArchived: trips.isArchived }).from(trips).where(eq(trips.id, parentTripId));
+        if (!parent || parent.isArchived) return null;
+      }
+      const [trip] = await db.insert(trips).values({ title, parentTripId }).returning();
       return trip;
     },
     getTrip: async (id) => {
       const [trip] = await db.select().from(trips).where(eq(trips.id, id));
-      return trip ?? null;
+      if (!trip) return null;
+      const dates = await db.execute(sql`WITH RECURSIVE descendants AS (SELECT id FROM trips WHERE id = ${id} UNION ALL SELECT child.id FROM trips child JOIN descendants d ON child.parent_trip_id = d.id) SELECT MIN(local_date)::text AS start_date, MAX(local_date)::text AS end_date FROM trip_days WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants)`);
+      return { ...trip, computedStartDate: dates[0]?.start_date ?? null, computedEndDate: dates[0]?.end_date ?? null };
     },
     editTrip: (id, revision, changes) => updateTripWithRevision(db, id, revision, changes),
     listDays: async (id) => {
@@ -215,10 +226,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
           departureLocalDate: legs.departureLocalDate,
           departureLocalTime: legs.departureLocalTime,
           departureTimeZone: legs.departureTimeZone,
+          departureTimePrecision: legs.departureTimePrecision,
           departureTimeConfidence: legs.departureTimeConfidence,
           arrivalLocalDate: legs.arrivalLocalDate,
           arrivalLocalTime: legs.arrivalLocalTime,
           arrivalTimeZone: legs.arrivalTimeZone,
+          arrivalTimePrecision: legs.arrivalTimePrecision,
           arrivalTimeConfidence: legs.arrivalTimeConfidence,
           movementConfidence: legs.movementConfidence,
           transportConfidence: legs.transportConfidence,

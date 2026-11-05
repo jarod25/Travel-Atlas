@@ -11,10 +11,12 @@ export type LegChanges = Partial<
     | 'departureLocalDate'
     | 'departureLocalTime'
     | 'departureTimeZone'
+    | 'departureTimePrecision'
     | 'departureTimeConfidence'
     | 'arrivalLocalDate'
     | 'arrivalLocalTime'
     | 'arrivalTimeZone'
+    | 'arrivalTimePrecision'
     | 'arrivalTimeConfidence'
   >
 >;

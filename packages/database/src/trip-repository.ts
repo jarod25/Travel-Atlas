@@ -12,7 +12,7 @@ export async function updateTripWithRevision(
   db: PostgresJsDatabase,
   id: string,
   expectedRevision: number,
-  changes: { title?: string; isArchived?: boolean },
+  changes: { title?: string; isArchived?: boolean; manualStartDate?: string | null; manualEndDate?: string | null },
 ): Promise<TripUpdateResult> {
   return db.transaction(async (tx) => {
     const [current] = await tx.select().from(trips).where(eq(trips.id, id)).for('update');
