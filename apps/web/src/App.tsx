@@ -98,10 +98,10 @@ export function App() {
   const [arrivalTime, setArrivalTime] = useState('');
   const [departureZone, setDepartureZone] = useState('');
   const [arrivalZone, setArrivalZone] = useState('');
-  const [departurePrecision, setDeparturePrecision] = useState<'exact' | 'approximate' | 'unknown'>(
+  const [departurePrecision, setDeparturePrecision] = useState<'exact' | 'approximate' | 'range' | 'unknown'>(
     'unknown',
   );
-  const [arrivalPrecision, setArrivalPrecision] = useState<'exact' | 'approximate' | 'unknown'>(
+  const [arrivalPrecision, setArrivalPrecision] = useState<'exact' | 'approximate' | 'range' | 'unknown'>(
     'unknown',
   );
   const [departureCertainty, setDepartureCertainty] = useState<
@@ -1668,12 +1668,12 @@ export function App() {
                           value={departurePrecision}
                           onChange={(e) =>
                             setDeparturePrecision(
-                              e.target.value as 'exact' | 'approximate' | 'unknown',
+                              e.target.value as 'exact' | 'approximate' | 'range' | 'unknown',
                             )
                           }
                         >
                           <option value="unknown">Unknown</option>
-                          <option value="approximate">Approximate</option>
+                          <option value="approximate">Approximate</option><option value="range" disabled>Range (not editable yet)</option>
                           <option value="exact">Exact</option>
                         </select>
                         <label htmlFor="departure-confidence">Departure certainty</label>
@@ -1722,12 +1722,12 @@ export function App() {
                           value={arrivalPrecision}
                           onChange={(e) =>
                             setArrivalPrecision(
-                              e.target.value as 'exact' | 'approximate' | 'unknown',
+                              e.target.value as 'exact' | 'approximate' | 'range' | 'unknown',
                             )
                           }
                         >
                           <option value="unknown">Unknown</option>
-                          <option value="approximate">Approximate</option>
+                          <option value="approximate">Approximate</option><option value="range" disabled>Range (not editable yet)</option>
                           <option value="exact">Exact</option>
                         </select>
                         <label htmlFor="arrival-confidence">Arrival certainty</label>
