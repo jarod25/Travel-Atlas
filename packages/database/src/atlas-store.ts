@@ -113,8 +113,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         SELECT MAX(local_date)::text FROM trip_days
         WHERE trip_id = ${trips.id} AND is_archived = false
       )`;
-      const effectiveStart = sql<string | null>`COALESCE(${trips.startDateOverride}::text, ${derivedStart})`;
-      const effectiveEnd = sql<string | null>`COALESCE(${trips.endDateOverride}::text, ${derivedEnd})`;
+      const effectiveStart = sql<string | null>`
+        COALESCE(${trips.startDateOverride}::text, ${derivedStart})
+      `;
+      const effectiveEnd = sql<string | null>`
+        COALESCE(${trips.endDateOverride}::text, ${derivedEnd})
+      `;
       return db
         .select({
           id: trips.id,
@@ -147,8 +151,12 @@ export function createAtlasStore(databaseUrl: string): AtlasStore {
         SELECT MAX(local_date)::text FROM trip_days
         WHERE trip_id = ${trips.id} AND is_archived = false
       )`;
-      const effectiveStart = sql<string | null>`COALESCE(${trips.startDateOverride}::text, ${derivedStart})`;
-      const effectiveEnd = sql<string | null>`COALESCE(${trips.endDateOverride}::text, ${derivedEnd})`;
+      const effectiveStart = sql<string | null>`
+        COALESCE(${trips.startDateOverride}::text, ${derivedStart})
+      `;
+      const effectiveEnd = sql<string | null>`
+        COALESCE(${trips.endDateOverride}::text, ${derivedEnd})
+      `;
       const [trip] = await db
         .select({
           id: trips.id,
