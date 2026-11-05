@@ -398,17 +398,9 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
 .composer h3 {
   margin: 0 0 4px;
 }
-.composer label,
-.sub-form label {
+.composer label {
   font-size: 0.8rem;
   color: #4e6c7e;
-}
-.sub-form {
-  display: grid;
-  gap: 8px;
-  border-top: 1px solid #dae7ed;
-  padding-top: 14px;
-  margin-top: 8px;
 }
 .muted {
   font-size: 0.76rem;

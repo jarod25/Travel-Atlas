@@ -76,7 +76,6 @@ export function App() {
   const [dayDate, setDayDate] = useState('');
   const [editedDayDate, setEditedDayDate] = useState('');
   const [placeQuery, setPlaceQuery] = useState('');
-  const [newPlace, setNewPlace] = useState('');
   const [placeLon, setPlaceLon] = useState('');
   const [placeLat, setPlaceLat] = useState('');
   const [placeConfidence, setPlaceConfidence] = useState<'confirmed' | 'estimated' | 'unknown'>(
@@ -567,13 +566,16 @@ export function App() {
   }
 
   async function addPlace() {
-    const name = newPlace.trim();
-    if (!name) return;
+    const name = placeQuery.trim();
+    if (!name || placeId) return;
     await execute(async () => {
       const place = await atlasApi.addPlace(name);
       setPlaceQuery(name);
       setPlaceId(place.id);
-      setNewPlace('');
+      setPlaces((previous) => [
+        ...previous.filter((candidate) => candidate.id !== place.id),
+        place,
+      ]);
       notifications.show({ title: 'Place created', message: name, color: 'teal' });
     });
   }
@@ -1315,7 +1317,7 @@ export function App() {
                       )}
                       <div className="composer">
                         <h3>Add a visit</h3>
-                        <label htmlFor="place-search">Search existing places</label>
+                        <label htmlFor="place-search">Search or name a Place</label>
                         <input
                           id="place-search"
                           disabled={dayReadOnly}
@@ -1324,7 +1326,7 @@ export function App() {
                             setPlaceQuery(e.target.value);
                             setPlaceId('');
                           }}
-                          placeholder="Place name"
+                          placeholder="Search existing Places or enter a new name"
                         />
                         <select
                           aria-label="Existing place"
@@ -1332,16 +1334,30 @@ export function App() {
                           value={placeId}
                           onChange={(e) => setPlaceId(e.target.value)}
                         >
-                          <option value="">Unknown place</option>
+                          <option value="">Unknown place (clear search)</option>
                           {places.map((place) => (
                             <option key={place.id} value={place.id}>
                               {place.name ?? 'Unnamed place'}
                             </option>
                           ))}
                         </select>
-                        <button disabled={pending || dayReadOnly} onClick={() => void addVisit()}>
+                        <button
+                          disabled={pending || dayReadOnly || (!placeId && !!placeQuery.trim())}
+                          onClick={() => void addVisit()}
+                        >
                           + Add visit
                         </button>
+                        {placeQuery.trim() && !placeId && (
+                          <button disabled={pending || dayReadOnly} onClick={() => void addPlace()}>
+                            Create new Place from this name
+                          </button>
+                        )}
+                        {!placeId && placeQuery.trim() && (
+                          <p className="muted">
+                            Select an existing Place or create one. Clear the search to record an
+                            Unknown place.
+                          </p>
+                        )}
                         <details className="coordinate-editor">
                           <summary>Coordinates (optional)</summary>
                           <p className="muted">
@@ -1391,23 +1407,6 @@ export function App() {
                             Save coordinates
                           </button>
                         </details>
-                        <div className="sub-form">
-                          <label htmlFor="new-place">Place not listed?</label>
-                          <input
-                            id="new-place"
-                            disabled={dayReadOnly}
-                            value={newPlace}
-                            onChange={(e) => setNewPlace(e.target.value)}
-                            placeholder="Create a named place"
-                            maxLength={200}
-                          />
-                          <button
-                            disabled={pending || dayReadOnly || !newPlace.trim()}
-                            onClick={() => void addPlace()}
-                          >
-                            Create place
-                          </button>
-                        </div>
                         <p className="muted">
                           Adding visits creates unknown draft legs within this day only.
                         </p>
