@@ -68,6 +68,7 @@ export function App() {
   const [days, setDays] = useState<TripDay[]>([]);
   const [dayId, setDayId] = useState<string | null>(() => readLocation().dayId);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
+  const [nextDayHasVisit, setNextDayHasVisit] = useState(false);
   const [archivedVisits, setArchivedVisits] = useState<ArchivedVisitRow[]>([]);
   const [visitVisibility, setVisitVisibility] = useState<'active' | 'archived' | 'all'>('active');
   const [places, setPlaces] = useState<Place[]>([]);
@@ -305,8 +306,23 @@ export function App() {
   const outgoingCrossDay = timeline?.crossDayLegs.find((leg) =>
     timeline.visits.some((visit) => visit.id === leg.fromVisitId),
   );
-  const canSuggestDayConnection =
-    (selectedDay?.activeVisitCount ?? 0) > 0 && (followingDay?.activeVisitCount ?? 0) > 0;
+  const canSuggestDayConnection = (timeline?.visits.length ?? 0) > 0 && nextDayHasVisit;
+  useEffect(() => {
+    let active = true;
+    setNextDayHasVisit(false);
+    if (!tripId || !followingDay || followingDay.isArchived) return;
+    void atlasApi
+      .timeline(tripId, followingDay.id)
+      .then((result) => {
+        if (active) setNextDayHasVisit(result.visits.length > 0);
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(String(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [tripId, followingDay?.id, followingDay?.isArchived, dayId]);
   const selectedVisit = timeline?.visits.find((visit) => visit.id === selectedVisitId);
   const selectedLeg = [...(timeline?.legs ?? []), ...(timeline?.crossDayLegs ?? [])].find(
     (leg) => leg.id === selectedLegId,
