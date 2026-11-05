@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-test('Leg date suggestions remain unpersisted until explicitly saved', async ({ page, request }) => {
+test('Leg date suggestions remain unpersisted until explicitly saved', async ({
+  page,
+  request,
+}) => {
   const title = `Synthetic dated Leg ${Date.now()}`;
   await page.goto('/trips');
   await page.getByLabel('New trip').fill(title);
