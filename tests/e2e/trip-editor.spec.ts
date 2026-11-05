@@ -329,7 +329,7 @@ test('Trip dates derive from active days and allow explicit reversible correctio
   await page.goto('/trips');
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
-  await expect(page).toHaveURL(/\\/trips\\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]{36}$/);
   const trip = { id: new URL(page.url()).pathname.split('/').pop() };
   await expect(page.getByRole('region', { name: 'Trip date corrections' })).toContainText(
     'Unknown',
