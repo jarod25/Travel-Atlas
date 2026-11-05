@@ -508,7 +508,12 @@ export function App() {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
-      await Promise.all([loadDays(tripId), loadTrips(), loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([
+        loadDays(tripId),
+        loadTrips(),
+        loadTimeline(tripId, dayId),
+        loadExplore(),
+      ]);
       notifications.show({
         title: 'Day saved',
         message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',
