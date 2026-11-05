@@ -330,7 +330,8 @@ export function App() {
       : [];
     return {
       type: 'FeatureCollection' as const,
-      features: selectedVisitId || selectedLegId ? bySelection : byDay.length ? byDay : displayed.features,
+      features:
+        selectedVisitId || selectedLegId ? bySelection : byDay.length ? byDay : displayed.features,
     };
   }, [displayed, view, dayId, selectedVisitId, selectedLegId]);
 
