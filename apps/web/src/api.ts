@@ -48,10 +48,16 @@ export interface LegRow {
   revision: number;
   departureLocalDate: string | null;
   departureLocalTime: string | null;
+  departureTimePrecision: 'unspecified' | 'precise' | 'approximate' | 'range';
+  departureRangeEndLocalDate: string | null;
+  departureRangeEndLocalTime: string | null;
   departureTimeZone: string | null;
   departureTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   arrivalLocalDate: string | null;
   arrivalLocalTime: string | null;
+  arrivalTimePrecision: 'unspecified' | 'precise' | 'approximate' | 'range';
+  arrivalRangeEndLocalDate: string | null;
+  arrivalRangeEndLocalTime: string | null;
   arrivalTimeZone: string | null;
   arrivalTimeConfidence: 'confirmed' | 'estimated' | 'unknown';
   movementConfidence: string;
@@ -173,9 +179,15 @@ export const atlasApi = {
       transportConfidence?: 'confirmed' | 'estimated' | 'unknown';
       departureLocalDate?: string | null;
       departureLocalTime?: string | null;
+      departureTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
+      departureRangeEndLocalDate?: string | null;
+      departureRangeEndLocalTime?: string | null;
       departureTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
       arrivalLocalDate?: string | null;
       arrivalLocalTime?: string | null;
+      arrivalTimePrecision?: 'unspecified' | 'precise' | 'approximate' | 'range';
+      arrivalRangeEndLocalDate?: string | null;
+      arrivalRangeEndLocalTime?: string | null;
       arrivalTimeConfidence?: 'confirmed' | 'estimated' | 'unknown';
     },
   ) =>
