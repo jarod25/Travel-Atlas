@@ -346,7 +346,7 @@ test('Trip period conflicts remain visible and reversible after changing a recor
     .getByRole('button', { name: 'Trips' })
     .click();
   const card = page.locator(`.trip-card[data-trip-id="${created!.id}"]`);
-  await card.getByText('Edit dates').click();
+  await card.locator('summary').getByText('Edit dates', { exact: true }).click();
   await card.getByLabel('Start date override (optional)').fill('2026-09-10');
   await card.getByRole('button', { name: 'Save trip dates' }).click();
   await expect(card.locator('small')).toContainText('2026-09-10');
@@ -360,7 +360,7 @@ test('Trip period conflicts remain visible and reversible after changing a recor
     .getByRole('button', { name: 'Trips' })
     .click();
   await expect(card.getByRole('alert')).toContainText('Trip period conflict');
-  await card.getByText('Edit dates').click();
+  await card.locator('summary').getByText('Edit dates', { exact: true }).click();
   await card.getByLabel('Start date override (optional)').fill('');
   await card.getByRole('button', { name: 'Save trip dates' }).click();
   await expect(card.getByRole('alert')).toHaveCount(0);
