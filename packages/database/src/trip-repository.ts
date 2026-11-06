@@ -106,8 +106,28 @@ export async function updateTripWithRevision(
     const start =
       changes.manualStartDate === undefined ? current.manualStartDate : changes.manualStartDate;
     const end = changes.manualEndDate === undefined ? current.manualEndDate : changes.manualEndDate;
-    if (start && end && start > end) {
-      return { status: 'invalid', reason: 'Start date must not be after end date' };
+    if (changes.manualStartDate !== undefined || changes.manualEndDate !== undefined) {
+      const [bounds] = await tx.execute(sql`
+        WITH RECURSIVE descendants AS (
+          SELECT id FROM trips WHERE id = ${id}
+          UNION ALL
+          SELECT child.id FROM trips child
+          JOIN descendants d ON child.parent_trip_id = d.id
+          WHERE child.is_archived = false
+        )
+        SELECT MIN(local_date)::text AS start_date,
+               MAX(local_date)::text AS end_date
+        FROM trip_days
+        WHERE is_archived = false AND trip_id IN (SELECT id FROM descendants)
+      `);
+      const effectiveStart = start ?? bounds?.start_date;
+      const effectiveEnd = end ?? bounds?.end_date;
+      if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
+        return {
+          status: 'invalid',
+          reason: 'Trip period conflict: start date must not be after end date',
+        };
+      }
     }
     const [updated] = await tx
       .update(trips)

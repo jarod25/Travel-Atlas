@@ -166,6 +166,7 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
     .click();
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
   const trips = await (await request.get('/api/v1/trips')).json();
   const trip = trips.find((item: { title: string }) => item.title === title);
   expect(trip?.id).toBeTruthy();
@@ -319,4 +320,50 @@ test('Timeline Add Visit shortcut works on narrow screens', async ({ page }) => 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole('button', { name: 'Go to Add visit' }).click();
   await expect(page.locator('.composer')).toBeInViewport();
+});
+
+test('Trip period conflicts remain visible and reversible after changing a recorded day', async ({
+  page,
+  request,
+}) => {
+  const title = `Synthetic period conflict ${Date.now()}`;
+  await page.goto('/trips');
+  await page.getByLabel('New trip').fill(title);
+  await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await page.locator('#day-date').fill('2026-09-12');
+  await page.getByRole('button', { name: '+ Day' }).click();
+  await expect(page.locator('#edit-day-date')).toHaveValue('2026-09-12');
+
+  const trips = (await (await request.get('/api/v1/trips')).json()) as Array<{
+    id: string;
+    title: string;
+  }>;
+  const created = trips.find((item) => item.title === title);
+  expect(created?.id).toBeTruthy();
+
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trips' })
+    .click();
+  const card = page.locator(`.trip-card[data-trip-id="${created!.id}"]`);
+  await card.locator('summary').getByText('Edit dates', { exact: true }).click();
+  await card.getByLabel('Start date override (optional)').fill('2026-09-10');
+  await card.getByRole('button', { name: 'Save trip dates' }).click();
+  await expect(card.locator('small')).toContainText('2026-09-10');
+
+  await card.getByRole('button', { name: 'Open timeline' }).click();
+  await page.locator('#edit-day-date').fill('2026-09-01');
+  await page.getByRole('button', { name: 'Save date' }).click();
+
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Trips' })
+    .click();
+  await expect(card.getByRole('alert')).toContainText('Trip period conflict');
+  await card.locator('summary').getByText('Edit dates', { exact: true }).click();
+  await card.getByLabel('Start date override (optional)').fill('');
+  await card.getByRole('button', { name: 'Save trip dates' }).click();
+  await expect(card.getByRole('alert')).toHaveCount(0);
+  await expect(card.locator('small')).toContainText('2026-09-01');
 });

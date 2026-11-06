@@ -4,7 +4,7 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { createAtlasStore } from '../../packages/database/src/atlas-store';
-import { trips } from '../../packages/database/src/schema';
+import { tripDays, trips } from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL must point to a disposable integration-test database.');
@@ -69,5 +69,42 @@ describe('Nested trip boundaries', () => {
     expect(
       await store.createTrip('Invalid synthetic child', '00000000-0000-0000-0000-000000000000'),
     ).toBeNull();
+  });
+  it('rejects an impossible override and flags a conflict when descendant days change later', async () => {
+    const parent = (await store.createTrip('Synthetic period parent')) as { id: string };
+    ids.push(parent.id);
+    const child = (await store.createTrip('Synthetic period child', parent.id)) as { id: string };
+    ids.push(child.id);
+    const day = (await store.createDay(child.id, '2026-09-12')) as { id: string };
+
+    const invalid = await store.editTrip(parent.id, 1, {
+      manualStartDate: '2026-09-15',
+    });
+    expect(invalid.status).toBe('invalid');
+
+    const corrected = await store.editTrip(parent.id, 1, {
+      manualStartDate: '2026-09-10',
+    });
+    expect(corrected.status).toBe('updated');
+
+    await db.update(tripDays).set({ localDate: '2026-09-01' }).where(eq(tripDays.id, day.id));
+    const tripsAfter = (await store.listTrips(true)) as Array<{
+      id: string;
+      computedEndDate: string | null;
+      manualStartDate: string | null;
+    }>;
+    expect(tripsAfter.find((trip) => trip.id === parent.id)).toMatchObject({
+      computedEndDate: '2026-09-01',
+      manualStartDate: '2026-09-10',
+    });
+
+    const stillInvalid = await store.editTrip(parent.id, 2, {
+      manualStartDate: '2026-09-09',
+    });
+    expect(stillInvalid.status).toBe('invalid');
+    const reset = await store.editTrip(parent.id, 2, { manualStartDate: null });
+    expect(reset.status).toBe('updated');
+    const afterReset = (await store.listTrips(true)) as typeof tripsAfter;
+    expect(afterReset.find((trip) => trip.id === parent.id)?.manualStartDate).toBeNull();
   });
 });

@@ -141,3 +141,17 @@ Playwright responsive workflows, followed by the separate manual checklist in
 
 Lot 4 routing proposals remain separate from evidence of journeys actually taken.
 Do not declare the personal database accepted before completing that checklist.
+
+## Consistent computed and manual Trip periods
+
+Each Trip's effective start is its optional manually corrected start or the earliest
+active dated day in its own descendant tree; the effective end follows the same
+rule using the latest dated active day. When an override would make the effective
+start later than the effective end, the Trip PATCH endpoint refuses the correction
+with a meaningful validation error. An existing correction may later become
+inconsistent after a Day is redated or archived; the Trips page prominently
+flags that conflict rather than silently displaying the inverted period as valid.
+The editor keeps its correction controls available so the user can clear or repair
+the override. Day changes refresh the computed bounds of the parent and its
+ancestors without inventing any missing date. No Legs, Visits or original Day
+dates are modified to resolve the display conflict.

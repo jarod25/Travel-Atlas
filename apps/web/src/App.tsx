@@ -62,6 +62,11 @@ function TripDateEditor({
   const [start, setStart] = useState(trip.manualStartDate ?? '');
   const [end, setEnd] = useState(trip.manualEndDate ?? '');
   const [invalid, setInvalid] = useState(false);
+  const effectiveStart = start || trip.computedStartDate;
+  const effectiveEnd = end || trip.computedEndDate;
+  const savedStart = trip.manualStartDate ?? trip.computedStartDate;
+  const savedEnd = trip.manualEndDate ?? trip.computedEndDate;
+  const savedConflict = Boolean(savedStart && savedEnd && savedStart > savedEnd);
   useEffect(() => {
     setStart(trip.manualStartDate ?? '');
     setEnd(trip.manualEndDate ?? '');
@@ -73,7 +78,7 @@ function TripDateEditor({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (start && end && start > end) {
+          if (effectiveStart && effectiveEnd && effectiveStart > effectiveEnd) {
             setInvalid(true);
             return;
           }
@@ -102,7 +107,15 @@ function TripDateEditor({
         <p className="muted">
           Leave empty to use dates calculated from recorded days and subtrips.
         </p>
-        {invalid && <p role="alert">End date cannot be before start date.</p>}
+        {savedConflict && (
+          <p role="alert">
+            Trip period conflict: saved corrections no longer match the recorded days. Adjust the
+            dates or clear an override.
+          </p>
+        )}
+        {invalid && (
+          <p role="alert">Trip period conflict: start cannot be after the resulting end date.</p>
+        )}
         <button type="submit" disabled={disabled}>
           Save trip dates
         </button>
@@ -342,7 +355,7 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [tripId]);
+  }, [tripId, view]);
 
   useEffect(() => {
     if (!tripId || !dayId) {
@@ -704,7 +717,7 @@ export function App() {
     if (!tripId) return;
     await execute(async () => {
       const created = await atlasApi.addDay(tripId, dayDate || null);
-      await loadDays(tripId);
+      await Promise.all([loadDays(tripId), loadTrips()]);
       setDayId(created.id);
       setDayDate('');
       notifications.show({
@@ -737,7 +750,12 @@ export function App() {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore()]);
+      await Promise.all([
+        loadDays(tripId),
+        loadTimeline(tripId, dayId),
+        loadExplore(),
+        loadTrips(),
+      ]);
       notifications.show({
         title: 'Day saved',
         message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',
@@ -749,7 +767,7 @@ export function App() {
     if (!tripId || !dayId || !selectedDay) return;
     await execute(async () => {
       await atlasApi.editDay(tripId, dayId, selectedDay.revision, editedDayDate || null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId)]);
+      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadTrips()]);
       notifications.show({
         title: 'Day date saved',
         message: 'Changes saved.',
@@ -1346,6 +1364,12 @@ export function App() {
                   {trip.manualEndDate ?? trip.computedEndDate ?? 'End unknown'}
                   {trip.parentTripId ? ' · Subtrip' : ''}
                 </small>
+                {(trip.manualStartDate ?? trip.computedStartDate) &&
+                  (trip.manualEndDate ?? trip.computedEndDate) &&
+                  (trip.manualStartDate ?? trip.computedStartDate)! >
+                    (trip.manualEndDate ?? trip.computedEndDate)! && (
+                    <p role="alert">Trip period conflict — edit dates to resolve.</p>
+                  )}
                 <div className="trip-actions">
                   {!trip.isArchived && !trip.archivedByParent && (
                     <button
