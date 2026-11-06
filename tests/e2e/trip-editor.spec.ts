@@ -166,6 +166,7 @@ test('Connected days expose the same editable Leg on both timelines', async ({ p
     .click();
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
   const trips = await (await request.get('/api/v1/trips')).json();
   const trip = trips.find((item: { title: string }) => item.title === title);
   expect(trip?.id).toBeTruthy();
