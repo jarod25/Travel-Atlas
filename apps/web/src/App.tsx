@@ -355,7 +355,7 @@ export function App() {
     return () => {
       active = false;
     };
-  }, [tripId]);
+  }, [tripId, view]);
 
   useEffect(() => {
     if (!tripId || !dayId) {
