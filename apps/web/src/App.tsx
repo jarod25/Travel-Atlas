@@ -109,8 +109,8 @@ function TripDateEditor({
         </p>
         {savedConflict && (
           <p role="alert">
-            Trip period conflict: saved corrections no longer match the recorded days. Adjust
-            the dates or clear an override.
+            Trip period conflict: saved corrections no longer match the recorded days. Adjust the
+            dates or clear an override.
           </p>
         )}
         {invalid && (
@@ -750,7 +750,12 @@ export function App() {
       await atlasApi.archiveDay(tripId, dayId, selectedDay.revision, !selectedDay.isArchived);
       setSelectedVisitId(null);
       setSelectedLegId(null);
-      await Promise.all([loadDays(tripId), loadTimeline(tripId, dayId), loadExplore(), loadTrips()]);
+      await Promise.all([
+        loadDays(tripId),
+        loadTimeline(tripId, dayId),
+        loadExplore(),
+        loadTrips(),
+      ]);
       notifications.show({
         title: 'Day saved',
         message: selectedDay.isArchived ? 'Day restored.' : 'Day archived.',

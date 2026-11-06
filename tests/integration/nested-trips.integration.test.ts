@@ -87,10 +87,7 @@ describe('Nested trip boundaries', () => {
     });
     expect(corrected.status).toBe('updated');
 
-    await db
-      .update(tripDays)
-      .set({ localDate: '2026-09-01' })
-      .where(eq(tripDays.id, day.id));
+    await db.update(tripDays).set({ localDate: '2026-09-01' }).where(eq(tripDays.id, day.id));
     const tripsAfter = (await store.listTrips(true)) as Array<{
       id: string;
       computedEndDate: string | null;
@@ -110,5 +107,4 @@ describe('Nested trip boundaries', () => {
     const afterReset = (await store.listTrips(true)) as typeof tripsAfter;
     expect(afterReset.find((trip) => trip.id === parent.id)?.manualStartDate).toBeNull();
   });
-
 });
