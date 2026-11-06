@@ -1364,7 +1364,7 @@ export function App() {
                   (trip.manualStartDate ?? trip.computedStartDate)! >
                     (trip.manualEndDate ?? trip.computedEndDate)! && (
                     <p role="alert">Trip period conflict — edit dates to resolve.</p>
-                  )
+                  )}
                 <div className="trip-actions">
                   {!trip.isArchived && !trip.archivedByParent && (
                     <button
