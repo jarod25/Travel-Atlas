@@ -214,6 +214,7 @@ test('Trip Editor URL survives reload and browser navigation', async ({ page, re
   await expect(page).toHaveURL(/\/trips$/);
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
 
   const trips = await (await request.get('/api/v1/trips')).json();
   const trip = trips.find((item: { title: string }) => item.title === title);
@@ -244,6 +245,7 @@ test('Trip renaming uses a cancellable accessible modal', async ({ page, request
   await page.goto('/trips');
   await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await page
     .getByRole('navigation', { name: 'Main navigation' })
     .getByRole('button', { name: 'Trips' })
@@ -278,6 +280,7 @@ test('Add Visit reuses one field for Place lookup and explicit creation', async 
   await page.goto('/trips');
   await page.getByLabel('New trip').fill(tripTitle);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: tripTitle })).toBeVisible();
   await page.getByRole('button', { name: '+ Day' }).click();
   await expect(page.locator('.day-tabs button')).toHaveCount(1);
 
@@ -294,6 +297,7 @@ test('Unknown Place stays an explicit recoverable choice after typing a name', a
   await page.goto('/trips');
   await page.getByLabel('New trip').fill(tripTitle);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: tripTitle })).toBeVisible();
   await page.getByRole('button', { name: '+ Day' }).click();
   await expect(page.locator('.day-tabs button')).toHaveCount(1);
 
@@ -309,8 +313,10 @@ test('Unknown Place stays an explicit recoverable choice after typing a name', a
 test('Timeline Add Visit shortcut works on narrow screens', async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 873 });
   await page.goto('/trips');
-  await page.getByLabel('New trip').fill(`Synthetic long Timeline ${Date.now()}`);
+  const title = `Synthetic long Timeline ${Date.now()}`;
+  await page.getByLabel('New trip').fill(title);
   await page.getByRole('button', { name: 'Create trip' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await page.getByRole('button', { name: '+ Day' }).click();
   await expect(page.locator('.day-tabs button')).toHaveCount(1);
   for (let i = 0; i < 8; i += 1) {
