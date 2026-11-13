@@ -147,7 +147,9 @@ test('Footer follows content and editor stays aligned with Explore', async ({
   expect(footer).not.toBeNull();
   const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
   const viewportHeight = page.viewportSize()!.height;
-  expect(Math.abs(footer!.y + footer!.height - Math.max(documentHeight, viewportHeight))).toBeLessThanOrEqual(2);
+  const footerBottom = footer!.y + footer!.height;
+  const expectedBottom = Math.max(documentHeight, viewportHeight);
+  expect(Math.abs(footerBottom - expectedBottom)).toBeLessThanOrEqual(2);
 
   await page
     .getByRole('navigation', { name: 'Main navigation' })
