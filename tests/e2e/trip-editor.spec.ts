@@ -131,7 +131,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   await expect(page.locator('.error-banner')).toHaveCount(0);
 });
 
-test('Empty-state layout keeps page footer at bottom and editor aligned with Explore', async ({
+test('Footer follows content and editor stays aligned with Explore', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1700, height: 900 });
@@ -145,7 +145,9 @@ test('Empty-state layout keeps page footer at bottom and editor aligned with Exp
     .click();
   const footer = await page.locator('.app-footer').boundingBox();
   expect(footer).not.toBeNull();
-  expect(Math.abs(footer!.y + footer!.height - 900)).toBeLessThanOrEqual(2);
+  const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+  const viewportHeight = page.viewportSize()!.height;
+  expect(Math.abs(footer!.y + footer!.height - Math.max(documentHeight, viewportHeight))).toBeLessThanOrEqual(2);
 
   await page
     .getByRole('navigation', { name: 'Main navigation' })
