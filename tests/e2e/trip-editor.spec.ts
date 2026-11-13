@@ -131,9 +131,7 @@ test('Trip Editor preserves a recorded Leg across reorder and archive/restore', 
   await expect(page.locator('.error-banner')).toHaveCount(0);
 });
 
-test('Footer follows content and editor stays aligned with Explore', async ({
-  page,
-}) => {
+test('Footer follows content and editor stays aligned with Explore', async ({ page }) => {
   await page.setViewportSize({ width: 1700, height: 900 });
   await page.goto('/');
   const explore = await page.locator('.explore').boundingBox();
