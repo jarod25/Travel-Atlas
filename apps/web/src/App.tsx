@@ -216,6 +216,10 @@ export function App() {
     nextDayId: string | null = null,
   ) {
     const targetView = nextView;
+    if (targetView !== view || nextTripId !== tripId || nextDayId !== dayId) {
+      setSelectedVisitId(null);
+      setSelectedLegId(null);
+    }
     const url = urlFor(targetView, nextTripId, nextDayId);
     if (window.location.pathname + window.location.search !== url) {
       window.history.pushState(null, '', url);
@@ -229,6 +233,8 @@ export function App() {
   useEffect(() => {
     const onPopState = () => {
       const next = readLocation();
+      setSelectedVisitId(null);
+      setSelectedLegId(null);
       setView(next.view);
       setTripId(next.tripId);
       setDayId(next.dayId);
@@ -614,10 +620,10 @@ export function App() {
     const byDay = dayId
       ? displayed.features.filter((feature) => feature.properties.dayId === dayId)
       : [];
+    const hasMatchingSelection = (selectedVisitId || selectedLegId) && bySelection.length > 0;
     return {
       type: 'FeatureCollection' as const,
-      features:
-        selectedVisitId || selectedLegId ? bySelection : byDay.length ? byDay : displayed.features,
+      features: hasMatchingSelection ? bySelection : byDay.length ? byDay : displayed.features,
     };
   }, [displayed, view, dayId, selectedVisitId, selectedLegId]);
 
@@ -718,6 +724,8 @@ export function App() {
     await execute(async () => {
       const created = await atlasApi.addDay(tripId, dayDate || null);
       await Promise.all([loadDays(tripId), loadTrips()]);
+      setSelectedVisitId(null);
+      setSelectedLegId(null);
       setDayId(created.id);
       setDayDate('');
       notifications.show({
@@ -1571,7 +1579,13 @@ export function App() {
                         dayId === day.id ? 'selected' : '',
                         day.isArchived ? 'archived-day' : '',
                       ].join(' ')}
-                      onClick={() => setDayId(day.id)}
+                      onClick={() => {
+                        if (day.id !== dayId) {
+                          setSelectedVisitId(null);
+                          setSelectedLegId(null);
+                        }
+                        setDayId(day.id);
+                      }}
                     >
                       {day.localDate ?? `Day ${day.position + 1} · date unknown`}
                       {day.isArchived ? ' (archived)' : ''}
