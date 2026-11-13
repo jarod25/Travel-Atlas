@@ -32,19 +32,15 @@ async function seedMappedSubtrip(
   });
   expect(coordinateResponse.ok(), await coordinateResponse.text()).toBe(true);
 
-  const visitResponse = await request.post(
-    `/api/v1/trips/${trip.id}/days/${day.id}/visits`,
-    { data: { placeId: place.id } },
-  );
+  const visitResponse = await request.post(`/api/v1/trips/${trip.id}/days/${day.id}/visits`, {
+    data: { placeId: place.id },
+  });
   expect(visitResponse.ok(), await visitResponse.text()).toBe(true);
 
   return { tripId: trip.id, dayId: day.id, title, placeName };
 }
 
-test('Switching between mapped subtrips clears stale selection and keeps map fitting available', async ({
-  page,
-  request,
-}) => {
+test('Switching trips clears stale map selection', async ({ page, request }) => {
   const unique = Date.now().toString(36);
   const parentResponse = await request.post('/api/v1/trips', {
     data: { title: `Synthetic map focus parent ${unique}` },
