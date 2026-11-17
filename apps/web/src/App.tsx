@@ -136,8 +136,10 @@ function TripPeriodSummary({ trip }: { trip: Trip }) {
       {isConflicting && (
         <p className="trip-period-alert" role="alert">
           <strong>Trip period conflict</strong>
-          Start {start} is later than end {end}. Edit dates to resolve this conflict. Recorded
-          days are unchanged.
+          <div>
+            Start {start} is later than end {end}. Edit dates to resolve this conflict.
+          </div>
+          <div>Recorded days are unchanged.</div>
         </p>
       )}
     </>
