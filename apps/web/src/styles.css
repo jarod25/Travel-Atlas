@@ -266,6 +266,17 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   color: #742d19;
   font-size: 0.95rem;
 }
+.trips-page select,
+.trips-page input {
+  max-width: 100%;
+  min-width: 0;
+}
+.trip-card select {
+  width: 100%;
+}
+.trip-card {
+  overflow-wrap: anywhere;
+}
 .trip-dates {
   min-width: 0;
 }
