@@ -128,7 +128,9 @@ function TripPeriodSummary({ trip }: { trip: Trip }) {
   return (
     <>
       <small className="trip-period">
-        {isConflicting ? 'Period inconsistent' : `${start ?? 'Start unknown'} — ${end ?? 'End unknown'}`}
+        {isConflicting
+          ? 'Period inconsistent'
+          : `${start ?? 'Start unknown'} — ${end ?? 'End unknown'}`}
         {trip.parentTripId ? ' · Subtrip' : ''}
       </small>
       {isConflicting && (
