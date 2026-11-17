@@ -323,7 +323,7 @@ export function App() {
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Unexpected error';
       setError(message);
-      notifications.show({ title: 'Operation failed', message, color: 'red' });
+      notifications.show({ title: 'Operation failed', message, color: 'red', autoClose: 12000 });
     } finally {
       setPending(false);
     }
