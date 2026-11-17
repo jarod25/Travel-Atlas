@@ -134,13 +134,13 @@ function TripPeriodSummary({ trip }: { trip: Trip }) {
         {trip.parentTripId ? ' · Subtrip' : ''}
       </small>
       {isConflicting && (
-        <p className="trip-period-alert" role="alert">
+        <div className="trip-period-alert" role="alert">
           <strong>Trip period conflict</strong>
           <div>
             Start {start} is later than end {end}. Edit dates to resolve this conflict.
           </div>
           <div>Recorded days are unchanged.</div>
-        </p>
+        </div>
       )}
     </>
   );
