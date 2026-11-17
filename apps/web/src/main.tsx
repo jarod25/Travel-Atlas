@@ -18,7 +18,7 @@ createRoot(container).render(
   <React.StrictMode>
     <MantineProvider defaultColorScheme="light">
       <ModalsProvider>
-        <Notifications position="top-right" />
+        <Notifications position="top-right" autoClose={8000} />
         <App />
       </ModalsProvider>
     </MantineProvider>
