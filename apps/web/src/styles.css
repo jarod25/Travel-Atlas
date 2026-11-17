@@ -234,6 +234,9 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
   border: 1px solid #d6e1e5;
   border-radius: 14px;
   color: #244861;
+  min-width: 0;
+  align-self: start;
+  align-content: start;
 }
 .trip-card span {
   color: #638093;
@@ -245,6 +248,58 @@ button:not(.visit-title):not(.trip-card):not(.app-header nav button) {
 }
 .trip-card small {
   color: #437c92;
+}
+.trip-card .trip-period-alert {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e9aa90;
+  border-left: 5px solid #a73c20;
+  border-radius: 8px;
+  background: #fff0e9;
+  color: #742d19;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.trip-card .trip-period-alert strong {
+  color: #742d19;
+  font-size: 0.95rem;
+}
+.trip-dates {
+  min-width: 0;
+}
+.trip-dates form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.trip-dates form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+.trip-dates form input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.trip-dates form button {
+  justify-self: start;
+}
+.trip-dates form p {
+  margin: 0;
+}
+.trip-dates form p[role='alert'] {
+  padding: 10px;
+  border: 1px solid #e9aa90;
+  border-radius: 8px;
+  background: #fff0e9;
+  color: #742d19;
 }
 .editor {
   flex: 1;
