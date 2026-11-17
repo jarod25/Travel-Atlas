@@ -4,7 +4,7 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { createAtlasStore } from '../../packages/database/src/atlas-store';
-import { tripDays, trips } from '../../packages/database/src/schema';
+import { trips } from '../../packages/database/src/schema';
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL must point to a disposable integration-test database.');
@@ -87,7 +87,8 @@ describe('Nested trip boundaries', () => {
     });
     expect(corrected.status).toBe('updated');
 
-    await db.update(tripDays).set({ localDate: '2026-09-01' }).where(eq(tripDays.id, day.id));
+    const movedDay = await store.editDay(child.id, day.id, 1, '2026-09-01');
+    expect(movedDay.status).toBe('updated');
     const tripsAfter = (await store.listTrips(true)) as Array<{
       id: string;
       computedEndDate: string | null;
@@ -106,5 +107,42 @@ describe('Nested trip boundaries', () => {
     expect(reset.status).toBe('updated');
     const afterReset = (await store.listTrips(true)) as typeof tripsAfter;
     expect(afterReset.find((trip) => trip.id === parent.id)?.manualStartDate).toBeNull();
+  });
+  it('recalculates ancestor periods when a descendant day is archived and restored', async () => {
+    const parent = (await store.createTrip('Synthetic archive period parent')) as { id: string };
+    ids.push(parent.id);
+    const child = (await store.createTrip('Synthetic archive period child', parent.id)) as {
+      id: string;
+    };
+    ids.push(child.id);
+    await store.createDay(parent.id, '2026-09-10');
+    const lateDay = (await store.createDay(child.id, '2026-09-15')) as {
+      id: string;
+      revision: number;
+    };
+    const corrected = await store.editTrip(parent.id, 1, {
+      manualStartDate: '2026-09-14',
+    });
+    expect(corrected.status).toBe('updated');
+
+    const archived = await store.archiveDay(child.id, lateDay.id, lateDay.revision, true);
+    expect(archived.status).toBe('updated');
+    const afterArchive = (await store.listTrips(true)) as Array<{
+      id: string;
+      computedEndDate: string | null;
+      manualStartDate: string | null;
+    }>;
+    expect(afterArchive.find((trip) => trip.id === parent.id)).toMatchObject({
+      computedEndDate: '2026-09-10',
+      manualStartDate: '2026-09-14',
+    });
+
+    const restored = await store.archiveDay(child.id, lateDay.id, lateDay.revision + 1, false);
+    expect(restored.status).toBe('updated');
+    const afterRestore = (await store.listTrips(true)) as typeof afterArchive;
+    expect(afterRestore.find((trip) => trip.id === parent.id)).toMatchObject({
+      computedEndDate: '2026-09-15',
+      manualStartDate: '2026-09-14',
+    });
   });
 });

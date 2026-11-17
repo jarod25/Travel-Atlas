@@ -18,6 +18,7 @@ import type { ColorMode } from './MapCanvas';
 import { emptyFeatures, visibleFeatures } from './map-data';
 import { describeLeg, describeLegTimes } from './leg-display';
 import { describeLegDuration } from './time-zones';
+import { resolveTripPeriod } from './trip-period';
 
 type View = 'explore' | 'trips' | 'editor';
 type MobilePanel = 'timeline' | 'map';
@@ -64,9 +65,7 @@ function TripDateEditor({
   const [invalid, setInvalid] = useState(false);
   const effectiveStart = start || trip.computedStartDate;
   const effectiveEnd = end || trip.computedEndDate;
-  const savedStart = trip.manualStartDate ?? trip.computedStartDate;
-  const savedEnd = trip.manualEndDate ?? trip.computedEndDate;
-  const savedConflict = Boolean(savedStart && savedEnd && savedStart > savedEnd);
+  const savedConflict = resolveTripPeriod(trip).isConflicting;
   useEffect(() => {
     setStart(trip.manualStartDate ?? '');
     setEnd(trip.manualEndDate ?? '');
@@ -121,6 +120,29 @@ function TripDateEditor({
         </button>
       </form>
     </details>
+  );
+}
+
+function TripPeriodSummary({ trip }: { trip: Trip }) {
+  const { start, end, isConflicting } = resolveTripPeriod(trip);
+  return (
+    <>
+      <small className="trip-period">
+        {isConflicting
+          ? 'Period inconsistent'
+          : `${start ?? 'Start unknown'} — ${end ?? 'End unknown'}`}
+        {trip.parentTripId ? ' · Subtrip' : ''}
+      </small>
+      {isConflicting && (
+        <div className="trip-period-alert" role="alert">
+          <strong>Trip period conflict</strong>
+          <div>
+            Start {start} is later than end {end}. Edit dates to resolve this conflict.
+          </div>
+          <div>Recorded days are unchanged.</div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -305,7 +327,7 @@ export function App() {
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Unexpected error';
       setError(message);
-      notifications.show({ title: 'Operation failed', message, color: 'red' });
+      notifications.show({ title: 'Operation failed', message, color: 'red', autoClose: 12000 });
     } finally {
       setPending(false);
     }
@@ -1367,17 +1389,7 @@ export function App() {
                   {depth ? '↳ '.repeat(depth) : ''}
                   {trip.title}
                 </strong>
-                <small>
-                  {trip.manualStartDate ?? trip.computedStartDate ?? 'Start unknown'} —{' '}
-                  {trip.manualEndDate ?? trip.computedEndDate ?? 'End unknown'}
-                  {trip.parentTripId ? ' · Subtrip' : ''}
-                </small>
-                {(trip.manualStartDate ?? trip.computedStartDate) &&
-                  (trip.manualEndDate ?? trip.computedEndDate) &&
-                  (trip.manualStartDate ?? trip.computedStartDate)! >
-                    (trip.manualEndDate ?? trip.computedEndDate)! && (
-                    <p role="alert">Trip period conflict — edit dates to resolve.</p>
-                  )}
+                <TripPeriodSummary trip={trip} />
                 <div className="trip-actions">
                   {!trip.isArchived && !trip.archivedByParent && (
                     <button

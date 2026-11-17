@@ -151,6 +151,10 @@ start later than the effective end, the Trip PATCH endpoint refuses the correcti
 with a meaningful validation error. An existing correction may later become
 inconsistent after a Day is redated or archived; the Trips page prominently
 flags that conflict rather than silently displaying the inverted period as valid.
+The Trip card labels the interval **Period inconsistent**, presents a prominent
+persistent warning with the conflicting start/end values, and does not present
+the inverted pair as an ordinary date range. The date editor stacks its labeled
+fields even on narrow cards so a conflict remains understandable on mobile.
 The editor keeps its correction controls available so the user can clear or repair
 the override. Day changes refresh the computed bounds of the parent and its
 ancestors without inventing any missing date. No Legs, Visits or original Day
