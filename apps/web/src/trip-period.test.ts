@@ -41,9 +41,7 @@ describe('Trip period presentation', () => {
   });
 
   it('detects a manual end earlier than the calculated start', () => {
-    expect(resolveTripPeriod({ ...dates, manualEndDate: '2026-09-10' }).isConflicting).toBe(
-      true,
-    );
+    expect(resolveTripPeriod({ ...dates, manualEndDate: '2026-09-10' }).isConflicting).toBe(true);
   });
 
   it('returns to calculated bounds when the override is removed', () => {
