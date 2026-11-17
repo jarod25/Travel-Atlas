@@ -49,9 +49,21 @@ test('Conflicting Trip periods stay readable and date controls do not overlap', 
     expect(firstLabel).not.toBeNull();
     expect(secondLabel).not.toBeNull();
     expect(secondLabel!.y).toBeGreaterThanOrEqual(firstLabel!.y + firstLabel!.height - 2);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      width + 2,
-    );
+    const overflow = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      elements: Array.from(document.querySelectorAll('*'))
+        .map((element) => ({
+          tag: element.tagName.toLowerCase(),
+          className: typeof element.className === 'string' ? element.className : '',
+          right: Math.round(element.getBoundingClientRect().right),
+        }))
+        .filter((element) => element.right > window.innerWidth + 2)
+        .slice(0, 8),
+    }));
+    if (overflow.elements.length) {
+      console.log(`Trips overflow at ${width}px:`, overflow);
+    }
+    expect(overflow.documentWidth).toBeLessThanOrEqual(width + 2);
   }
 
   await card.getByRole('button', { name: 'Save trip dates' }).click();
