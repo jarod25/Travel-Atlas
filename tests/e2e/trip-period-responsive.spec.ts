@@ -55,12 +55,12 @@ test('Conflicting Trip periods stay readable and date controls do not overlap', 
   }
 
   await card.getByRole('button', { name: 'Save trip dates' }).click();
-  await expect(card.locator('.trip-period-alert')).toContainText('Trip period conflict');
-  await startClear();
-  async function startClear() {
-    await card.getByLabel('Start date override (optional)').fill('');
-    await card.getByRole('button', { name: 'Save trip dates' }).click();
-    await expect(card.locator('.trip-period-alert')).toHaveCount(0);
-    await expect(card.locator('.trip-period')).toContainText('2026-09-01');
-  }
+  await expect(card.getByRole('alert')).toContainText([
+    'Trip period conflict',
+    'Trip period conflict: start cannot be after the resulting end date.',
+  ]);
+  await card.getByLabel('Start date override (optional)').fill('');
+  await card.getByRole('button', { name: 'Save trip dates' }).click();
+  await expect(card.locator('.trip-period-alert')).toHaveCount(0);
+  await expect(card.locator('.trip-period')).toContainText('2026-09-01');
 });
